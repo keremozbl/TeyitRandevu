@@ -43,3 +43,7 @@ next-env.d.ts
 # Supabase
 .env
 supabase/.temp/
+
+# npx skills ile yonetilir; skills-lock.json yeterli
+.agents/skills/
+.claude/skills/

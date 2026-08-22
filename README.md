@@ -21,19 +21,21 @@ Docker kurulu olmadığı için yerel Supabase yerine bulut projesiyle
 
 1. [supabase.com](https://supabase.com) → yeni proje, **bölge: Frankfurt (EU
    Central)**. Gerekçe: `docs/PLAN.md` Bölüm 12.2.
-2. Settings → API'den `URL`, `anon key` ve `service_role key` değerlerini
-   `.env` dosyasına yaz.
-3. Settings → General'den Reference ID'yi `SUPABASE_PROJECT_REF` olarak yaz.
-4. Projeye bağlan ve şemayı gönder:
+2. Settings → API'den `URL`, publishable ve secret anahtarları `.env`'e yaz.
+3. Settings → Database → Connection string (Session pooler) değerini
+   `SUPABASE_DB_URL` olarak `.env`'e yaz. Paroladaki özel karakterler
+   **yüzde-kodlanmalı** (`#` → `%23`).
+4. Şemayı gönder ve doğrula:
 
 ```bash
-npx supabase login          # tarayıcıda oturum açar
-npm run db:link
-npm run db:push             # supabase/schemas/*.sql uygulanır
-npm run db:seed             # izin kataloğu ve rol şablonları
-npm run db:advisors         # güvenlik denetimi — açık varsa düzeltilir
-npm run db:types            # TypeScript tipleri üretilir
+npm run db:push       # migration'lar uygulanır
+npm run db:seed       # izin kataloğu ve rol şablonları
+npm run db:advisors   # güvenlik + performans denetimi
+npm run rls:test      # canlı kiracı izolasyonu ve çakışma testi
 ```
+
+> `db diff` ve `gen types` gölge veritabanı için Docker ister. Docker yoksa
+> migration'lar `supabase/migrations/` altına elle yazılır.
 
 ### Geliştirme
 
@@ -66,6 +68,9 @@ Faz 0 — kurulum. Tamamlananlar:
 - [x] Çakışma engeli (exclusion constraint)
 - [x] İzin kataloğu ve rol şablonları
 - [x] Sektör şablonları: diş kliniği, berber
-- [ ] Supabase projesine bağlanma
-- [ ] Kimlik doğrulama
-- [ ] Kurum kurulum sihirbazı
+- [x] Supabase projesine bağlanma — şema ve seed uygulandı
+- [x] Kimlik doğrulama: giriş, kayıt, e-posta bağlantısı
+- [x] Kurum kurulum sihirbazı ve panel iskeleti
+- [x] Canlı RLS doğrulaması — 29 test, kiracı izolasyonu ve çakışma kısıtı
+- [ ] TypeScript tipleri (Docker gerekiyor)
+- [ ] Takvim ızgarası ve randevu oluşturma

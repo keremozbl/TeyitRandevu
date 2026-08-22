@@ -11,8 +11,13 @@ create extension if not exists btree_gist with schema extensions;
 -- `security definer` fonksiyon herkese açık bir API uç noktasına dönüşür.
 create schema if not exists private;
 
-revoke all on schema private from public, anon, authenticated;
-grant usage on schema private to postgres, service_role;
+revoke all on schema private from public, anon;
+-- authenticated'a USAGE zorunlu: RLS politikaları bu şemadaki fonksiyonları
+-- çağırır ve politika ifadeleri SORGUYU ATAN KULLANICI adına değerlendirilir,
+-- politikanın sahibi adına değil. USAGE olmadan her politika "permission
+-- denied" ile patlar. Güvenlik şemayı gizlemekten değil, PostgREST'in yalnızca
+-- `public` şemasını dışa açmasından geliyor (config.toml → api.schemas).
+grant usage on schema private to postgres, service_role, authenticated;
 
 -- -----------------------------------------------------------------------------
 -- updated_at otomatiği

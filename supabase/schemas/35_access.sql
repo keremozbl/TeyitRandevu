@@ -2,10 +2,9 @@
 -- 35_access — yetki çözümleme fonksiyonları
 -- =============================================================================
 -- Performans notu (kritik): bu fonksiyonlar YALNIZCA auth.uid() ve izin
--- anahtarına bağlıdır, satır değerlerine değil. Politikalarda `(select ...)`
--- sarmalıyla çağrıldıklarında Postgres bunları InitPlan'a çevirir ve sorgu
--- başına BİR KEZ çalıştırır. Satır değeri alan bir yetki fonksiyonu her satır
--- için yeniden çalışır ve büyük takvimlerde sorguyu kilitler.
+-- anahtarına bağlıdır, satır değerlerine değil. Bu yüzden planlayıcı onları
+-- sorgu başına bir kez hesaplayabilir. Satır değeri alan bir yetki fonksiyonu
+-- her satır için yeniden çalışır ve büyük takvimlerde sorguyu kilitler.
 --
 -- Güvenlik notu: hepsi `security definer` — memberships/role_permissions
 -- tablolarını RLS'e takılmadan okumaları gerekir. Bu yüzden her biri kendi
@@ -110,8 +109,10 @@ $$;
 -- Tek çağrıda okuma kontrolü.
 -- Politikalarda kullanım:
 --   using ( private.allows('appointment.read', tenant_id, branch_id, resource_id) )
--- Alt fonksiyonlar `(select ...)` ile sarmalandığı için sorgu başına bir kez
--- çalışır; bu fonksiyonun kendisi sadece dizi karşılaştırması yapar.
+-- Bu fonksiyon `security definer` DEĞİL ve tek SELECT'ten oluşuyor; Postgres
+-- onu çağıran sorguya satır içi açar (inline). Açıldıktan sonra içindeki alt
+-- sorgular satırdan bağımsız kalır ve planlayıcı bunları sorgu başına bir kez
+-- hesaplar.
 -- -----------------------------------------------------------------------------
 create or replace function private.allows(
   _perm     text,
@@ -124,19 +125,39 @@ language sql
 stable
 set search_path = ''
 as $$
-  select _tenant   = any ((select private.tenants_with(_perm)))
-      or _branch   = any ((select private.branches_with(_perm)))
-      or _resource = any ((select private.resources_with(_perm)));
+  -- `= any ((select f()))` YAZILAMAZ: Postgres bunu ANY(alt sorgu) olarak
+  -- ayrıştırır ve satırlar uuid[] olduğu için `uuid = uuid[]` hatası verir.
+  -- `unnest` ile satırlara açmak hem tip olarak doğru hem de uncorrelated
+  -- alt sorgu olduğu için planlayıcı tarafından bir kez hesaplanır.
+  select _tenant   = any (select unnest(private.tenants_with(_perm)))
+      or _branch   = any (select unnest(private.branches_with(_perm)))
+      or _resource = any (select unnest(private.resources_with(_perm)));
 $$;
 
 -- -----------------------------------------------------------------------------
--- EXECUTE yetkilerini kapat. Bu fonksiyonlar yalnızca politikaların içinden
--- çağrılır; kimse doğrudan çağırıp yetki haritasını dışarı sızdıramaz.
--- (Politika içinden çağrı, politikanın sahibi adına çalıştığı için etkilenmez.)
+-- EXECUTE yetkileri
+--
+-- authenticated'ın bu fonksiyonları çağırabilmesi ZORUNLU: RLS politika
+-- ifadeleri sorguyu atan kullanıcı adına değerlendirilir. EXECUTE geri
+-- alınırsa politikalar "permission denied for function" ile patlar ve
+-- uygulama tamamen durur.
+--
+-- Bu bir güvenlik açığı değil: fonksiyonlar yalnızca çağıranın KENDİ yetki
+-- haritasını döndürür — zaten bildiği bilgiyi. Başka kiracının verisine
+-- açılan bir pencere değiller. Dışarıdan RPC ile çağrılamamalarını sağlayan
+-- şey de bu grant değil, PostgREST'in yalnızca `public` şemasını dışa
+-- açması (config.toml → api.schemas).
 -- -----------------------------------------------------------------------------
-revoke execute on function private.member_tenants()          from public, anon, authenticated;
-revoke execute on function private.is_tenant_member(uuid)     from public, anon, authenticated;
-revoke execute on function private.tenants_with(text)         from public, anon, authenticated;
-revoke execute on function private.branches_with(text)        from public, anon, authenticated;
-revoke execute on function private.resources_with(text)       from public, anon, authenticated;
-revoke execute on function private.allows(text, uuid, uuid, uuid) from public, anon, authenticated;
+revoke execute on function private.member_tenants()               from public, anon;
+revoke execute on function private.is_tenant_member(uuid)         from public, anon;
+revoke execute on function private.tenants_with(text)             from public, anon;
+revoke execute on function private.branches_with(text)            from public, anon;
+revoke execute on function private.resources_with(text)           from public, anon;
+revoke execute on function private.allows(text, uuid, uuid, uuid) from public, anon;
+
+grant execute on function private.member_tenants()               to authenticated;
+grant execute on function private.is_tenant_member(uuid)         to authenticated;
+grant execute on function private.tenants_with(text)             to authenticated;
+grant execute on function private.branches_with(text)            to authenticated;
+grant execute on function private.resources_with(text)           to authenticated;
+grant execute on function private.allows(text, uuid, uuid, uuid) to authenticated;

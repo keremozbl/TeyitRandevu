@@ -49,15 +49,18 @@ seviyesinde değil. Resepsiyonun randevuyu görüp tedavi notunu görmemesi anca
 
 ```bash
 # 1. İlgili schemas/*.sql dosyasını düzenle
-# 2. Migration üret
-npm run db:diff -- <aciklayici_ad>
+# 2. supabase/migrations/ altına elle bir migration yaz (yalnızca DEĞİŞİKLİK)
 # 3. Uygula
 npm run db:push
-# 4. Güvenlik denetimi — açık varsa düzeltilmeden devam edilmez
+# 4. Denetim — güvenlik VE performans, ikisi de temiz olmadan devam edilmez
 npm run db:advisors
-# 5. Tipleri yenile
-npm run db:types
+# 5. Canlı RLS doğrulaması — kiracı izolasyonu ve çakışma kısıtı
+npm run rls:test
 ```
+
+`supabase db diff` ve `gen types` gölge veritabanı için **Docker** ister; bu
+makinede Docker yok. O yüzden migration'lar elle yazılıyor. Docker kurulursa
+`db diff -f <ad>` ile declarative dosyalardan otomatik üretilebilir.
 
 Yeni dosya eklersen `supabase/config.toml` içindeki `schema_paths` listesine
 sırasıyla ekle; dosyalar verilen sırayla uygulanır.
@@ -72,9 +75,24 @@ Aşağıdakilerin her biri sessizce açık üretir — hata vermez, yanlış ça
 | Sadece `to authenticated` | Rol + `using` içinde sahiplik/üyelik koşulu |
 | UPDATE'te yalnız `using` | `using` **ve** `with check` birlikte |
 | SELECT politikasız tablo | Her tabloya SELECT politikası — yoksa UPDATE sessizce 0 satır döner |
-| `security definer` + `public` şema | `private` şema + explicit `revoke execute` |
+| `security definer` fonksiyonu `public` şemada | `private` şema; korumayı sağlayan PostgREST'in yalnız `public`'i açması |
 | `user_metadata` ile yetki | `app_metadata` ya da tablodan okuma |
 | View ile okuma | `with (security_invoker = true)` |
+| Yazma için `for all` politikası | Ayrı `for insert` / `for update` / `for delete` |
+| `= any ((select dizi_donduren_fn()))` | `= any (select unnest(dizi_donduren_fn()))` |
+
+**Canlıda öğrenilen iki kural — ikisi de sessizce kırıyor:**
+
+1. **Politika ifadeleri sorguyu atan kullanıcı adına değerlendirilir**, politikanın
+   sahibi adına değil. `private` şemadaki yetki fonksiyonlarından `authenticated`
+   rolünün EXECUTE yetkisini geri alırsanız her politika
+   `permission denied for function` ile patlar ve uygulama tamamen durur.
+   Güvenliği sağlayan şey EXECUTE'u kısmak değil, PostgREST'in yalnızca `public`
+   şemasını dışa açması (`config.toml → api.schemas`).
+
+2. **`for all` aynı zamanda bir SELECT politikası yaratır.** Ayrı bir `_read`
+   politikası da varsa her okumada ikisi birden değerlendirilir. Yazma
+   politikaları her zaman `insert` / `update` / `delete` olarak ayrı yazılır.
 
 Yetki fonksiyonları (`private.tenants_with`, `branches_with`, `resources_with`)
 yalnızca `auth.uid()`'ye bağlıdır; `(select ...)` sarmalıyla çağrıldıklarında

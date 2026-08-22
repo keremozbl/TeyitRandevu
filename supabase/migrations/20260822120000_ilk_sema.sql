@@ -1,12 +1,5 @@
--- =============================================================================
 -- İlk migration — supabase/schemas/*.sql dosyalarından sırayla üretildi.
---
--- Docker kurulu olmadığı için `supabase db diff` gölge veritabanı kuramıyor.
--- Veritabanı boş olduğundan declarative dosyaların sıralı birleşimi ile
--- diff'in üreteceği çıktı aynı şeydir.
---
--- ŞEMANIN KAYNAĞI HÂLÂ supabase/schemas/ — bu dosya türetilmiş çıktıdır.
--- =============================================================================
+-- ŞEMANIN KAYNAĞI supabase/schemas/ — bu dosya türetilmiş çıktıdır.
 
 
 -- ###########################################################################
@@ -388,10 +381,9 @@ create index time_off_tenant_idx         on public.time_off (tenant_id);
 -- 35_access — yetki çözümleme fonksiyonları
 -- =============================================================================
 -- Performans notu (kritik): bu fonksiyonlar YALNIZCA auth.uid() ve izin
--- anahtarına bağlıdır, satır değerlerine değil. Politikalarda `(select ...)`
--- sarmalıyla çağrıldıklarında Postgres bunları InitPlan'a çevirir ve sorgu
--- başına BİR KEZ çalıştırır. Satır değeri alan bir yetki fonksiyonu her satır
--- için yeniden çalışır ve büyük takvimlerde sorguyu kilitler.
+-- anahtarına bağlıdır, satır değerlerine değil. Bu yüzden planlayıcı onları
+-- sorgu başına bir kez hesaplayabilir. Satır değeri alan bir yetki fonksiyonu
+-- her satır için yeniden çalışır ve büyük takvimlerde sorguyu kilitler.
 --
 -- Güvenlik notu: hepsi `security definer` — memberships/role_permissions
 -- tablolarını RLS'e takılmadan okumaları gerekir. Bu yüzden her biri kendi
@@ -496,8 +488,10 @@ $$;
 -- Tek çağrıda okuma kontrolü.
 -- Politikalarda kullanım:
 --   using ( private.allows('appointment.read', tenant_id, branch_id, resource_id) )
--- Alt fonksiyonlar `(select ...)` ile sarmalandığı için sorgu başına bir kez
--- çalışır; bu fonksiyonun kendisi sadece dizi karşılaştırması yapar.
+-- Bu fonksiyon `security definer` DEĞİL ve tek SELECT'ten oluşuyor; Postgres
+-- onu çağıran sorguya satır içi açar (inline). Açıldıktan sonra içindeki alt
+-- sorgular satırdan bağımsız kalır ve planlayıcı bunları sorgu başına bir kez
+-- hesaplar.
 -- -----------------------------------------------------------------------------
 create or replace function private.allows(
   _perm     text,
@@ -510,9 +504,13 @@ language sql
 stable
 set search_path = ''
 as $$
-  select _tenant   = any ((select private.tenants_with(_perm)))
-      or _branch   = any ((select private.branches_with(_perm)))
-      or _resource = any ((select private.resources_with(_perm)));
+  -- `= any ((select f()))` YAZILAMAZ: Postgres bunu ANY(alt sorgu) olarak
+  -- ayrıştırır ve satırlar uuid[] olduğu için `uuid = uuid[]` hatası verir.
+  -- `unnest` ile satırlara açmak hem tip olarak doğru hem de uncorrelated
+  -- alt sorgu olduğu için planlayıcı tarafından bir kez hesaplanır.
+  select _tenant   = any (select unnest(private.tenants_with(_perm)))
+      or _branch   = any (select unnest(private.branches_with(_perm)))
+      or _resource = any (select unnest(private.resources_with(_perm)));
 $$;
 
 -- -----------------------------------------------------------------------------

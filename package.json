@@ -8,12 +8,11 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "db:link": "supabase link --project-ref $SUPABASE_PROJECT_REF",
-    "db:diff": "supabase db diff -f",
-    "db:push": "supabase db push",
-    "db:seed": "supabase db push --include-seed",
-    "db:advisors": "supabase db advisors --level warn",
-    "db:types": "supabase gen types typescript --linked --schema public > src/lib/supabase/types.ts"
+    "db:push": "supabase db push --db-url $SUPABASE_DB_URL",
+    "db:seed": "supabase db push --include-seed --db-url $SUPABASE_DB_URL",
+    "db:advisors": "supabase db advisors --type security --level warn --db-url $SUPABASE_DB_URL && supabase db advisors --type performance --level warn --db-url $SUPABASE_DB_URL",
+    "db:types": "supabase gen types typescript --schema public --db-url $SUPABASE_DB_URL > src/lib/supabase/types.ts",
+    "rls:test": "node scripts/rls-test.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",

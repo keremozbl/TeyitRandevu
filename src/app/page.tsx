@@ -9,7 +9,8 @@ const SETUP_STEPS = [
   { label: "Sektör şablonları", done: true },
   { label: "Kimlik doğrulama: giriş, kayıt, e-posta bağlantısı", done: true },
   { label: "Kurum kurulum sihirbazı ve panel iskeleti", done: true },
-  { label: "Supabase projesine bağlanma", done: false },
+  { label: "Supabase bağlantısı, şema ve seed uygulandı", done: true },
+  { label: "Canlı RLS doğrulaması — 29 test geçti", done: true },
   { label: "Takvim ızgarası ve randevu oluşturma", done: false },
 ];
 

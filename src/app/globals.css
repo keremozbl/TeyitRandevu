@@ -1,0 +1,194 @@
+@import "tailwindcss";
+
+/* =============================================================================
+   TeyitRandevu tasarım token'ları
+
+   Duruş: bu bir OPERASYON ARACI. Resepsiyonist günde sekiz saat kullanacak,
+   hayran kalmak için değil iş bitirmek için açacak. Öncelik sırası:
+   hız → yoğunluk → netlik → estetik.
+
+   Kaçınılanlar (Plan Bölüm 9): mor-mavi degrade, glassmorphism, her yere büyük
+   radius, emoji bölüm ikonu, Inter'in varsayılan hali, kutudan çıktığı gibi
+   bırakılmış bileşen kütüphanesi.
+   ============================================================================= */
+
+:root {
+  /* --- yüzeyler ------------------------------------------------------------
+     Nötrler hafif sıcak: gün boyu bakılan bir ekranda saf beyaz yorar.
+     "Seçilmiş nötr" — miras alınmış değil. */
+  --bg:         #F7F7F5;
+  --surface:    #FFFFFF;
+  --surface-2:  #F0F1EE;
+  --border:     #DEDFDA;
+  --border-strong: #C6C9C2;
+
+  /* --- metin --- */
+  --ink:        #14191A;
+  --ink-2:      #55605F;
+  --ink-3:      #838C8B;
+
+  /* --- marka aksanı ---------------------------------------------------------
+     Derin teal. Durum renkleri yeşil/amber/kırmızıyı aldığı için aksan onlarla
+     çakışmayan bir tonda olmak zorunda; tıbbi mavi klişesine de düşmüyor. */
+  --accent:      #0E5F6E;
+  --accent-hover:#0B4E5A;
+  --accent-ink:  #FFFFFF;
+  --accent-soft: #DCEDF0;
+
+  /* --- durum renkleri -------------------------------------------------------
+     Aksandan AYRI semantik set. Renk tek başına anlam taşımaz: her duruma bir
+     etiket ve şekil eşlik eder (renk körlüğü + siyah-beyaz çıktı). */
+  --st-confirmed: #1F7A4D;   --st-confirmed-soft: #DCEFE3;
+  --st-pending:   #9A6412;   --st-pending-soft:   #F6E9D2;
+  --st-arrived:   #0E5F6E;   --st-arrived-soft:   #DCEDF0;
+  --st-noshow:    #A63A29;   --st-noshow-soft:    #F6DFDA;
+  --st-cancelled: #6B7472;   --st-cancelled-soft: #E8EAE7;
+
+  --focus: #0E5F6E;
+
+  /* --- ölçüler --------------------------------------------------------------
+     Küçük ve tutarlı radius. Büyük radius operasyon aracını oyuncak gösterir. */
+  --radius:    5px;
+  --radius-sm: 3px;
+  --radius-lg: 8px;
+
+  /* Yoğunluk iki ölçek: takvim ve listeler sıkı, formlar rahat. */
+  --row-h:       28px;   /* yoğun liste satırı */
+  --row-h-relaxed: 40px; /* form satırı */
+  --slot-h:      44px;   /* takvimde 30 dakikalık slot */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:         #0F1416;
+    --surface:    #161D1F;
+    --surface-2:  #1D2528;
+    --border:     #2A3336;
+    --border-strong: #3B4649;
+
+    --ink:        #E6EBEA;
+    --ink-2:      #97A3A2;
+    --ink-3:      #6C7877;
+
+    --accent:      #3FA9BC;
+    --accent-hover:#57BCCD;
+    --accent-ink:  #06282F;
+    --accent-soft: #123239;
+
+    --st-confirmed: #4BAE7C;   --st-confirmed-soft: #14301F;
+    --st-pending:   #D3A054;   --st-pending-soft:   #33260F;
+    --st-arrived:   #3FA9BC;   --st-arrived-soft:   #123239;
+    --st-noshow:    #E08A76;   --st-noshow-soft:    #37201A;
+    --st-cancelled: #7E8886;   --st-cancelled-soft: #21292B;
+
+    --focus: #3FA9BC;
+  }
+}
+
+[data-theme="dark"] {
+  --bg:         #0F1416;
+  --surface:    #161D1F;
+  --surface-2:  #1D2528;
+  --border:     #2A3336;
+  --border-strong: #3B4649;
+
+  --ink:        #E6EBEA;
+  --ink-2:      #97A3A2;
+  --ink-3:      #6C7877;
+
+  --accent:      #3FA9BC;
+  --accent-hover:#57BCCD;
+  --accent-ink:  #06282F;
+  --accent-soft: #123239;
+
+  --st-confirmed: #4BAE7C;   --st-confirmed-soft: #14301F;
+  --st-pending:   #D3A054;   --st-pending-soft:   #33260F;
+  --st-arrived:   #3FA9BC;   --st-arrived-soft:   #123239;
+  --st-noshow:    #E08A76;   --st-noshow-soft:    #37201A;
+  --st-cancelled: #7E8886;   --st-cancelled-soft: #21292B;
+
+  --focus: #3FA9BC;
+}
+
+/* Tailwind'e token'ları tanıt */
+@theme inline {
+  --color-bg:           var(--bg);
+  --color-surface:      var(--surface);
+  --color-surface-2:    var(--surface-2);
+  --color-border:       var(--border);
+  --color-border-strong:var(--border-strong);
+  --color-ink:          var(--ink);
+  --color-ink-2:        var(--ink-2);
+  --color-ink-3:        var(--ink-3);
+  --color-accent:       var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-ink:   var(--accent-ink);
+  --color-accent-soft:  var(--accent-soft);
+
+  --color-st-confirmed:      var(--st-confirmed);
+  --color-st-confirmed-soft: var(--st-confirmed-soft);
+  --color-st-pending:        var(--st-pending);
+  --color-st-pending-soft:   var(--st-pending-soft);
+  --color-st-arrived:        var(--st-arrived);
+  --color-st-arrived-soft:   var(--st-arrived-soft);
+  --color-st-noshow:         var(--st-noshow);
+  --color-st-noshow-soft:    var(--st-noshow-soft);
+  --color-st-cancelled:      var(--st-cancelled);
+  --color-st-cancelled-soft: var(--st-cancelled-soft);
+
+  --radius-DEFAULT: var(--radius);
+  --radius-sm:      var(--radius-sm);
+  --radius-lg:      var(--radius-lg);
+
+  --font-sans: var(--font-ui), system-ui, sans-serif;
+  --font-mono: var(--font-data), ui-monospace, monospace;
+}
+
+/* --- temel ---------------------------------------------------------------- */
+
+* { box-sizing: border-box; }
+
+html {
+  /* Koyu temada tarayıcının kendi kontrollerini de düzeltir:
+     scrollbar, native select, date picker */
+  color-scheme: light dark;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-ui), system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 14px;          /* operasyon aracı: 16px yoğunluğu düşürür */
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  /* çift dokunuş yakınlaştırma gecikmesini kaldırır */
+  touch-action: manipulation;
+}
+
+/* Sayı hizalaması: saat, fiyat, TCKN sütunları kayarsa tablo okunmaz olur */
+table, .tabular, time, [data-numeric] {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Görünür odak halkası — Web Interface Guidelines'ın en sık ihlal edilen kuralı.
+   :focus değil :focus-visible; tıklamada halka çıkmasın. */
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* outline: none yazılacaksa yerine mutlaka bir focus stili gelir */
+:focus:not(:focus-visible) { outline: none; }
+
+h1, h2, h3, h4 { text-wrap: balance; margin: 0; font-weight: 600; }
+p { text-wrap: pretty; margin: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

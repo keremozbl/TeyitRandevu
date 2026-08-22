@@ -1,0 +1,38 @@
+# Supabase yerel geliştirme yapılandırması.
+# project_id, `supabase link` ile bulut projesine bağlandığında güncellenir.
+project_id = "teyitrandevu"
+
+[db]
+major_version = 17
+
+# Declarative schema: şemanın tek kaynağı bu dosyalar. Migration'lar
+# `supabase db diff` ile bunlardan üretilir, elle yazılmaz.
+# Sıra önemli: dosyalar verilen sırayla uygulanır.
+[db.migrations]
+schema_paths = [
+  "./schemas/00_foundation.sql",
+  "./schemas/10_tenants.sql",
+  "./schemas/20_rbac.sql",
+  "./schemas/30_org.sql",
+  "./schemas/35_access.sql",
+  "./schemas/40_customers.sql",
+  "./schemas/50_appointments.sql",
+  "./schemas/90_rls.sql",
+]
+
+[api]
+enabled = true
+schemas = ["public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[auth]
+site_url = "http://127.0.0.1:3000"
+additional_redirect_urls = ["http://127.0.0.1:3000/auth/callback"]
+# Sağlık verisi taşıyan bir sistemde uzun JWT ömrü risktir: kullanıcı
+# silindiğinde mevcut token'lar geçerli kalır (Plan Bölüm 3).
+jwt_expiry = 3600
+enable_signup = true
+
+[auth.email]
+enable_confirmations = true

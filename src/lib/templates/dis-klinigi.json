@@ -1,0 +1,75 @@
+{
+  "key": "dis_klinigi",
+  "family": "saglik",
+  "label": "Diş Kliniği",
+  "description": "Hekim ve ünit bazlı takvim, hasta dosyası, tedavi notu.",
+
+  "terminology": {
+    "customer_singular": "Hasta",
+    "customer_plural": "Hastalar",
+    "service_singular": "Tedavi",
+    "service_plural": "Tedaviler",
+    "resource_singular": "Hekim",
+    "resource_plural": "Hekimler",
+    "appointment_singular": "Randevu",
+    "appointment_plural": "Randevular"
+  },
+
+  "modules": ["tooth_chart", "treatment_plan", "installments"],
+  "roles": ["owner", "admin", "hekim", "asistan", "resepsiyon", "muhasebe"],
+
+  "booking_rules": {
+    "min_lead_minutes": 120,
+    "max_advance_days": 60,
+    "cancel_window_minutes": 240,
+    "hold_minutes": 10
+  },
+
+  "resources": [
+    { "kind": "staff", "name": "Hekim 1", "title": "Dt.", "color": "#0E5F6E" },
+    { "kind": "room", "name": "1 No'lu Ünit", "color": "#6B7472" }
+  ],
+
+  "working_hours": {
+    "weekdays": [1, 2, 3, 4, 5],
+    "starts_at": "09:00",
+    "ends_at": "18:00",
+    "break": { "starts_at": "13:00", "ends_at": "14:00" }
+  },
+
+  "services": [
+    { "name": "Kontrol / Muayene", "duration_min": 20, "buffer_after_min": 5, "category": "Genel" },
+    { "name": "Detartraj (Diş Taşı Temizliği)", "duration_min": 40, "buffer_after_min": 10, "category": "Genel" },
+    { "name": "Dolgu", "duration_min": 45, "buffer_after_min": 10, "category": "Restoratif" },
+    { "name": "Kanal Tedavisi", "duration_min": 90, "buffer_after_min": 15, "category": "Endodonti" },
+    { "name": "Diş Çekimi", "duration_min": 30, "buffer_after_min": 15, "category": "Cerrahi" },
+    { "name": "İmplant", "duration_min": 120, "buffer_before_min": 15, "buffer_after_min": 20, "category": "Cerrahi" },
+    { "name": "Ortodonti Kontrolü", "duration_min": 30, "category": "Ortodonti" },
+    { "name": "Diş Beyazlatma", "duration_min": 60, "buffer_after_min": 10, "category": "Estetik" }
+  ],
+
+  "customer_fields": [
+    { "key": "tckn", "label": "T.C. Kimlik No", "kind": "text", "is_required": false, "is_medical": false },
+    { "key": "kan_grubu", "label": "Kan Grubu", "kind": "select", "is_medical": true,
+      "options": ["0 Rh+", "0 Rh-", "A Rh+", "A Rh-", "B Rh+", "B Rh-", "AB Rh+", "AB Rh-"] },
+    { "key": "kronik_hastalik", "label": "Kronik Hastalık", "kind": "textarea", "is_medical": true },
+    { "key": "ilac_alerjisi", "label": "İlaç Alerjisi", "kind": "textarea", "is_medical": true },
+    { "key": "kullandigi_ilaclar", "label": "Kullandığı İlaçlar", "kind": "textarea", "is_medical": true },
+    { "key": "hamilelik", "label": "Hamilelik / Emzirme", "kind": "boolean", "is_medical": true }
+  ],
+
+  "appointment_fields": [
+    { "key": "dis_no", "label": "Diş No", "kind": "text", "is_medical": true },
+    { "key": "sikayet", "label": "Şikâyet", "kind": "textarea", "is_medical": true }
+  ],
+
+  "notification_defaults": [
+    { "trigger": "appointment_created", "offset_minutes": 0, "channel": "sms", "is_commercial": false },
+    { "trigger": "before_start", "offset_minutes": -1440, "channel": "whatsapp", "is_commercial": false },
+    { "trigger": "before_start", "offset_minutes": -120, "channel": "sms", "is_commercial": false }
+  ],
+
+  "notes": [
+    "Sağlık Bakanlığı tanıtım mevzuatı gereği kampanya ve indirim şablonları bu sektörde sunulmaz (Plan Bölüm 12.3)."
+  ]
+}

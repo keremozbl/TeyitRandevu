@@ -1,0 +1,67 @@
+{
+  "key": "berber",
+  "family": "kisisel_bakim",
+  "label": "Berber / Kuaför",
+  "description": "Usta bazlı takvim, hızlı randevu, paket ve sadakat takibi.",
+
+  "terminology": {
+    "customer_singular": "Müşteri",
+    "customer_plural": "Müşteriler",
+    "service_singular": "Hizmet",
+    "service_plural": "Hizmetler",
+    "resource_singular": "Usta",
+    "resource_plural": "Ustalar",
+    "appointment_singular": "Randevu",
+    "appointment_plural": "Randevular"
+  },
+
+  "modules": ["packages", "loyalty"],
+  "roles": ["owner", "admin", "uygulayici", "resepsiyon", "muhasebe"],
+
+  "booking_rules": {
+    "min_lead_minutes": 30,
+    "max_advance_days": 30,
+    "cancel_window_minutes": 60,
+    "hold_minutes": 10
+  },
+
+  "resources": [
+    { "kind": "staff", "name": "Usta 1", "color": "#0E5F6E" },
+    { "kind": "staff", "name": "Usta 2", "color": "#9A6412" }
+  ],
+
+  "working_hours": {
+    "weekdays": [1, 2, 3, 4, 5, 6],
+    "starts_at": "09:00",
+    "ends_at": "21:00",
+    "break": null
+  },
+
+  "services": [
+    { "name": "Saç Kesimi", "duration_min": 30, "category": "Saç" },
+    { "name": "Sakal Tıraşı", "duration_min": 15, "category": "Sakal" },
+    { "name": "Saç + Sakal", "duration_min": 40, "category": "Saç" },
+    { "name": "Çocuk Saç Kesimi", "duration_min": 20, "category": "Saç" },
+    { "name": "Saç Boyama", "duration_min": 60, "buffer_after_min": 10, "category": "Renk" },
+    { "name": "Yıkama + Fön", "duration_min": 25, "category": "Saç" }
+  ],
+
+  "customer_fields": [
+    { "key": "dogum_gunu", "label": "Doğum Günü", "kind": "date", "is_medical": false },
+    { "key": "tercih_edilen_usta", "label": "Tercih Ettiği Usta", "kind": "text", "is_medical": false },
+    { "key": "sac_notu", "label": "Saç / Renk Notu", "kind": "textarea", "is_medical": false }
+  ],
+
+  "appointment_fields": [],
+
+  "notification_defaults": [
+    { "trigger": "appointment_created", "offset_minutes": 0, "channel": "sms", "is_commercial": false },
+    { "trigger": "before_start", "offset_minutes": -1440, "channel": "whatsapp", "is_commercial": false },
+    { "trigger": "before_start", "offset_minutes": -120, "channel": "sms", "is_commercial": false },
+    { "trigger": "birthday", "offset_minutes": 0, "channel": "sms", "is_commercial": true }
+  ],
+
+  "notes": [
+    "Doğum günü ve kampanya mesajları TİCARİ İLETİ'dir: İYS onayı, ret hakkı ve kayıt zorunludur (Plan Bölüm 12.3)."
+  ]
+}

@@ -11,6 +11,7 @@ const SETUP_STEPS = [
   { label: "Kurum kurulum sihirbazı ve panel iskeleti", done: true },
   { label: "Supabase bağlantısı, şema ve seed uygulandı", done: true },
   { label: "Canlı RLS doğrulaması — 29 test geçti", done: true },
+  { label: "TypeScript tipleri — 26 tablo", done: true },
   { label: "Takvim ızgarası ve randevu oluşturma", done: false },
 ];
 

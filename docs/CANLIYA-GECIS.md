@@ -119,24 +119,32 @@ olan bu.
 
 ## D. Geliştirme altyapısı borcu
 
-### D1. TypeScript tipleri `any`
+### D1. TypeScript tipleri ✅ çözüldü
 
-`src/lib/supabase/types.ts` yer tutucu. `supabase gen types` gölge veritabanı
-için Docker istiyor, bu makinede yok. Sonuç: veritabanı çağrılarında sütun adı
-yazım hataları derleme anında değil çalışma anında ortaya çıkıyor.
+Docker'a gerek kalmadı: `supabase gen types --project-id` doğrudan Management
+API'sine gidiyor. Personal access token ile 26 tablo ve iki RPC tipli üretildi.
 
-Takvim ve randevu kodu bu projenin en karmaşık kısmı olacak; oraya girmeden
-önce Docker Desktop kurulup `npm run db:types` çalıştırılmalı.
+**Tek bakım maddesi:** token 30 gün geçerli, **~21 Eylül 2026'da yenilenmeli**.
+Süresi dolarsa yalnızca `npm run db:types` etkilenir; uygulama, veritabanı ve
+giriş çalışmaya devam eder. Yenileme:
+https://supabase.com/dashboard/account/tokens → `.env` içindeki
+`SUPABASE_ACCESS_TOKEN` güncellenir.
 
 ### D2. Migration'lar elle yazılıyor
 
-`supabase db diff` de Docker istiyor. Şu an `supabase/schemas/*.sql` (kaynak) ve
+`supabase db diff` hâlâ Docker istiyor — tip üretiminin aksine bu gerçekten
+bir gölge veritabanı kuruyor. Şu an `supabase/schemas/*.sql` (kaynak) ve
 `supabase/migrations/*.sql` (uygulanan) elle senkron tutuluyor. **İkisi
 sessizce ayrışabilir** — biri düzeltilip diğeri unutulursa yeni bir ortam
 kurulduğunda farklı bir şema çıkar.
 
-Docker kurulunca `db diff -f <ad>` bu riski tamamen kaldırır. O zamana kadar:
-şema dosyasını değiştiren her commit aynı commit'te migration da içermeli.
+Kalan tek Docker gerekçesi bu ve tüm Supabase yığınını değil yalnızca bir
+Postgres container'ı kaldırıyor; ileride kurulursa hafif çalışır. O zamana
+kadar kural: şema dosyasını değiştiren her commit aynı commit'te migration da
+içermeli.
+
+**Ek not:** bu makinede 14,6 GB boş disk ve 7,8 GB RAM var. Docker Desktop
+kurulacaksa önce yer açılmalı.
 
 ### D3. İlk migration birleştirmeyle üretildi
 
@@ -162,7 +170,7 @@ Bilinmesi yeterli.
 ## Sıra önerisi
 
 1. **A1** denetim kaydı yazımıyla birlikte (71 gün, ama denetim kaydı zaten C'de)
-2. **D1 + D2** Docker — takvim koduna girmeden önce
-3. **B2 + B3** SMTP ve auth ayarları — pilot öncesi
-4. **C** KVKK kalemleri — gerçek hasta verisi girmeden önce
-5. **B1 + B4 + A2** anahtar yenileme, yedek, ücretli plan — pilot günü
+2. **B2 + B3** SMTP ve auth ayarları — pilot öncesi
+3. **C** KVKK kalemleri — gerçek hasta verisi girmeden önce
+4. **B1 + B4 + A2** anahtar yenileme, yedek, ücretli plan — pilot günü
+5. **D2** Docker — elle migration yazmak sıkıntı vermeye başlarsa

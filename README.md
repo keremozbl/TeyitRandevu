@@ -35,8 +35,14 @@ npm run db:advisors   # güvenlik + performans denetimi
 npm run rls:test      # canlı kiracı izolasyonu ve çakışma testi
 ```
 
-> `db diff` ve `gen types` gölge veritabanı için Docker ister. Docker yoksa
-> migration'lar `supabase/migrations/` altına elle yazılır.
+Tipleri yenilemek için (şema değiştikçe):
+
+```bash
+npm run db:types      # personal access token gerekir, Docker gerekmez
+```
+
+> `db diff` gölge veritabanı için Docker ister; kurulu değilse migration'lar
+> `supabase/migrations/` altına elle yazılır.
 
 ### Geliştirme
 
@@ -73,5 +79,5 @@ Faz 0 — kurulum. Tamamlananlar:
 - [x] Kimlik doğrulama: giriş, kayıt, e-posta bağlantısı
 - [x] Kurum kurulum sihirbazı ve panel iskeleti
 - [x] Canlı RLS doğrulaması — 29 test, kiracı izolasyonu ve çakışma kısıtı
-- [ ] TypeScript tipleri (Docker gerekiyor)
+- [x] TypeScript tipleri — 26 tablo, iki RPC
 - [ ] Takvim ızgarası ve randevu oluşturma

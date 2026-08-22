@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import { TENANT_COOKIE } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
+import type { Json } from "@/lib/supabase/types";
 import { getTemplate } from "@/lib/templates";
 import { isValidSlug } from "@/lib/utils/slug";
 
@@ -75,7 +76,9 @@ export async function createTenantAction(
     _family: template.family,
     _business_type: template.key,
     _timezone: "Europe/Istanbul",
-    _payload: payload,
+    // payload yukarıda tam tipli kuruldu; `Json` index signature istediği için
+    // yalnızca sınırda dönüştürülüyor. İçerik zaten bir JSON dosyasından geliyor.
+    _payload: payload as unknown as Json,
   });
 
   if (error) {
@@ -88,7 +91,7 @@ export async function createTenantAction(
     return { error: `Kurum oluşturulamadı: ${error.message}` };
   }
 
-  if (typeof data === "string") {
+  if (data) {
     (await cookies()).set(TENANT_COOKIE, data, {
       httpOnly: true,
       sameSite: "lax",

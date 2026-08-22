@@ -1,12 +1,16 @@
+import Link from "next/link";
+
 import { FAMILY_LABELS, listTemplates, type BusinessFamily } from "@/lib/templates";
 
 const SETUP_STEPS = [
   { label: "Next.js iskeleti, tasarım token'ları", done: true },
-  { label: "Declarative şema — 8 dosya, RLS politikaları dahil", done: true },
+  { label: "Declarative şema — 9 dosya, RLS politikaları dahil", done: true },
   { label: "Yetki motoru: izin kataloğu ve rol şablonları", done: true },
   { label: "Sektör şablonları", done: true },
+  { label: "Kimlik doğrulama: giriş, kayıt, e-posta bağlantısı", done: true },
+  { label: "Kurum kurulum sihirbazı ve panel iskeleti", done: true },
   { label: "Supabase projesine bağlanma", done: false },
-  { label: "Kimlik doğrulama ve kurum kurulum sihirbazı", done: false },
+  { label: "Takvim ızgarası ve randevu oluşturma", done: false },
 ];
 
 export default function Home() {
@@ -24,6 +28,20 @@ export default function Home() {
           Klinik ve işletmeler için randevu, hasta takibi ve otomatik hatırlatma
           sistemi. Bu sayfa geçici bir kurulum ekranıdır.
         </p>
+        <div className="mt-1 flex gap-3 text-[13px]">
+          <Link
+            href="/giris"
+            className="inline-flex h-9 items-center rounded border border-accent bg-accent px-3.5 font-medium text-accent-ink no-underline"
+          >
+            Giriş Yap
+          </Link>
+          <Link
+            href="/kayit"
+            className="inline-flex h-9 items-center rounded border border-border bg-surface px-3.5 font-medium text-ink no-underline"
+          >
+            Kurum Hesabı Oluştur
+          </Link>
+        </div>
       </header>
 
       <section className="flex flex-col gap-4">

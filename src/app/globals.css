@@ -152,6 +152,8 @@ html {
   /* Koyu temada tarayıcının kendi kontrollerini de düzeltir:
      scrollbar, native select, date picker */
   color-scheme: light dark;
+  /* Yapışkan başlık, odaklanan ya da kancayla gelinen öğeyi örtmesin */
+  scroll-padding-top: 5.5rem;
 }
 
 body {

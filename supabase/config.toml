@@ -17,6 +17,7 @@ schema_paths = [
   "./schemas/35_access.sql",
   "./schemas/40_customers.sql",
   "./schemas/50_appointments.sql",
+  "./schemas/60_onboarding.sql",
   "./schemas/90_rls.sql",
 ]
 

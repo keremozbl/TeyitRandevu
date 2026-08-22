@@ -16,6 +16,11 @@ const tpl = JSON.parse(readFileSync("src/lib/templates/dis-klinigi.json", "utf8"
 let pass = 0, fail = 0;
 const ok = (m) => { pass++; console.log("  ✓", m); };
 const no = (m, d) => { fail++; console.log("  ✗", m, d ? `\n      → ${d}` : ""); };
+/** Tek satırlık iddia: koşul doğruysa ok, değilse no. */
+function check(cond, okMsg, failMsg, detail) {
+  if (cond) ok(okMsg);
+  else no(failMsg ?? okMsg, detail);
+}
 
 const stamp = Date.now();
 const users = [
@@ -46,18 +51,17 @@ try {
   for (const t of ["tenants", "customers", "appointments", "services", "memberships"]) {
     const { data, error } = await a.client.from(t).select("*");
     if (error) no(`${t} okunamadı`, error.message);
-    else if (data.length === 0) ok(`${t}: 0 satır`);
-    else no(`${t}: ${data.length} satır sızdı`);
+    else check(data.length === 0, `${t}: 0 satır`, `${t}: ${data.length} satır SIZDI`);
   }
 
   console.log("\n[3] Global kataloglar okunabilmeli");
   const { data: perms } = await a.client.from("permissions").select("key");
-  perms?.length === 21 ? ok(`permissions: ${perms.length} satır`) : no(`permissions: ${perms?.length}`);
+  check(perms?.length === 21, `permissions: ${perms?.length} satır`, `permissions: ${perms?.length} (beklenen 21)`);
 
   console.log("\n[4] tenants tablosuna doğrudan INSERT engellenmeli");
   const { error: insErr } = await a.client.from("tenants")
     .insert({ name: "Korsan", slug: `korsan-${stamp}`, family: "saglik", business_type: "x" });
-  insErr ? ok(`reddedildi: ${insErr.code}`) : no("doğrudan INSERT geçti");
+  check(Boolean(insErr), `reddedildi: ${insErr?.code}`, "doğrudan INSERT GEÇTİ");
 
   console.log("\n[5] Kurulum RPC'si");
   const payload = {
@@ -84,16 +88,16 @@ try {
   ];
   for (const [table, expected] of checks) {
     const { data } = await a.client.from(table).select("id");
-    data?.length === expected ? ok(`${table}: ${data.length}`) : no(`${table}: ${data?.length} (beklenen ${expected})`);
+    check(data?.length === expected, `${table}: ${data?.length}`, `${table}: ${data?.length} (beklenen ${expected})`);
   }
   // öğle arası günü ikiye böler: 5 gün × 2 aralık × 1 personel kaynağı
   const { data: wh } = await a.client.from("working_hours").select("id");
-  wh?.length === 10 ? ok(`working_hours: 10 (öğle arası günü ikiye bölmüş)`) : no(`working_hours: ${wh?.length}`);
+  check(wh?.length === 10, "working_hours: 10 (öğle arası günü ikiye bölmüş)", `working_hours: ${wh?.length} (beklenen 10)`);
 
   console.log("\n[7] İKİNCİ KULLANICI HİÇBİR ŞEY GÖRMEMELİ  ← asıl test");
   for (const t of ["tenants", "services", "resources", "roles", "branches", "field_definitions", "working_hours"]) {
     const { data } = await b.client.from(t).select("id");
-    data?.length === 0 ? ok(`${t}: 0 satır`) : no(`${t}: ${data?.length} satır SIZDI`);
+    check(data?.length === 0, `${t}: 0 satır`, `${t}: ${data?.length} satır SIZDI`);
   }
 
   console.log("\n[8] Çakışma kısıtı — çift rezervasyon");
@@ -104,7 +108,7 @@ try {
   const { data: cust, error: cErr } = await a.client.from("customers")
     .insert({ tenant_id: tenantId, branch_id: r.branch_id, full_name: "Test Hasta", phone: "+905551112233" })
     .select().single();
-  cErr ? no("hasta oluşturulamadı", cErr.message) : ok("hasta oluşturuldu");
+  check(!cErr, "hasta oluşturuldu", "hasta oluşturulamadı", cErr?.message);
 
   const base = { tenant_id: tenantId, branch_id: r.branch_id, resource_id: r.id,
                  customer_id: cust?.id, service_id: s.id, status: "confirmed" };
@@ -113,33 +117,33 @@ try {
 
   const { error: a1 } = await a.client.from("appointments")
     .insert({ ...base, starts_at: t1.toISOString(), ends_at: t2.toISOString() });
-  a1 ? no("ilk randevu eklenemedi", a1.message) : ok("ilk randevu eklendi");
+  check(!a1, "ilk randevu eklendi", "ilk randevu eklenemedi", a1?.message);
 
   // Aynı kaynak, kesişen aralık → veritabanı reddetmeli
   const o1 = new Date(t1.getTime() + 10 * 60000);
   const o2 = new Date(o1.getTime() + s.duration_min * 60000);
   const { error: a2 } = await a.client.from("appointments")
     .insert({ ...base, starts_at: o1.toISOString(), ends_at: o2.toISOString() });
-  a2 ? ok(`çakışan randevu REDDEDİLDİ (${a2.code})`) : no("ÇAKIŞAN RANDEVU KABUL EDİLDİ");
+  check(Boolean(a2), `çakışan randevu REDDEDİLDİ (${a2?.code})`, "ÇAKIŞAN RANDEVU KABUL EDİLDİ");
 
   // İptal edilmiş randevu yer kaplamamalı
   await a.client.from("appointments").update({ status: "cancelled" })
     .eq("resource_id", r.id).eq("starts_at", t1.toISOString());
   const { error: a3 } = await a.client.from("appointments")
     .insert({ ...base, starts_at: t1.toISOString(), ends_at: t2.toISOString() });
-  a3 ? no("iptal sonrası slot hâlâ dolu", a3.message) : ok("iptal edilen randevu yer kaplamıyor");
+  check(!a3, "iptal edilen randevu yer kaplamıyor", "iptal sonrası slot hâlâ dolu", a3?.message);
 
   console.log("\n[9] Tıbbi not ayrı izin");
   const { error: mnErr } = await a.client.from("customer_medical_notes")
     .insert({ tenant_id: tenantId, customer_id: cust.id, resource_id: r.id, branch_id: r.branch_id, body: "test" });
   // owner 'tenant' kapsamında yazma iznine sahip
-  mnErr ? no("owner tıbbi not yazamadı", mnErr.message) : ok("owner tıbbi not yazabiliyor");
+  check(!mnErr, "owner tıbbi not yazabiliyor", "owner tıbbi not yazamadı", mnErr?.message);
   const { data: mnB } = await b.client.from("customer_medical_notes").select("id");
-  mnB?.length === 0 ? ok("yabancı kullanıcı tıbbi notu göremiyor") : no(`sızdı: ${mnB?.length}`);
+  check(mnB?.length === 0, "yabancı kullanıcı tıbbi notu göremiyor", `SIZDI: ${mnB?.length}`);
 
   console.log("\n[10] Yetki fonksiyonları dışarıdan çağrılamamalı");
   const { error: fnErr } = await a.client.rpc("allows", { _perm: "appointment.read", _tenant: tenantId });
-  fnErr ? ok("private.allows RPC ile çağrılamıyor") : no("private fonksiyon dışarıdan çağrılabildi");
+  check(Boolean(fnErr), "private.allows RPC ile çağrılamıyor", "private fonksiyon DIŞARIDAN ÇAĞRILABİLDİ");
 
 } catch (e) {
   no("BEKLENMEYEN HATA", e.message);

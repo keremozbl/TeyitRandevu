@@ -5,6 +5,7 @@ Klinik ve işletmeler için randevu, hasta takibi ve otomatik hatırlatma sistem
 altyapısını kurar.
 
 Plan ve mimari kararlar: [`docs/PLAN.md`](docs/PLAN.md)
+Canlıya geçiş kontrol listesi: [`docs/CANLIYA-GECIS.md`](docs/CANLIYA-GECIS.md)
 Geliştirme kuralları: [`CLAUDE.md`](CLAUDE.md)
 
 ## Kurulum

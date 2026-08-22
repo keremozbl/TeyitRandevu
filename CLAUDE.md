@@ -4,6 +4,10 @@
 sektörden bağımsız. Tam plan: `docs/PLAN.md` — mimari kararların gerekçeleri
 orada, burada yalnızca uygulama kuralları var.
 
+**Bilinçli borçlar `docs/CANLIYA-GECIS.md` içinde.** Test ortamında çalışan ama
+canlıda değiştirilmesi gereken bir şey fark edersen oraya ekle; sessizce
+düzeltme, çünkü çoğu bilerek böyle.
+
 ## Yığın
 
 Next.js 16 (App Router) · React 19 · Tailwind 4 · Supabase (Postgres + Auth +

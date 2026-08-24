@@ -10,6 +10,7 @@
  */
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 
 function loadEnv(file = ".env") {
   if (!existsSync(file)) return;
@@ -31,16 +32,24 @@ function need(value, name, hint) {
   process.exit(1);
 }
 
-// shell:true + argüman dizisi Node'da uyarı üretir (argümanlar kaçırılmaz,
-// yalnızca birleştirilir). Windows'ta npx bir .cmd olduğu için adı orada
-// açıkça verilip shell kapatılıyor.
-const NPX = process.platform === "win32" ? "npx.cmd" : "npx";
+// CLI, npx üzerinden DEĞİL doğrudan çalıştırılıyor. Sebep: Windows'ta npx bir
+// .cmd dosyası ve Node 20.12+ sürümleri shell olmadan .cmd spawn'ını EINVAL ile
+// reddediyor (CVE-2024-27980 yaması) — komut sessizce hiç çalışmıyordu.
+// supabase paketi zaten bir JS dosyası; onu bu Node ile çalıştırmak shell'e de
+// platform ayrımına da gerek bırakmıyor.
+const CLI = createRequire(import.meta.url).resolve("supabase/dist/supabase.js");
 
 function run(args, opts = {}) {
-  const r = spawnSync(NPX, ["supabase", ...args], {
+  const r = spawnSync(process.execPath, [CLI, ...args], {
     stdio: opts.capture ? ["inherit", "pipe", "inherit"] : "inherit",
     encoding: "utf8",
   });
+  if (r.error) {
+    console.error(`
+Supabase CLI çalıştırılamadı: ${r.error.message}
+`);
+    process.exit(1);
+  }
   if (r.status !== 0) process.exit(r.status ?? 1);
   return r.stdout;
 }

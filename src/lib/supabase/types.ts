@@ -1306,6 +1306,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_appointment: {
+        Args: {
+          _branch_id: string
+          _customer_id?: string
+          _customer_name?: string
+          _customer_phone?: string
+          _duration_min: number
+          _notes?: string
+          _resource_id: string
+          _service_id?: string
+          _starts_at: string
+          _status: Database["public"]["Enums"]["appointment_status"]
+          _tenant_id: string
+        }
+        Returns: string
+      }
       create_tenant_from_template: {
         Args: {
           _business_type: string

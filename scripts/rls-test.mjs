@@ -133,7 +133,61 @@ try {
     .insert({ ...base, starts_at: t1.toISOString(), ends_at: t2.toISOString() });
   check(!a3, "iptal edilen randevu yer kaplamıyor", "iptal sonrası slot hâlâ dolu", a3?.message);
 
-  console.log("\n[9] Tıbbi not ayrı izin");
+  console.log("\n[9] Randevu oluşturma RPC'si — randevu ve hasta TEK işlemde");
+  const rpcStart = new Date(Date.now() + 3 * 86400000);
+  rpcStart.setUTCHours(6, 0, 0, 0);
+  const rpcPhone = "+905559998877";
+  const orphanPhone = "+905559990000";
+
+  const rpcArgs = {
+    _tenant_id: tenantId, _branch_id: r.branch_id, _resource_id: r.id,
+    _starts_at: rpcStart.toISOString(), _duration_min: 30, _status: "confirmed",
+    _service_id: s.id,
+  };
+
+  const { data: newId, error: rpc1 } = await a.client.rpc("create_appointment", {
+    ...rpcArgs, _customer_name: "RPC Hasta", _customer_phone: rpcPhone,
+  });
+  check(!rpc1 && Boolean(newId), "randevu ve yeni hasta oluşturuldu", "RPC başarısız", rpc1?.message);
+
+  const { data: firstCust } = await a.client.from("customers").select("id").eq("phone", rpcPhone);
+  check(firstCust?.length === 1, "hasta bir kez kaydedildi", `hasta ${firstCust?.length} kez kaydedildi`);
+
+  // Aynı telefonla ikinci randevu: ikinci bir hasta kaydı AÇILMAMALI
+  const later = new Date(rpcStart.getTime() + 3600000);
+  const { error: rpc2 } = await a.client.rpc("create_appointment", {
+    ...rpcArgs, _starts_at: later.toISOString(),
+    _customer_name: "RPC Hasta (tekrar)", _customer_phone: rpcPhone,
+  });
+  const { data: afterSecond } = await a.client.from("customers").select("id").eq("phone", rpcPhone);
+  check(!rpc2 && afterSecond?.length === 1, "aynı telefon ikinci kayıt açmıyor",
+    `telefon tekrarında ${afterSecond?.length} kayıt`, rpc2?.message);
+
+  // ASIL İDDİA: çakışma hatası hasta kaydını da geri almalı
+  const { error: rpc3 } = await a.client.rpc("create_appointment", {
+    ...rpcArgs, _customer_name: "Öksüz Kalmamalı", _customer_phone: orphanPhone,
+  });
+  check(rpc3?.code === "23P01", `çakışan randevu REDDEDİLDİ (${rpc3?.code})`,
+    "ÇAKIŞAN RANDEVU KABUL EDİLDİ", rpc3?.message);
+  const { data: orphan } = await a.client.from("customers").select("id").eq("phone", orphanPhone);
+  check(orphan?.length === 0, "çakışmada hasta kaydı da geri alındı",
+    `ÖKSÜZ HASTA KAYDI KALDI: ${orphan?.length}`);
+
+  // Kaynak ile şube uyuşmuyorsa reddedilmeli
+  const { error: rpc4 } = await a.client.rpc("create_appointment", {
+    ...rpcArgs, _branch_id: crypto.randomUUID(),
+    _starts_at: new Date(rpcStart.getTime() + 7200000).toISOString(),
+  });
+  check(Boolean(rpc4), "kaynak-şube uyuşmazlığı reddedildi", "UYUŞMAYAN ŞUBE KABUL EDİLDİ");
+
+  // Yabancı kullanıcı bu kuruma randevu yazamamalı
+  const { error: rpc5 } = await b.client.rpc("create_appointment", {
+    ...rpcArgs, _starts_at: new Date(rpcStart.getTime() + 10800000).toISOString(),
+    _customer_name: "Korsan",
+  });
+  check(Boolean(rpc5), "yabancı kullanıcı RPC ile randevu yazamıyor", "YABANCI KULLANICI RANDEVU YAZDI");
+
+  console.log("\n[10] Tıbbi not ayrı izin");
   const { error: mnErr } = await a.client.from("customer_medical_notes")
     .insert({ tenant_id: tenantId, customer_id: cust.id, resource_id: r.id, branch_id: r.branch_id, body: "test" });
   // owner 'tenant' kapsamında yazma iznine sahip
@@ -141,7 +195,7 @@ try {
   const { data: mnB } = await b.client.from("customer_medical_notes").select("id");
   check(mnB?.length === 0, "yabancı kullanıcı tıbbi notu göremiyor", `SIZDI: ${mnB?.length}`);
 
-  console.log("\n[10] Yetki fonksiyonları dışarıdan çağrılamamalı");
+  console.log("\n[11] Yetki fonksiyonları dışarıdan çağrılamamalı");
   const { error: fnErr } = await a.client.rpc("allows", { _perm: "appointment.read", _tenant: tenantId });
   check(Boolean(fnErr), "private.allows RPC ile çağrılamıyor", "private fonksiyon DIŞARIDAN ÇAĞRILABİLDİ");
 

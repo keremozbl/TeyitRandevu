@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import type { Interval } from "@/lib/domain";
 import type { CalendarAppointment, DaySchedule, ResourceDay } from "@/lib/scheduling/queries";
 import { RESOURCE_KIND_LABELS, STATUS_STYLES } from "@/lib/scheduling/status";
@@ -37,11 +39,14 @@ export function DayGrid({
   schedule,
   isToday,
   label,
+  highlightId,
 }: {
   schedule: DaySchedule;
   isToday: boolean;
   /** Okunur gün adı — ızgaranın ekran okuyucudaki adı ham tarih olmasın */
   label: string;
+  /** Az önce oluşturulan randevu; ızgarada halkayla işaretlenir */
+  highlightId?: string;
 }) {
   const { timeZone, dayStartsAt, gridFromMinutes, gridToMinutes, resources } = schedule;
   const totalMinutes = gridToMinutes - gridFromMinutes;
@@ -102,6 +107,9 @@ export function DayGrid({
             bandOf={bandOf}
             offsetOf={offsetOf}
             time={time}
+            date={schedule.date}
+            branchId={schedule.branch?.id ?? null}
+            highlightId={highlightId}
             now={
               isToday ? (
                 <NowLine
@@ -126,6 +134,9 @@ function ResourceColumn({
   bandOf,
   offsetOf,
   time,
+  date,
+  branchId,
+  highlightId,
   now,
 }: {
   day: ResourceDay;
@@ -133,10 +144,23 @@ function ResourceColumn({
   bandOf: (interval: Interval) => { top: number; height: number };
   offsetOf: (instant: Date) => number;
   time: Intl.DateTimeFormat;
+  date: string;
+  branchId: string | null;
+  highlightId?: string;
   now: React.ReactNode;
 }) {
-  const { resource, openWindows, timeOff, appointments } = day;
+  const { resource, freeSlots, openWindows, timeOff, appointments } = day;
   const closedAllDay = openWindows.length === 0;
+
+  const newAppointmentHref = (startsAt: Date) => {
+    const params = new URLSearchParams({
+      tarih: date,
+      saat: time.format(startsAt),
+      kaynak: resource.id,
+    });
+    if (branchId) params.set("sube", branchId);
+    return `/app/randevu/yeni?${params.toString()}`;
+  };
 
   return (
     <div className="flex w-56 shrink-0 grow flex-col border-l border-border">
@@ -197,6 +221,23 @@ function ResourceColumn({
           <p className="absolute inset-x-0 top-3 text-center text-[12px] text-ink-3">Kapalı</p>
         )}
 
+        {freeSlots.map((startsAt) => (
+          <Link
+            key={startsAt.toISOString()}
+            href={newAppointmentHref(startsAt)}
+            aria-label={`${time.format(startsAt)} · ${resource.name} · yeni randevu`}
+            className="group absolute inset-x-0.5 rounded-sm no-underline transition-colors duration-150 hover:bg-accent-soft"
+            style={{ top: offsetOf(startsAt), height: SLOT_HEIGHT - 1 }}
+          >
+            <span
+              aria-hidden="true"
+              className="flex h-full items-center justify-center text-[11px] text-accent opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100"
+            >
+              + randevu
+            </span>
+          </Link>
+        ))}
+
         {appointments.map((appointment) => (
           <AppointmentBlock
             key={appointment.id}
@@ -204,6 +245,7 @@ function ResourceColumn({
             bandOf={bandOf}
             offsetOf={offsetOf}
             time={time}
+            highlighted={appointment.id === highlightId}
           />
         ))}
 
@@ -218,11 +260,13 @@ function AppointmentBlock({
   bandOf,
   offsetOf,
   time,
+  highlighted = false,
 }: {
   appointment: CalendarAppointment;
   bandOf: (interval: Interval) => { top: number; height: number };
   offsetOf: (instant: Date) => number;
   time: Intl.DateTimeFormat;
+  highlighted?: boolean;
 }) {
   const status = STATUS_STYLES[appointment.status];
   const band = bandOf({ start: appointment.startsAt, end: appointment.endsAt });
@@ -248,7 +292,9 @@ function AppointmentBlock({
       )}
 
       <article
-        className={`absolute inset-x-0.5 overflow-hidden rounded-sm border-l-2 px-1.5 py-0.5 ${status.block}`}
+        className={`absolute inset-x-0.5 overflow-hidden rounded-sm border-l-2 px-1.5 py-0.5 ${status.block} ${
+          highlighted ? "outline-2 outline-offset-1 outline-accent" : ""
+        }`}
         style={{ top: band.top, height }}
         title={`${range} · ${who}${appointment.serviceName ? ` · ${appointment.serviceName}` : ""} · ${status.label}`}
       >

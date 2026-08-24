@@ -240,3 +240,27 @@ export function mergeResourceAvailability(
       slots: [...slotsOfDay.values()].sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime()),
     }));
 }
+
+/**
+ * Hedefe en yakın slot. Çakışma hatasını "Bu saat dolu — en yakın uygun saat
+ * 14:30" mesajına çevirmek için: hata yalnız sorunu değil çözümü de söyler.
+ *
+ * Eşit uzaklıkta iki slot varsa önceki seçilir; erken saat resepsiyon için
+ * daha kullanışlı.
+ */
+export function nearestSlot(days: readonly DayAvailability[], target: Date): Slot | null {
+  let best: Slot | null = null;
+  let bestDistance = Infinity;
+
+  for (const day of days) {
+    for (const slot of day.slots) {
+      const distance = Math.abs(slot.startsAt.getTime() - target.getTime());
+      if (distance < bestDistance) {
+        best = slot;
+        bestDistance = distance;
+      }
+    }
+  }
+
+  return best;
+}

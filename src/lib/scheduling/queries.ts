@@ -10,13 +10,18 @@
  */
 
 import {
+  addDays,
+  computeAvailability,
   computeOpenWindows,
+  nearestSlot,
   parseBookingRules,
   utcToPlainDate,
   zonedTimeToUtc,
   type BookingRules,
   type Interval,
   type PlainDate,
+  type ServiceDuration,
+  type Slot,
 } from "@/lib/domain";
 import { createClient } from "@/lib/supabase/server";
 import type { Enums } from "@/lib/supabase/types";
@@ -48,6 +53,8 @@ export type CalendarAppointment = {
 
 export type ResourceDay = {
   resource: CalendarResource;
+  /** Izgarada tıklanabilir boş yarım saatlerin başlangıçları */
+  freeSlots: Date[];
   /** Çalışma saatleri eksi izinler — ızgarada açık zaman */
   openWindows: Interval[];
   /** İzinler ayrıca çizilir: "kapalı" ile "hiç çalışmıyor" farklı şeyler */
@@ -71,6 +78,9 @@ export type DaySchedule = {
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const MINUTE_MS = 60_000;
+
+/** Izgaranın tıklanabilir adımı; --slot-h ile aynı ölçek. */
+const GRID_SLOT_MINUTES = 30;
 
 /** Izgara hiç veri yokken de bir yere oturmalı. */
 const FALLBACK_FROM_MINUTES = 8 * 60;
@@ -257,8 +267,21 @@ export async function loadDaySchedule({
 
   const resourceDays: ResourceDay[] = resources.map((resource) => {
     const schedule = schedules.get(resource.id) ?? { workingHours: [], timeOff: [], busy: [] };
+    // Boş slotlar motordan gelir; ızgara kendi çakışma mantığını kurmaz.
+    // Kural verilmiyor: personel minimum ön süreye tabi değil, geçmiş saate de
+    // kayıt açabilir (gelen hastayı sonradan işlemek yaygın).
+    const [availability] = computeAvailability({
+      timeZone,
+      from: date,
+      to: date,
+      schedule,
+      service: { durationMin: GRID_SLOT_MINUTES },
+      stepMinutes: GRID_SLOT_MINUTES,
+    });
+
     return {
       resource,
+      freeSlots: availability.slots.map((slot) => slot.startsAt),
       openWindows: computeOpenWindows(date, timeZone, schedule),
       timeOff: [...(schedule.timeOff ?? [])],
       appointments: appointments.filter((a) => a.resourceId === resource.id),
@@ -266,4 +289,197 @@ export async function loadDaySchedule({
   });
 
   return assemble(resourceDays, rules);
+}
+
+export type ServiceOption = {
+  id: string;
+  name: string;
+  durationMin: number;
+  bufferBeforeMin: number;
+  bufferAfterMin: number;
+};
+
+export type CustomerOption = { id: string; fullName: string; phone: string | null };
+
+export type BookingContext = {
+  branch: BranchSummary;
+  timeZone: string;
+  rules: BookingRules;
+  resources: CalendarResource[];
+  services: ServiceOption[];
+  /** Arama sonucu ya da arama yoksa son eklenen hastalar */
+  customers: CustomerOption[];
+};
+
+/**
+ * PostgREST'in `or` filtresi virgülle ayrılır ve parantezle gruplanır; arama
+ * metnindeki bu karakterler filtreyi bozar. Kullanıcı ne yazarsa yazsın
+ * sorgunun yapısını değiştiremesin diye ayıklanıyorlar.
+ */
+function sanitizeSearch(raw: string): string {
+  return raw.replace(/[,()*%\\"']/g, " ").trim().slice(0, 60);
+}
+
+/** Randevu formunun ihtiyaç duyduğu her şey: kaynaklar, hizmetler, hastalar. */
+export async function loadBookingContext({
+  tenantId,
+  tenantTimeZone,
+  branchId,
+  search,
+}: {
+  tenantId: string;
+  tenantTimeZone: string;
+  branchId?: string;
+  search?: string;
+}): Promise<BookingContext | null> {
+  const supabase = await createClient();
+
+  const { data: branchRows, error: branchError } = await supabase
+    .from("branches")
+    .select("id, name, timezone")
+    .eq("tenant_id", tenantId)
+    .eq("is_active", true)
+    .order("name");
+  if (branchError) throw new Error(`Şubeler okunamadı: ${branchError.message}`);
+
+  const branches: BranchSummary[] = branchRows ?? [];
+  const branch = branches.find((b) => b.id === branchId) ?? branches[0];
+  if (!branch) return null;
+
+  const term = sanitizeSearch(search ?? "");
+  const digits = term.replace(/\D/g, "");
+
+  let customerQuery = supabase
+    .from("customers")
+    .select("id, full_name, phone")
+    .eq("tenant_id", tenantId)
+    .eq("is_active", true);
+
+  if (term) {
+    const filters = [`full_name.ilike.%${term}%`];
+    if (digits.length >= 3) filters.push(`phone.ilike.%${digits}%`);
+    customerQuery = customerQuery.or(filters.join(",")).order("full_name").limit(20);
+  } else {
+    customerQuery = customerQuery.order("created_at", { ascending: false }).limit(8);
+  }
+
+  const [settingsResult, resourceResult, serviceResult, customerResult] = await Promise.all([
+    supabase.from("tenant_settings").select("booking_rules").eq("tenant_id", tenantId).maybeSingle(),
+    supabase
+      .from("resources")
+      .select("id, name, title, color, kind, is_bookable")
+      .eq("branch_id", branch.id)
+      .eq("is_active", true)
+      .eq("is_bookable", true)
+      .order("sort_order")
+      .order("name"),
+    supabase
+      .from("services")
+      .select("id, name, duration_min, buffer_before_min, buffer_after_min")
+      .eq("tenant_id", tenantId)
+      .eq("is_active", true)
+      .order("sort_order")
+      .order("name"),
+    customerQuery,
+  ]);
+
+  for (const [label, result] of [
+    ["Kaynaklar", resourceResult],
+    ["Hizmetler", serviceResult],
+    ["Hastalar", customerResult],
+  ] as const) {
+    if (result.error) throw new Error(`${label} okunamadı: ${result.error.message}`);
+  }
+
+  return {
+    branch,
+    timeZone: resolveTimeZone(branch.timezone, tenantTimeZone),
+    rules: parseBookingRules(settingsResult.data?.booking_rules),
+    resources: (resourceResult.data ?? []).map((row) => ({
+      id: row.id,
+      name: row.name,
+      title: row.title,
+      color: row.color,
+      kind: row.kind,
+      isBookable: row.is_bookable,
+    })),
+    services: (serviceResult.data ?? []).map((row) => ({
+      id: row.id,
+      name: row.name,
+      durationMin: row.duration_min,
+      bufferBeforeMin: row.buffer_before_min,
+      bufferAfterMin: row.buffer_after_min,
+    })),
+    customers: (customerResult.data ?? []).map((row) => ({
+      id: row.id,
+      fullName: row.full_name,
+      phone: row.phone,
+    })),
+  };
+}
+
+/**
+ * Çakışma hatasından sonra önerilecek saat. Aynı günden başlar, o gün hiç yer
+ * yoksa bir hafta ileriye bakar — "yer yok" demek yerine bir tarih vermek
+ * resepsiyonu telefonda bekletmez.
+ */
+export async function findNearestSlot({
+  resourceId,
+  date,
+  timeZone,
+  service,
+  target,
+  stepMinutes,
+}: {
+  resourceId: string;
+  date: PlainDate;
+  timeZone: string;
+  service: ServiceDuration;
+  target: Date;
+  stepMinutes?: number;
+}): Promise<Slot | null> {
+  const supabase = await createClient();
+  const to = addDays(date, 7);
+  const rangeStart = zonedTimeToUtc(date, "00:00", timeZone).toISOString();
+  const rangeEnd = zonedTimeToUtc(addDays(to, 1), "00:00", timeZone).toISOString();
+
+  const [workingHoursResult, timeOffResult, appointmentsResult] = await Promise.all([
+    supabase
+      .from("working_hours")
+      .select("resource_id, weekday, starts_at, ends_at")
+      .eq("resource_id", resourceId),
+    supabase
+      .from("time_off")
+      .select("resource_id, starts_at, ends_at")
+      .eq("resource_id", resourceId)
+      .lt("starts_at", rangeEnd)
+      .gt("ends_at", rangeStart),
+    supabase
+      .from("appointments")
+      .select("resource_id, blocked_from, blocked_to, status")
+      .eq("resource_id", resourceId)
+      .lt("blocked_from", rangeEnd)
+      .gt("blocked_to", rangeStart),
+  ]);
+
+  if (workingHoursResult.error || timeOffResult.error || appointmentsResult.error) return null;
+
+  const schedule = buildResourceSchedules({
+    resourceIds: [resourceId],
+    workingHours: workingHoursResult.data ?? [],
+    timeOff: timeOffResult.data ?? [],
+    appointments: appointmentsResult.data ?? [],
+  }).get(resourceId);
+  if (!schedule) return null;
+
+  const days = computeAvailability({
+    timeZone,
+    from: date,
+    to,
+    schedule,
+    service,
+    stepMinutes,
+  });
+
+  return nearestSlot(days, target);
 }

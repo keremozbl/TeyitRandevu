@@ -18,6 +18,7 @@ import type { BranchSummary } from "@/lib/scheduling/queries";
  */
 export function DayNav({
   date,
+  newHref,
   prevHref,
   nextHref,
   todayHref,
@@ -26,6 +27,7 @@ export function DayNav({
   branchId,
 }: {
   date: string;
+  newHref: string;
   prevHref: string;
   nextHref: string;
   todayHref: string;
@@ -57,6 +59,8 @@ export function DayNav({
         router.push(prevHref);
       } else if (event.key === "ArrowRight") {
         router.push(nextHref);
+      } else if (event.key === "n") {
+        router.push(newHref);
       } else if (event.key === "g") {
         awaitingChord = true;
         clearTimeout(chordTimer);
@@ -76,7 +80,7 @@ export function DayNav({
       window.removeEventListener("keydown", onKeyDown);
       clearTimeout(chordTimer);
     };
-  }, [router, prevHref, nextHref, todayHref]);
+  }, [router, prevHref, nextHref, todayHref, newHref]);
 
   const arrow =
     "inline-flex h-7 w-7 items-center justify-center rounded border border-border bg-surface text-ink-2 no-underline transition-colors duration-150 hover:bg-surface-2 hover:text-ink";
@@ -152,8 +156,15 @@ export function DayNav({
         Tarihi Göster
       </button>
 
+      <Link
+        href={newHref}
+        className="inline-flex h-7 items-center rounded border border-accent bg-accent px-2.5 text-[13px] font-medium text-accent-ink no-underline transition-colors duration-150 hover:bg-accent-hover"
+      >
+        Yeni Randevu
+      </Link>
+
       <p className="ml-auto hidden font-mono text-[11px] text-ink-3 lg:block">
-        ← → gün · g d bugün
+        ← → gün · g d bugün · n yeni randevu
       </p>
     </form>
   );

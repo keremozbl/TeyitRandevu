@@ -13,10 +13,10 @@ export const metadata: Metadata = { title: "Takvim" };
 export default async function TakvimPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tarih?: string; sube?: string }>;
+  searchParams: Promise<{ tarih?: string; sube?: string; vurgu?: string }>;
 }) {
   const { active } = await requireTenant();
-  const { tarih, sube } = await searchParams;
+  const { tarih, sube, vurgu } = await searchParams;
 
   const schedule = await loadDaySchedule({
     tenantId: active.tenant.id,
@@ -69,6 +69,12 @@ export default async function TakvimPage({
       .map((appointment) => ({ appointment, resourceName: day.resource.name })),
   );
 
+  const newAppointmentHref = (() => {
+    const params = new URLSearchParams({ tarih: schedule.date });
+    if (schedule.branch) params.set("sube", schedule.branch.id);
+    return `/app/randevu/yeni?${params.toString()}`;
+  })();
+
   return (
     <div className="flex flex-col gap-4 p-4">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
@@ -82,6 +88,7 @@ export default async function TakvimPage({
       </div>
 
       <DayNav
+        newHref={newAppointmentHref}
         date={schedule.date}
         prevHref={hrefFor(addDays(schedule.date, -1))}
         nextHref={hrefFor(addDays(schedule.date, 1))}
@@ -103,7 +110,12 @@ export default async function TakvimPage({
         />
       ) : (
         <>
-          <DayGrid schedule={gridSchedule} isToday={isToday} label={heading} />
+          <DayGrid
+            schedule={gridSchedule}
+            isToday={isToday}
+            label={heading}
+            highlightId={vurgu}
+          />
           <Legend />
         </>
       )}

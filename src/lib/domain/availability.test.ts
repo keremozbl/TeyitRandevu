@@ -6,6 +6,7 @@ import {
   computeAvailability,
   computeOpenWindows,
   mergeResourceAvailability,
+  nearestSlot,
   type ResourceSchedule,
   type WorkingHour,
 } from "./availability.ts";
@@ -257,4 +258,24 @@ test("aynı saati veren kaynaklar tek slotta birleşir", () => {
       ["11:00", ["hekim-b"]],
     ],
   );
+});
+
+test("en yakın uygun slot hata mesajı için bulunur", () => {
+  const days = computeAvailability({
+    timeZone: IST,
+    from: MONDAY,
+    to: MONDAY,
+    schedule: {
+      workingHours: [{ weekday: 1, startsAt: "09:00", endsAt: "12:00" }],
+      busy: [span(MONDAY, "10:00", "11:00")],
+    },
+    service: { durationMin: 30 },
+    stepMinutes: 30,
+  });
+
+  // 10:15 dolu; en yakın açık saat 11:00 (45 dk sonra), 09:30 ise 45 dk önce
+  assert.equal(clock.format(nearestSlot(days, ist(MONDAY, "10:15"))!.startsAt), "09:30");
+  assert.equal(clock.format(nearestSlot(days, ist(MONDAY, "10:40"))!.startsAt), "11:00");
+  assert.equal(clock.format(nearestSlot(days, ist(MONDAY, "07:00"))!.startsAt), "09:00");
+  assert.equal(nearestSlot([{ date: MONDAY, slots: [] }], ist(MONDAY, "10:00")), null);
 });

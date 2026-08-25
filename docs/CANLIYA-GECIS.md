@@ -30,7 +30,7 @@ $$);
 ### A2. Ücretsiz Supabase projesi 7 gün hareketsizlikte duraklatılıyor
 
 Pilot kliniğe demo yapacağınız gün proje uykuda olabilir. Pilot başlamadan önce
-ücretli plana geçilmeli — aynı zamanda yedekleme için de gerekli (bkz. B4).
+ücretli plana geçilmeli — aynı zamanda yedekleme için de gerekli (bkz. B5).
 
 ### A3. KVKK yurt dışı aktarım evrakı
 
@@ -51,7 +51,20 @@ Settings → API → Rotate, ardından Settings → Database → Reset password.
 Microsoft'un bulutuna senkronlanıyor. Canlı anahtarlar burada durmamalı;
 üretim değerleri yalnızca Vercel'in Environment Variables ekranında olmalı.
 
-### B2. Kendi SMTP'niz bağlanacak
+### B2. Demo hesap ve demo kurum silinecek
+
+Geliştirme sırasında canlı projeye bir demo hesap ve "Demo Diş Kliniği" adında
+bir kurum yazıldı (`npm run demo:seed`). Hesap yönetici API'siyle açıldığı için
+e-posta doğrulaması atlandı ve parolası betikte düz metin duruyor.
+
+```bash
+npm run demo:seed -- --temizle    # kurumu, bağlı tüm kayıtları ve hesabı siler
+```
+
+Pilot kuruma açılmadan önce çalıştırılacak; demo verisi gerçek hasta
+kayıtlarıyla aynı veritabanında durmamalı.
+
+### B3. Kendi SMTP'niz bağlanacak
 
 Supabase'in varsayılan e-posta göndericisi geliştirme içindir: saatte birkaç
 mesajla sınırlı ve teslimat garantisi yok. Doğrulama ve giriş bağlantıları
@@ -61,7 +74,7 @@ Resend/Postmark bağlanacak, SPF + DKIM + DMARC kayıtları yazılacak. E-posta
 şablonları da Türkçeleştirilecek — şu an Supabase'in İngilizce varsayılanları
 gidiyor.
 
-### B3. Auth ayarları canlı projede yapılandırılacak
+### B4. Auth ayarları canlı projede yapılandırılacak
 
 `supabase/config.toml` **yalnızca yerel geliştirmeyi** etkiler; bulut projesi
 kendi ayarlarını kullanır. Şu an bulutta:
@@ -78,19 +91,19 @@ kendi ayarlarını kullanır. Şu an bulutta:
 Sağlık verisi tutan bir sistemde yönetici hesabının tek faktörle korunması
 savunulabilir değil.
 
-### B4. Yedekleme ve PITR
+### B5. Yedekleme ve PITR
 
 Ücretsiz planda anlamlı yedek yok. Hasta verisi girdiğiniz an point-in-time
 recovery şart. Ayrıca geri yükleme bir kez **denenmeli** — denenmemiş yedek
 yedek sayılmaz.
 
-### B5. `rls:test` üretime karşı çalıştırılamamalı
+### B6. `rls:test` üretime karşı çalıştırılamamalı
 
 Betik gerçek kullanıcı ve kurum oluşturup siliyor. Şu an hangi veritabanına
 bağlandığını kontrol etmiyor. Üretim URL'sini görürse kendini durduran bir
 koruma eklenecek.
 
-### B6. Hata mesajları içeriyi sızdırıyor
+### B7. Hata mesajları içeriyi sızdırıyor
 
 `createTenantAction` içinde tanınmayan hatalar `error.message` olarak
 kullanıcıya gösteriliyor; bu Postgres kısıt adlarını ve şema ayrıntılarını
@@ -170,7 +183,8 @@ Bilinmesi yeterli.
 ## Sıra önerisi
 
 1. **A1** denetim kaydı yazımıyla birlikte (71 gün, ama denetim kaydı zaten C'de)
-2. **B2 + B3** SMTP ve auth ayarları — pilot öncesi
-3. **C** KVKK kalemleri — gerçek hasta verisi girmeden önce
-4. **B1 + B4 + A2** anahtar yenileme, yedek, ücretli plan — pilot günü
-5. **D2** Docker — elle migration yazmak sıkıntı vermeye başlarsa
+2. **B3 + B4** SMTP ve auth ayarları — pilot öncesi
+3. **B2** demo hesabın ve demo kurumun silinmesi — gerçek hasta verisi girmeden önce
+4. **C** KVKK kalemleri — gerçek hasta verisi girmeden önce
+5. **B1 + B5 + A2** anahtar yenileme, yedek, ücretli plan — pilot günü
+6. **D2** Docker — elle migration yazmak sıkıntı vermeye başlarsa

@@ -5,10 +5,12 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { requireTenant } from "@/lib/auth/session";
-import { parseBookingRules, utcToPlainDate, zonedTimeToUtc, type Slot } from "@/lib/domain";
+import { parseBookingRules, zonedTimeToUtc } from "@/lib/domain";
 import { findNearestSlot } from "@/lib/scheduling/queries";
 import { createClient } from "@/lib/supabase/server";
 import { toE164 } from "@/lib/utils/phone";
+
+import { calendarHref, conflictMessage } from "./messages";
 
 export type AppointmentFormState = {
   error?: string;
@@ -161,23 +163,5 @@ export async function createAppointmentAction(
 
   revalidatePath("/app");
   // vurgu: yeni kayıt ızgarada işaretlensin — "kaydedildi mi?" sorusu kalmasın
-  redirect(`/app?tarih=${input.date}&sube=${input.branch_id}&vurgu=${appointmentId}`);
-}
-
-/** Hata mesajı sorunu değil çözümü söyler: dolu saat yerine boş saati. */
-function conflictMessage(slot: Slot | null, timeZone: string, requestedDate: string): string {
-  if (!slot) {
-    return "Bu saat dolu. Bu kaynakta önümüzdeki bir hafta içinde uygun saat yok — başka bir kaynak ya da tarih seçin.";
-  }
-
-  const sameDay = utcToPlainDate(slot.startsAt, timeZone) === requestedDate;
-  const formatted = new Intl.DateTimeFormat("tr-TR", {
-    timeZone,
-    hourCycle: "h23",
-    hour: "2-digit",
-    minute: "2-digit",
-    ...(sameDay ? {} : { weekday: "long", day: "numeric", month: "long" }),
-  }).format(slot.startsAt);
-
-  return `Bu saat dolu — en yakın uygun saat ${formatted}.`;
+  redirect(calendarHref({ tarih: input.date, sube: input.branch_id, vurgu: appointmentId }));
 }

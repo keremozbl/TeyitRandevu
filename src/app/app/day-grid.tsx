@@ -245,6 +245,7 @@ function ResourceColumn({
             bandOf={bandOf}
             offsetOf={offsetOf}
             time={time}
+            branchId={branchId}
             highlighted={appointment.id === highlightId}
           />
         ))}
@@ -260,12 +261,14 @@ function AppointmentBlock({
   bandOf,
   offsetOf,
   time,
+  branchId,
   highlighted = false,
 }: {
   appointment: CalendarAppointment;
   bandOf: (interval: Interval) => { top: number; height: number };
   offsetOf: (instant: Date) => number;
   time: Intl.DateTimeFormat;
+  branchId: string | null;
   highlighted?: boolean;
 }) {
   const status = STATUS_STYLES[appointment.status];
@@ -291,8 +294,9 @@ function AppointmentBlock({
         />
       )}
 
-      <article
-        className={`absolute inset-x-0.5 overflow-hidden rounded-sm border-l-2 px-1.5 py-0.5 ${status.block} ${
+      <Link
+        href={`/app/randevu/${appointment.id}${branchId ? `?sube=${branchId}` : ""}`}
+        className={`absolute inset-x-0.5 block overflow-hidden rounded-sm border-l-2 px-1.5 py-0.5 no-underline hover:brightness-95 ${status.block} ${
           highlighted ? "outline-2 outline-offset-1 outline-accent" : ""
         }`}
         style={{ top: band.top, height }}
@@ -314,7 +318,7 @@ function AppointmentBlock({
         {!compact && appointment.serviceName && (
           <p className="truncate text-[11px] text-ink-2">{appointment.serviceName}</p>
         )}
-      </article>
+      </Link>
     </>
   );
 }

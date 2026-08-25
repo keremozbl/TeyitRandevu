@@ -326,11 +326,14 @@ export async function loadBookingContext({
   tenantTimeZone,
   branchId,
   search,
+  withCustomers = true,
 }: {
   tenantId: string;
   tenantTimeZone: string;
   branchId?: string;
   search?: string;
+  /** Düzenleme ekranı hasta seçmiyor; gereksiz yere hasta adı okumayalım. */
+  withCustomers?: boolean;
 }): Promise<BookingContext | null> {
   const supabase = await createClient();
 
@@ -380,7 +383,7 @@ export async function loadBookingContext({
       .eq("is_active", true)
       .order("sort_order")
       .order("name"),
-    customerQuery,
+    withCustomers ? customerQuery : Promise.resolve({ data: [], error: null }),
   ]);
 
   for (const [label, result] of [
@@ -482,4 +485,78 @@ export async function findNearestSlot({
   });
 
   return nearestSlot(days, target);
+}
+
+export type AppointmentDetail = {
+  id: string;
+  tenantId: string;
+  branchId: string;
+  resourceId: string;
+  serviceId: string | null;
+  customerId: string | null;
+  startsAt: Date;
+  endsAt: Date;
+  /** Kurumun zaman dilimindeki gün ve saat — form alanları buradan dolar */
+  date: PlainDate;
+  time: string;
+  durationMin: number;
+  status: Enums<"appointment_status">;
+  notes: string | null;
+  cancelledReason: string | null;
+  customerName: string | null;
+  customerPhone: string | null;
+  serviceName: string | null;
+  resourceName: string;
+  branchName: string;
+  timeZone: string;
+};
+
+/** Tek randevunun düzenleme ekranı için tam hâli. RLS görmeye yetkiyi verir. */
+export async function loadAppointment(
+  id: string,
+  tenantTimeZone: string,
+): Promise<AppointmentDetail | null> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("appointments")
+    .select(
+      "id, tenant_id, branch_id, resource_id, service_id, customer_id, starts_at, ends_at, status, notes, cancelled_reason, customers(full_name, phone), services(name), resources(name, title), branches(name, timezone)",
+    )
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  const timeZone = resolveTimeZone(data.branches?.timezone, tenantTimeZone);
+  const startsAt = toDate(data.starts_at, "starts_at");
+  const endsAt = toDate(data.ends_at, "ends_at");
+
+  return {
+    id: data.id,
+    tenantId: data.tenant_id,
+    branchId: data.branch_id,
+    resourceId: data.resource_id,
+    serviceId: data.service_id,
+    customerId: data.customer_id,
+    startsAt,
+    endsAt,
+    date: utcToPlainDate(startsAt, timeZone),
+    time: new Intl.DateTimeFormat("tr-TR", {
+      timeZone,
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }).format(startsAt),
+    durationMin: Math.round((endsAt.getTime() - startsAt.getTime()) / MINUTE_MS),
+    status: data.status,
+    notes: data.notes,
+    cancelledReason: data.cancelled_reason,
+    customerName: data.customers?.full_name ?? null,
+    customerPhone: data.customers?.phone ?? null,
+    serviceName: data.services?.name ?? null,
+    resourceName: [data.resources?.title, data.resources?.name].filter(Boolean).join(" "),
+    branchName: data.branches?.name ?? "",
+    timeZone,
+  };
 }

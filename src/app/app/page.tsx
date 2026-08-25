@@ -1,5 +1,9 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
+import { Button } from "@/components/ui/button";
+import { Alert } from "@/components/ui/alert";
+import { undoCancelAction } from "@/lib/appointments/edit-actions";
 import { requireTenant } from "@/lib/auth/session";
 import { addDays, utcToPlainDate, zonedTimeToUtc } from "@/lib/domain";
 import { loadDaySchedule, type CalendarAppointment } from "@/lib/scheduling/queries";
@@ -13,10 +17,17 @@ export const metadata: Metadata = { title: "Takvim" };
 export default async function TakvimPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tarih?: string; sube?: string; vurgu?: string }>;
+  searchParams: Promise<{
+    tarih?: string;
+    sube?: string;
+    vurgu?: string;
+    geri?: string;
+    onceki?: string;
+    hata?: string;
+  }>;
 }) {
   const { active } = await requireTenant();
-  const { tarih, sube, vurgu } = await searchParams;
+  const { tarih, sube, vurgu, geri, onceki, hata } = await searchParams;
 
   const schedule = await loadDaySchedule({
     tenantId: active.tenant.id,
@@ -87,6 +98,23 @@ export default async function TakvimPage({
         </p>
       </div>
 
+      {hata && <Alert tone="error">{hata}</Alert>}
+
+      {geri && (
+        <div className="flex flex-wrap items-center gap-3 rounded border-l-2 border-st-cancelled bg-st-cancelled-soft px-3 py-2.5 text-[13px]">
+          <p className="text-ink">Randevu iptal edildi.</p>
+          <form action={undoCancelAction} className="ml-auto">
+            <input type="hidden" name="id" value={geri} />
+            <input type="hidden" name="onceki" value={onceki ?? "confirmed"} />
+            <input type="hidden" name="tarih" value={schedule.date} />
+            {schedule.branch && <input type="hidden" name="sube" value={schedule.branch.id} />}
+            <Button type="submit" size="sm">
+              Geri Al
+            </Button>
+          </form>
+        </div>
+      )}
+
       <DayNav
         newHref={newAppointmentHref}
         date={schedule.date}
@@ -130,6 +158,7 @@ export default async function TakvimPage({
                 appointment={appointment}
                 resourceName={resourceName}
                 time={time}
+                branchId={schedule.branch?.id ?? null}
               />
             ))}
           </ul>
@@ -143,15 +172,20 @@ function DroppedRow({
   appointment,
   resourceName,
   time,
+  branchId,
 }: {
   appointment: CalendarAppointment;
   resourceName: string;
   time: Intl.DateTimeFormat;
+  branchId: string | null;
 }) {
   const status = STATUS_STYLES[appointment.status];
 
   return (
-    <li className="flex min-w-0 items-center gap-3 px-3 py-1.5 text-[13px]">
+    <li className="flex min-w-0 text-[13px]">
+      <Link
+        href={`/app/randevu/${appointment.id}${branchId ? `?sube=${branchId}` : ""}`}
+        className="flex min-w-0 flex-1 items-center gap-3 px-3 py-1.5 no-underline transition-colors duration-150 hover:bg-surface-2">
       <time
         dateTime={appointment.startsAt.toISOString()}
         className="shrink-0 font-mono text-[12px] text-ink-2"
@@ -169,6 +203,7 @@ function DroppedRow({
         <span aria-hidden="true" className={`size-1.5 rounded-full ${status.dot}`} />
         {status.label}
       </span>
+      </Link>
     </li>
   );
 }

@@ -187,7 +187,34 @@ try {
   });
   check(Boolean(rpc5), "yabancı kullanıcı RPC ile randevu yazamıyor", "YABANCI KULLANICI RANDEVU YAZDI");
 
-  console.log("\n[10] Tıbbi not ayrı izin");
+  console.log("\n[10] Durum değişikliğinin yan etkileri veritabanında");
+  const readAppointment = async () => (await a.client.from("appointments")
+    .select("status, cancelled_at, cancelled_by, no_show_at").eq("id", newId).single()).data;
+  const readNoShowCount = async () => (await a.client.from("customers")
+    .select("no_show_count").eq("phone", rpcPhone).single()).data?.no_show_count;
+
+  await a.client.from("appointments").update({ status: "no_show" }).eq("id", newId);
+  const afterNoShow = await readAppointment();
+  check(Boolean(afterNoShow?.no_show_at), "gelmedi damgası atıldı", "no_show_at boş kaldı");
+  check(await readNoShowCount() === 1, "hasta gelmeme sayacı arttı", "sayaç artmadı");
+
+  await a.client.from("appointments").update({ status: "confirmed" }).eq("id", newId);
+  const undoneNoShow = await readAppointment();
+  check(undoneNoShow?.no_show_at === null, "gelmedi geri alınınca damga silindi", "damga kaldı");
+  check(await readNoShowCount() === 0, "sayaç geri alındı", "sayaç düşmedi");
+
+  await a.client.from("appointments")
+    .update({ status: "cancelled", cancelled_reason: "Hasta erteledi" }).eq("id", newId);
+  const afterCancel = await readAppointment();
+  check(Boolean(afterCancel?.cancelled_at), "iptal zamanı damgalandı", "cancelled_at boş kaldı");
+  check(afterCancel?.cancelled_by === a.id, "iptal eden kullanıcı yazıldı", "cancelled_by yanlış");
+
+  await a.client.from("appointments").update({ status: "confirmed" }).eq("id", newId);
+  const afterUndo = await readAppointment();
+  check(afterUndo?.cancelled_at === null && afterUndo?.cancelled_by === null,
+    "iptal geri alınınca iz kalmıyor", "iptal izi kaldı");
+
+  console.log("\n[11] Tıbbi not ayrı izin");
   const { error: mnErr } = await a.client.from("customer_medical_notes")
     .insert({ tenant_id: tenantId, customer_id: cust.id, resource_id: r.id, branch_id: r.branch_id, body: "test" });
   // owner 'tenant' kapsamında yazma iznine sahip
@@ -195,7 +222,7 @@ try {
   const { data: mnB } = await b.client.from("customer_medical_notes").select("id");
   check(mnB?.length === 0, "yabancı kullanıcı tıbbi notu göremiyor", `SIZDI: ${mnB?.length}`);
 
-  console.log("\n[11] Yetki fonksiyonları dışarıdan çağrılamamalı");
+  console.log("\n[12] Yetki fonksiyonları dışarıdan çağrılamamalı");
   const { error: fnErr } = await a.client.rpc("allows", { _perm: "appointment.read", _tenant: tenantId });
   check(Boolean(fnErr), "private.allows RPC ile çağrılamıyor", "private fonksiyon DIŞARIDAN ÇAĞRILABİLDİ");
 

@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { cache } from "react";
 
 import { createClient } from "@/lib/supabase/server";
 
@@ -20,8 +21,11 @@ export type MembershipSummary = {
 /**
  * Oturumu doğrular. getSession() değil getUser() — getSession() cookie'deki
  * token'a olduğu gibi güvenir, getUser() Auth sunucusuna doğrulatır.
+ *
+ * `cache()` istek boyunca hafızada tutar: layout ve sayfa aynı isteği iki kez
+ * sormasın. Her çağrı Auth sunucusuna bir tur demek ve turlar sıraya giriyor.
  */
-export async function requireUser() {
+export const requireUser = cache(async function requireUser() {
   const supabase = await createClient();
   const {
     data: { user },
@@ -29,10 +33,10 @@ export async function requireUser() {
 
   if (!user) redirect("/giris");
   return { supabase, user };
-}
+});
 
 /** Kullanıcının üye olduğu kurumlar. RLS zaten başkasınınkini göstermez. */
-export async function listMemberships(): Promise<MembershipSummary[]> {
+export const listMemberships = cache(async function listMemberships(): Promise<MembershipSummary[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("memberships")
@@ -48,13 +52,13 @@ export async function listMemberships(): Promise<MembershipSummary[]> {
     role_key: row.roles.key,
     tenant: row.tenants,
   }));
-}
+});
 
 /**
  * Aktif kurumu çözer. Hiç üyelik yoksa kurulum sihirbazına yönlendirir —
  * hesabı olup kurumu olmayan kullanıcı boş bir panele düşmemeli.
  */
-export async function requireTenant() {
+export const requireTenant = cache(async function requireTenant() {
   const { user } = await requireUser();
   const memberships = await listMemberships();
 
@@ -65,4 +69,4 @@ export async function requireTenant() {
     memberships.find((m) => m.tenant_id === selected) ?? memberships[0];
 
   return { user, memberships, active };
-}
+});

@@ -111,6 +111,24 @@ dışarı verebilir. Canlıda: kullanıcıya genel mesaj, ayrıntı sunucu günl
 
 ---
 
+### B8. Vercel bölgesi Supabase bölgesiyle aynı olacak
+
+Supabase projesi **eu-central-1** (Frankfurt). Sayfa süresi kod hızından çok
+sunucu ile veritabanı arasındaki tur sayısına bağlı: `/app` beş altı kez sıraya
+giriyor. Bu makinede tur başına ~110 ms ölçüldü, yani üretim derlemesinde bile
+sayfa ~530 ms. Aynı istekler Frankfurt'taki bir fonksiyondan atıldığında tur
+birkaç milisaniyeye iner.
+
+Vercel'de proje ayarından **Function Region → Frankfurt (fra1)** seçilecek.
+Seçilmezse varsayılan bölge Washington olur ve her tur okyanusu geçer.
+
+Ölçüm: `requireTenant()` istek başına `cache()` ile bir kez çalışıyor ve şube,
+ayar, kaynak sorguları aynı anda atılıyor (694 ms → 532 ms). Kalan turlar
+oturum doğrulaması (proxy + sayfa) ve günün verisi; bunları azaltmanın yolu
+`getClaims()` ile JWT'yi yerelde doğrulamak, o da ayrı bir karar.
+
+---
+
 ## C. KVKK — planda söz verilip henüz yapılmayanlar
 
 Bunlar hukuki yükümlülük, "sonra bakarız" kalemi değil. Hepsi Plan Bölüm 12'de
@@ -186,5 +204,6 @@ Bilinmesi yeterli.
 2. **B3 + B4** SMTP ve auth ayarları — pilot öncesi
 3. **B2** demo hesabın ve demo kurumun silinmesi — gerçek hasta verisi girmeden önce
 4. **C** KVKK kalemleri — gerçek hasta verisi girmeden önce
+4b. **B8** Vercel bölgesi — ilk dağıtımda, tek kutucuk
 5. **B1 + B5 + A2** anahtar yenileme, yedek, ücretli plan — pilot günü
 6. **D2** Docker — elle migration yazmak sıkıntı vermeye başlarsa

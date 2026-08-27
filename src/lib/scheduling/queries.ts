@@ -142,69 +142,70 @@ export async function loadDaySchedule({
 }): Promise<DaySchedule> {
   const supabase = await createClient();
 
-  const { data: branchRows, error: branchError } = await supabase
-    .from("branches")
-    .select("id, name, timezone")
-    .eq("tenant_id", tenantId)
-    .eq("is_active", true)
-    .order("name");
-  if (branchError) throw new Error(`Şubeler okunamadı: ${branchError.message}`);
+  // Üçü de birbirinden bağımsız; aynı anda sorulur. Her ek tur, sunucu ile
+  // veritabanı arasındaki gidiş dönüş kadar gecikme demek — sayfanın süresi
+  // sorguların hızından çok kaç kere sıraya girdiğine bağlı.
+  const [branchesResult, settingsResult, resourceResult] = await Promise.all([
+    supabase
+      .from("branches")
+      .select("id, name, timezone")
+      .eq("tenant_id", tenantId)
+      .eq("is_active", true)
+      .order("name"),
+    supabase
+      .from("tenant_settings")
+      .select("booking_rules")
+      .eq("tenant_id", tenantId)
+      .maybeSingle(),
+    // Şube henüz seçilmediği için kurumun tüm kaynakları çekilip burada süzülür:
+    // şubeyi bekleyip ayrı sormak bir tur daha ekliyordu.
+    supabase
+      .from("resources")
+      .select("id, branch_id, name, title, color, kind, is_bookable")
+      .eq("tenant_id", tenantId)
+      .eq("is_active", true)
+      .order("sort_order")
+      .order("name"),
+  ]);
+  if (branchesResult.error) throw new Error(`Şubeler okunamadı: ${branchesResult.error.message}`);
+  if (resourceResult.error) throw new Error(`Kaynaklar okunamadı: ${resourceResult.error.message}`);
 
-  const branches: BranchSummary[] = branchRows ?? [];
+  const branches: BranchSummary[] = branchesResult.data ?? [];
   const branch = branches.find((b) => b.id === branchId) ?? branches[0] ?? null;
   const timeZone = resolveTimeZone(branch?.timezone, tenantTimeZone);
   const date = resolveDate(rawDate, timeZone);
+  const rules = parseBookingRules(settingsResult.data?.booking_rules);
 
   const dayStartsAt = zonedTimeToUtc(date, "00:00", timeZone);
   const dayEndsAt = zonedTimeToUtc(date, "24:00", timeZone);
   const dayLengthMinutes = minutesFrom(dayStartsAt, dayEndsAt);
 
-  const assemble = (resources: ResourceDay[], rules: BookingRules): DaySchedule => ({
+  const assemble = (resourceDays: ResourceDay[]): DaySchedule => ({
     date,
     timeZone,
     branch,
     branches,
     rules,
-    resources,
+    resources: resourceDays,
     dayStartsAt,
-    ...gridBounds(dayStartsAt, dayLengthMinutes, resources),
+    ...gridBounds(dayStartsAt, dayLengthMinutes, resourceDays),
   });
 
-  const settingsQuery = supabase
-    .from("tenant_settings")
-    .select("booking_rules")
-    .eq("tenant_id", tenantId)
-    .maybeSingle();
+  if (!branch) return assemble([]);
 
-  if (!branch) {
-    const { data: settings } = await settingsQuery;
-    return assemble([], parseBookingRules(settings?.booking_rules));
-  }
-
-  const [{ data: settings }, { data: resourceRows, error: resourceError }] = await Promise.all([
-    settingsQuery,
-    supabase
-      .from("resources")
-      .select("id, name, title, color, kind, is_bookable")
-      .eq("branch_id", branch.id)
-      .eq("is_active", true)
-      .order("sort_order")
-      .order("name"),
-  ]);
-  if (resourceError) throw new Error(`Kaynaklar okunamadı: ${resourceError.message}`);
-
-  const rules = parseBookingRules(settings?.booking_rules);
-  const resources: CalendarResource[] = (resourceRows ?? []).map((row) => ({
-    id: row.id,
-    name: row.name,
-    title: row.title,
-    color: row.color,
-    kind: row.kind,
-    isBookable: row.is_bookable,
-  }));
+  const resources: CalendarResource[] = (resourceResult.data ?? [])
+    .filter((row) => row.branch_id === branch.id)
+    .map((row) => ({
+      id: row.id,
+      name: row.name,
+      title: row.title,
+      color: row.color,
+      kind: row.kind,
+      isBookable: row.is_bookable,
+    }));
   const resourceIds = resources.map((r) => r.id);
 
-  if (resourceIds.length === 0) return assemble([], rules);
+  if (resourceIds.length === 0) return assemble([]);
 
   const dayStartIso = dayStartsAt.toISOString();
   const dayEndIso = dayEndsAt.toISOString();
@@ -288,7 +289,7 @@ export async function loadDaySchedule({
     };
   });
 
-  return assemble(resourceDays, rules);
+  return assemble(resourceDays);
 }
 
 export type ServiceOption = {

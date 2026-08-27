@@ -198,6 +198,11 @@ Bilinmesi yeterli.
 | Hasta kartında belge yükleme yok | Storage kovası ve politikaları henüz kurulmadı; kart belgesiz de işe yarıyor | Röntgen/onam formu istendiğinde |
 | Listede "sıradaki randevu" en fazla 300 ileri randevu tarar | Klinik ölçeğinde ileri tarihli randevu bunun altında; aşılırsa bazı satırda saat boş görünür, yanlış görünmez | Randevu hacmi büyüyünce tek sorguluk bir görünüm |
 | Arayüz terminolojisi sabit ("Hasta") | `tenant_settings.terminology` yazılıyor ama okunmuyor; ilk dikey diş kliniği | Berber ya da başka dikey canlıya çıkınca |
+| Kullanıcı daveti yok | Davet e-postası kurumun SMTP'sini istiyor (B3); rol ve izin düzenleme onsuz da çalışıyor | SMTP bağlanınca |
+| Üyelik düzenleme yok: rol değiştirme, şube kapsamı, hekim eşlemesi | Tek kullanıcılı kurumda gereksiz; ikinci kullanıcı olmadan test edilemiyor da | İkinci kullanıcı eklenince — davetle birlikte |
+| Kullanıcı e-postası servis rolüyle çözülüyor | `auth.users` PostgREST'e kapalı ve `profiles` tablosu yok; kimlikler RLS'ten geçmiş üyelik satırlarından geliyor, servis rolü yalnızca id→e-posta çeviriyor | Denetim kaydı ya da "notu kim yazdı" gerektiğinde `profiles` tablosu |
+| Yeni rol oluşturma ve rol silme yok | Şablondan gelen altı rol düzenlenebiliyor; kurum kendi rolünü kurmak isteyene kadar yeterli | Kurum kendi rolünü istediğinde |
+| Kaynak silme yok, pasife alma var | `appointments.resource_id` `restrict`; geçmişi olan kaynak zaten silinemez, silinebilseydi takvim geçmişi eksilirdi | Gerekmez |
 | Hasta kaydı silinemiyor, anonimleştirme de yok | DELETE politikası bilerek yok (KVKK: kayıt silinmez); ama imha talebi akışı da yok — C tablosundaki kalem | Silme talebi geldiğinde |
 | Izgarada sürükleme yalnız fare ve kalemle | Dokunmatikte sürükleme ile kaydırma aynı hareket; düzenleme formu her cihazda çalışıyor | Tablet kullanımı yaygınlaşınca — uzun basıp sürükleme |
 | Sürüklenen randevu ızgaranın dışına taşınamaz | Izgara mesai saatlerinden üretiliyor; mesai dışı randevu zaten istisna | Nöbet/acil kaydı sıkça gerekirse |

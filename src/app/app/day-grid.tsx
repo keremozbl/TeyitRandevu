@@ -1,9 +1,11 @@
 import Link from "next/link";
 
 import type { Interval } from "@/lib/domain";
-import type { CalendarAppointment, DaySchedule, ResourceDay } from "@/lib/scheduling/queries";
-import { RESOURCE_KIND_LABELS, STATUS_STYLES } from "@/lib/scheduling/status";
+import type { DaySchedule, ResourceDay } from "@/lib/scheduling/queries";
+import { RESOURCE_KIND_LABELS } from "@/lib/scheduling/status";
 
+import { AppointmentBlock } from "./appointment-block";
+import { GridSurface } from "./grid-surface";
 import { NowLine } from "./now-line";
 
 /**
@@ -12,11 +14,14 @@ import { NowLine } from "./now-line";
  * Yükseklik `--slot-h` token'ıyla aynı ölçekte: 30 dakika = 44px. Konumlar
  * sunucuda hesaplanmış `Date` değerlerinden çıkar, tarayıcının saat dilimi
  * hiçbir şeyi kaydırmaz.
+ *
+ * Randevu blokları istemci bileşeni (`appointment-block.tsx`): sürüklenirken
+ * ve sunucu onayı beklenirken geçici bir konumda durabilmeleri gerekiyor.
+ * Sütunlar, boş slotlar ve zaman ekseni sunucuda kalır.
  */
 const SLOT_MINUTES = 30;
 const SLOT_HEIGHT = 44; // globals.css → --slot-h
 const PX_PER_MIN = SLOT_HEIGHT / SLOT_MINUTES;
-const MIN_BLOCK_HEIGHT = 16;
 
 /** style özniteliğine 442.99999999999994 yazılmasın. */
 const px = (value: number) => Math.round(value * 100) / 100;
@@ -75,12 +80,14 @@ export function DayGrid({
   for (let minute = gridFromMinutes; minute <= gridToMinutes; minute += 60) hours.push(minute);
 
   return (
-    <div
-      data-arrow-scroll
-      tabIndex={0}
-      role="region"
-      aria-label={`${label} takvimi`}
-      className="max-h-[calc(100dvh-15rem)] min-h-80 overflow-auto overscroll-contain rounded border border-border bg-surface"
+    <GridSurface
+      label={label}
+      timeZone={timeZone}
+      dayStartsAtMs={dayStartsAt.getTime()}
+      pxPerMinute={PX_PER_MIN}
+      gridFromMinutes={gridFromMinutes}
+      gridToMinutes={gridToMinutes}
+      stepMinutes={schedule.rules.slot_step_minutes}
     >
       <div className="flex w-full min-w-max pb-4">
         {/* zaman ekseni */}
@@ -124,7 +131,7 @@ export function DayGrid({
           />
         ))}
       </div>
-    </div>
+    </GridSurface>
   );
 }
 
@@ -183,7 +190,13 @@ function ResourceColumn({
         )}
       </div>
 
-      <div className="relative bg-surface-2" style={{ height: bodyHeight }}>
+      {/* Sürükleme hedefi: bırakılan sütun bu öznitelikten okunur */}
+      <div
+        data-column
+        data-resource-id={resource.id}
+        className="relative bg-surface-2 outline-accent data-[drop=true]:outline-2 data-[drop=true]:-outline-offset-2"
+        style={{ height: bodyHeight }}
+      >
         {openWindows.map((window) => {
           const band = bandOf(window);
           return (
@@ -241,11 +254,22 @@ function ResourceColumn({
         {appointments.map((appointment) => (
           <AppointmentBlock
             key={appointment.id}
-            appointment={appointment}
-            bandOf={bandOf}
-            offsetOf={offsetOf}
-            time={time}
-            branchId={branchId}
+            id={appointment.id}
+            resourceId={appointment.resourceId}
+            startsAtMs={appointment.startsAt.getTime()}
+            durationMinutes={Math.round(
+              (appointment.endsAt.getTime() - appointment.startsAt.getTime()) / 60_000,
+            )}
+            bufferBeforeMin={Math.round(
+              (appointment.startsAt.getTime() - appointment.blockedFrom.getTime()) / 60_000,
+            )}
+            bufferAfterMin={Math.round(
+              (appointment.blockedTo.getTime() - appointment.endsAt.getTime()) / 60_000,
+            )}
+            status={appointment.status}
+            customerName={appointment.customerName ?? "İsimsiz kayıt"}
+            serviceName={appointment.serviceName}
+            href={`/app/randevu/${appointment.id}${branchId ? `?sube=${branchId}` : ""}`}
             highlighted={appointment.id === highlightId}
           />
         ))}
@@ -253,72 +277,5 @@ function ResourceColumn({
         {now}
       </div>
     </div>
-  );
-}
-
-function AppointmentBlock({
-  appointment,
-  bandOf,
-  offsetOf,
-  time,
-  branchId,
-  highlighted = false,
-}: {
-  appointment: CalendarAppointment;
-  bandOf: (interval: Interval) => { top: number; height: number };
-  offsetOf: (instant: Date) => number;
-  time: Intl.DateTimeFormat;
-  branchId: string | null;
-  highlighted?: boolean;
-}) {
-  const status = STATUS_STYLES[appointment.status];
-  const band = bandOf({ start: appointment.startsAt, end: appointment.endsAt });
-  const height = Math.max(band.height, MIN_BLOCK_HEIGHT);
-  const compact = height < 34;
-
-  const buffer = bandOf({ start: appointment.blockedFrom, end: appointment.blockedTo });
-  const hasBuffer =
-    offsetOf(appointment.blockedFrom) < band.top || offsetOf(appointment.blockedTo) > band.top + band.height;
-
-  const range = `${time.format(appointment.startsAt)}–${time.format(appointment.endsAt)}`;
-  const who = appointment.customerName ?? "İsimsiz kayıt";
-
-  return (
-    <>
-      {hasBuffer && (
-        <div
-          aria-hidden="true"
-          className="absolute inset-x-0.5 rounded-sm bg-ink-3/15"
-          style={{ top: buffer.top, height: buffer.height }}
-          title="Tampon süre"
-        />
-      )}
-
-      <Link
-        href={`/app/randevu/${appointment.id}${branchId ? `?sube=${branchId}` : ""}`}
-        className={`absolute inset-x-0.5 block overflow-hidden rounded-sm border-l-2 px-1.5 py-0.5 no-underline hover:brightness-95 ${status.block} ${
-          highlighted ? "outline-2 outline-offset-1 outline-accent" : ""
-        }`}
-        style={{ top: band.top, height }}
-        title={`${range} · ${who}${appointment.serviceName ? ` · ${appointment.serviceName}` : ""} · ${status.label}`}
-      >
-        <div className="flex min-w-0 items-baseline gap-1.5">
-          <time
-            dateTime={appointment.startsAt.toISOString()}
-            className="shrink-0 font-mono text-[11px] text-ink-2"
-          >
-            {time.format(appointment.startsAt)}
-          </time>
-          <span className="min-w-0 truncate text-[12px] font-medium text-ink">{who}</span>
-          <span className="ml-auto shrink-0 font-mono text-[9px] uppercase tracking-wide text-ink-2">
-            {status.short}
-            <span className="sr-only"> — {status.label}</span>
-          </span>
-        </div>
-        {!compact && appointment.serviceName && (
-          <p className="truncate text-[11px] text-ink-2">{appointment.serviceName}</p>
-        )}
-      </Link>
-    </>
   );
 }

@@ -232,6 +232,9 @@ function Legend() {
         <span aria-hidden="true" className="h-2.5 w-4 rounded-sm bg-ink-3/15" />
         Tampon süre
       </li>
+      <li className="ml-auto hidden text-ink-3 lg:block">
+        Randevuyu sürükleyerek taşıyın, alt kenarından süreyi değiştirin
+      </li>
     </ul>
   );
 }

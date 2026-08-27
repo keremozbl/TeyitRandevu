@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { requireTenant } from "@/lib/auth/session";
-import { zonedTimeToUtc } from "@/lib/domain";
+import { utcToPlainDate, zonedTimeToUtc } from "@/lib/domain";
 import { findNearestSlot } from "@/lib/scheduling/queries";
 import { createClient } from "@/lib/supabase/server";
 
@@ -123,6 +123,94 @@ export async function updateAppointmentAction(
 
   revalidatePath("/app");
   redirect(calendarHref({ tarih: input.date, vurgu: input.id }));
+}
+
+const moveSchema = z.object({
+  id: z.uuid(),
+  resource_id: z.uuid(),
+  starts_at: z.iso.datetime(),
+  duration_min: z.number().int().min(5).max(1440),
+});
+
+export type MoveInput = z.input<typeof moveSchema>;
+export type MoveResult = { ok: true } | { ok: false; error: string };
+
+/**
+ * Izgarada sürüklenerek taşınan ya da kenarından uzatılan randevu.
+ *
+ * Formdan farkı: sayfa değişmez. Sonuç bir cümle olarak döner, takvim
+ * kendiliğinde tazelenir (`revalidatePath`) — bu yüzden `redirect` yok.
+ *
+ * Hizmet ve tamponlara dokunulmaz: sürükleme yeri değiştirir, tedaviyi değil.
+ * `blocked_from` / `blocked_to` sütunları veritabanında tamponlardan üretilir,
+ * yani tampon yeni saatle birlikte kendiliğinden kayar.
+ */
+export async function moveAppointmentAction(input: MoveInput): Promise<MoveResult> {
+  const { active } = await requireTenant();
+
+  const parsed = moveSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Randevu taşınamadı: geçersiz istek." };
+  const { id, resource_id, starts_at, duration_min } = parsed.data;
+
+  const supabase = await createClient();
+
+  const { data: current } = await supabase
+    .from("appointments")
+    .select("branch_id, status, buffer_before_min, buffer_after_min, branches(timezone)")
+    .eq("id", id)
+    .maybeSingle();
+  if (!current) return { ok: false, error: "Randevu bulunamadı ya da erişiminiz yok." };
+
+  // Izgarada zaten görünmeyen bir durum sürüklenemez; yine de sunucu kendi
+  // kararını verir, çünkü isteği ızgara atmak zorunda değil.
+  if (current.status === "cancelled" || current.status === "no_show") {
+    return { ok: false, error: "İptal edilmiş ya da gelmemiş randevu taşınmaz." };
+  }
+
+  const { data: resource } = await supabase
+    .from("resources")
+    .select("branch_id")
+    .eq("id", resource_id)
+    .maybeSingle();
+  if (!resource || resource.branch_id !== current.branch_id) {
+    return { ok: false, error: "Randevu başka bir şubenin kaynağına taşınamaz." };
+  }
+
+  const startsAt = new Date(starts_at);
+  const endsAt = new Date(startsAt.getTime() + duration_min * 60_000);
+
+  const { error } = await supabase
+    .from("appointments")
+    .update({
+      resource_id,
+      starts_at: startsAt.toISOString(),
+      ends_at: endsAt.toISOString(),
+    })
+    .eq("id", id);
+
+  if (error) {
+    if (error.code === "23P01") {
+      const timeZone = current.branches?.timezone?.trim() || active.tenant.timezone;
+      const date = utcToPlainDate(startsAt, timeZone);
+      const slot = await findNearestSlot({
+        resourceId: resource_id,
+        date,
+        timeZone,
+        service: {
+          durationMin: duration_min,
+          bufferBeforeMin: current.buffer_before_min,
+          bufferAfterMin: current.buffer_after_min,
+        },
+        target: startsAt,
+      });
+      return { ok: false, error: conflictMessage(slot, timeZone, date) };
+    }
+    if (error.code === "42501") return { ok: false, error: "Bu randevuyu taşıma yetkiniz yok." };
+    return { ok: false, error: `Randevu taşınamadı: ${error.message}` };
+  }
+
+  revalidatePath("/app");
+  return { ok: true };
 }
 
 const statusSchema = z.object({

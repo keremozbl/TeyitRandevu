@@ -195,6 +195,8 @@ Bilinmesi yeterli.
 | `business_type` şablon anahtarına FK'siz | Şablonlar kodda, tablo değil | Şablonlar veritabanına taşınırsa |
 | Tenant değiştirici arayüzü yok | Çoğu kullanıcı tek kurumda | Çok kurumlu kullanıcı çıkınca |
 | `audit_logs` bölümlerinde politika yok | İzin verilmemiş = erişim yok | Gerekmez |
+| Izgarada sürükleme yalnız fare ve kalemle | Dokunmatikte sürükleme ile kaydırma aynı hareket; düzenleme formu her cihazda çalışıyor | Tablet kullanımı yaygınlaşınca — uzun basıp sürükleme |
+| Sürüklenen randevu ızgaranın dışına taşınamaz | Izgara mesai saatlerinden üretiliyor; mesai dışı randevu zaten istisna | Nöbet/acil kaydı sıkça gerekirse |
 
 ---
 

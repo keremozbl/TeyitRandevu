@@ -19,6 +19,7 @@ export function AppointmentForm({
   time,
   resourceId,
   search,
+  preselectCustomerId,
   backHref,
 }: {
   context: BookingContext;
@@ -26,12 +27,20 @@ export function AppointmentForm({
   time: string;
   resourceId: string;
   search: string;
+  /** Hasta kartından gelindiyse o hasta seçili açılır */
+  preselectCustomerId: string;
   backHref: string;
 }) {
   const [state, formAction, pending] = useActionState(createAppointmentAction, EMPTY);
   const [serviceId, setServiceId] = useState("");
   const [duration, setDuration] = useState(30);
-  const [customer, setCustomer] = useState(context.customers.length === 0 ? NEW_CUSTOMER : "");
+  const [customer, setCustomer] = useState(
+    context.customers.some((person) => person.id === preselectCustomerId)
+      ? preselectCustomerId
+      : context.customers.length === 0
+        ? NEW_CUSTOMER
+        : "",
+  );
 
   // Hata dönünce ilk hatalı alana odaklan: kullanıcı formu yukarı aşağı
   // taramak zorunda kalmasın (Web Interface Guidelines).

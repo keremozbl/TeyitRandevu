@@ -20,16 +20,18 @@ export default async function YeniRandevuPage({
     kaynak?: string;
     sube?: string;
     q?: string;
+    hasta?: string;
   }>;
 }) {
   const { active } = await requireTenant();
-  const { tarih, saat, kaynak, sube, q } = await searchParams;
+  const { tarih, saat, kaynak, sube, q, hasta } = await searchParams;
 
   const context = await loadBookingContext({
     tenantId: active.tenant.id,
     tenantTimeZone: active.tenant.timezone,
     branchId: sube,
     search: q,
+    pinnedCustomerId: hasta,
   });
 
   if (!context || context.resources.length === 0) {
@@ -78,6 +80,7 @@ export default async function YeniRandevuPage({
         time={time}
         resourceId={resourceId}
         search={q ?? ""}
+        preselectCustomerId={hasta ?? ""}
         backHref={backHref}
       />
     </div>

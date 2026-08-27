@@ -136,7 +136,7 @@ gerekçeleriyle duruyor.
 
 | Yükümlülük | Durum |
 |---|---|
-| Denetim kaydı: kim hangi hasta kaydını açtı | Tablo var, **yazan kod yok** |
+| Denetim kaydı: kim hangi hasta kaydını açtı | Tablo var, **yazan kod yok** — hasta kartı geldiğinden beri bu boşluk somut: kart açmak da tıbbi not okumak da kayıt düşürmüyor |
 | Tıbbi notların sütun bazlı şifrelenmesi | Yapılmadı |
 | Aydınlatma ve açık rıza akışı | `consents` tablosu var, **arayüz yok** |
 | Saklama ve imha politikası, silme talebi akışı | Yapılmadı |
@@ -195,6 +195,10 @@ Bilinmesi yeterli.
 | `business_type` şablon anahtarına FK'siz | Şablonlar kodda, tablo değil | Şablonlar veritabanına taşınırsa |
 | Tenant değiştirici arayüzü yok | Çoğu kullanıcı tek kurumda | Çok kurumlu kullanıcı çıkınca |
 | `audit_logs` bölümlerinde politika yok | İzin verilmemiş = erişim yok | Gerekmez |
+| Hasta kartında belge yükleme yok | Storage kovası ve politikaları henüz kurulmadı; kart belgesiz de işe yarıyor | Röntgen/onam formu istendiğinde |
+| Listede "sıradaki randevu" en fazla 300 ileri randevu tarar | Klinik ölçeğinde ileri tarihli randevu bunun altında; aşılırsa bazı satırda saat boş görünür, yanlış görünmez | Randevu hacmi büyüyünce tek sorguluk bir görünüm |
+| Arayüz terminolojisi sabit ("Hasta") | `tenant_settings.terminology` yazılıyor ama okunmuyor; ilk dikey diş kliniği | Berber ya da başka dikey canlıya çıkınca |
+| Hasta kaydı silinemiyor, anonimleştirme de yok | DELETE politikası bilerek yok (KVKK: kayıt silinmez); ama imha talebi akışı da yok — C tablosundaki kalem | Silme talebi geldiğinde |
 | Izgarada sürükleme yalnız fare ve kalemle | Dokunmatikte sürükleme ile kaydırma aynı hareket; düzenleme formu her cihazda çalışıyor | Tablet kullanımı yaygınlaşınca — uzun basıp sürükleme |
 | Sürüklenen randevu ızgaranın dışına taşınamaz | Izgara mesai saatlerinden üretiliyor; mesai dışı randevu zaten istisna | Nöbet/acil kaydı sıkça gerekirse |
 

@@ -26,6 +26,7 @@ const stamp = Date.now();
 const users = [
   { email: `rls-test-a-${stamp}@teyit.test`, pw: "TestParola123!" },
   { email: `rls-test-b-${stamp}@teyit.test`, pw: "TestParola123!" },
+  { email: `rls-test-c-${stamp}@teyit.test`, pw: "TestParola123!" },
 ];
 
 async function makeUser(u) {
@@ -39,7 +40,7 @@ async function makeUser(u) {
   return { id: data.user.id, client: c };
 }
 
-let a, b, tenantId;
+let a, b, c, tenantId;
 
 try {
   console.log("\n[1] Test kullanıcıları");
@@ -222,6 +223,35 @@ try {
   const { data: mnB } = await b.client.from("customer_medical_notes").select("id");
   check(mnB?.length === 0, "yabancı kullanıcı tıbbi notu göremiyor", `SIZDI: ${mnB?.length}`);
 
+  // Asıl vaka yabancı değil, AYNI KURUMDAKİ resepsiyon: hastayı görmeli,
+  // tedavi notunu görmemeli. Hasta kartı bu ayrımın üstünde duruyor.
+  console.log();
+  console.log("[11b] Aynı kurumun resepsiyonu tıbbi notu görmemeli");
+  c = await makeUser(users[2]);
+  const { data: recRole } = await admin.from("roles")
+    .select("id").eq("tenant_id", tenantId).eq("key", "resepsiyon").single();
+  const { error: memErr } = await admin.from("memberships")
+    .insert({ user_id: c.id, tenant_id: tenantId, role_id: recRole.id, is_active: true });
+  check(!memErr, "resepsiyon üyeliği açıldı", "üyelik açılamadı", memErr?.message);
+
+  const { data: recCustomers } = await c.client.from("customers").select("id");
+  check(recCustomers?.length > 0, "resepsiyon hastayı görüyor", "resepsiyon hastayı GÖREMİYOR");
+
+  const { data: recNotes } = await c.client.from("customer_medical_notes").select("id");
+  check(recNotes?.length === 0, "resepsiyon tıbbi notu göremiyor", `SIZDI: ${recNotes?.length}`);
+
+  const { error: recWrite } = await c.client.from("customer_medical_notes")
+    .insert({ tenant_id: tenantId, customer_id: cust.id, resource_id: r.id, branch_id: r.branch_id, body: "olmamalı" });
+  check(Boolean(recWrite), `resepsiyon tıbbi not yazamıyor (${recWrite?.code})`, "RESEPSİYON TIBBİ NOT YAZDI");
+
+  // Arayüz bölümü açıp açmayacağını buradan okuyor (izin değil, görünürlük)
+  const { data: recPerms } = await c.client.from("role_permissions")
+    .select("permission_key").eq("role_id", recRole.id);
+  const keys = (recPerms ?? []).map((row) => row.permission_key);
+  check(keys.includes("customer.read"), "resepsiyon izinleri okunabiliyor", "role_permissions okunamadı");
+  check(!keys.includes("customer.medical_notes.read"),
+    "resepsiyon rolünde tıbbi not izni yok", "resepsiyonda tıbbi not izni ÇIKTI");
+
   console.log("\n[12] Yetki fonksiyonları dışarıdan çağrılamamalı");
   const { error: fnErr } = await a.client.rpc("allows", { _perm: "appointment.read", _tenant: tenantId });
   check(Boolean(fnErr), "private.allows RPC ile çağrılamıyor", "private fonksiyon DIŞARIDAN ÇAĞRILABİLDİ");
@@ -234,7 +264,7 @@ try {
     const { error } = await admin.from("tenants").delete().eq("id", tenantId);
     console.log(error ? `  kurum silinemedi: ${error.message}` : "  kurum ve bağlı tüm kayıtlar silindi");
   }
-  for (const u of [a, b]) {
+  for (const u of [a, b, c]) {
     if (u?.id) await admin.auth.admin.deleteUser(u.id);
   }
   console.log("  test kullanıcıları silindi");

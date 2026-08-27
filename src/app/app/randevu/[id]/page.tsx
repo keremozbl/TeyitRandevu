@@ -84,7 +84,16 @@ export default async function RandevuPage({
         </Link>
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
           <h1 className="text-lg tracking-tight">
-            {appointment.customerName ?? "İsimsiz kayıt"}
+            {appointment.customerId ? (
+              <Link
+                href={`/app/hastalar/${appointment.customerId}`}
+                className="text-ink no-underline hover:underline"
+              >
+                {appointment.customerName ?? "İsimsiz kayıt"}
+              </Link>
+            ) : (
+              (appointment.customerName ?? "İsimsiz kayıt")
+            )}
           </h1>
           <span className="flex items-center gap-1.5 text-[13px] text-ink-2">
             <span aria-hidden="true" className={`size-1.5 rounded-full ${status.dot}`} />

@@ -328,6 +328,7 @@ export async function loadBookingContext({
   branchId,
   search,
   withCustomers = true,
+  pinnedCustomerId,
 }: {
   tenantId: string;
   tenantTimeZone: string;
@@ -335,6 +336,8 @@ export async function loadBookingContext({
   search?: string;
   /** Düzenleme ekranı hasta seçmiyor; gereksiz yere hasta adı okumayalım. */
   withCustomers?: boolean;
+  /** Hasta kartından gelindiğinde o hasta listede olmalı, aramaya bağlı kalmasın */
+  pinnedCustomerId?: string;
 }): Promise<BookingContext | null> {
   const supabase = await createClient();
 
@@ -395,6 +398,26 @@ export async function loadBookingContext({
     if (result.error) throw new Error(`${label} okunamadı: ${result.error.message}`);
   }
 
+  const customers = (customerResult.data ?? []).map((row) => ({
+    id: row.id,
+    fullName: row.full_name,
+    phone: row.phone,
+  }));
+
+  // Kartından randevu verilen hasta aramanın ilk yirmisine düşmeyebilir;
+  // düşmezse form onu hiç göstermez ve seçim sessizce kaybolur.
+  if (pinnedCustomerId && !customers.some((person) => person.id === pinnedCustomerId)) {
+    const { data: pinned } = await supabase
+      .from("customers")
+      .select("id, full_name, phone")
+      .eq("tenant_id", tenantId)
+      .eq("id", pinnedCustomerId)
+      .maybeSingle();
+    if (pinned) {
+      customers.unshift({ id: pinned.id, fullName: pinned.full_name, phone: pinned.phone });
+    }
+  }
+
   return {
     branch,
     timeZone: resolveTimeZone(branch.timezone, tenantTimeZone),
@@ -414,11 +437,7 @@ export async function loadBookingContext({
       bufferBeforeMin: row.buffer_before_min,
       bufferAfterMin: row.buffer_after_min,
     })),
-    customers: (customerResult.data ?? []).map((row) => ({
-      id: row.id,
-      fullName: row.full_name,
-      phone: row.phone,
-    })),
+    customers,
   };
 }
 

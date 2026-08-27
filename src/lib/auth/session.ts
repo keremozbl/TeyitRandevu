@@ -8,6 +8,7 @@ export const TENANT_COOKIE = "tr_tenant";
 
 export type MembershipSummary = {
   tenant_id: string;
+  role_id: string;
   role_key: string;
   tenant: {
     id: string;
@@ -41,7 +42,7 @@ export const listMemberships = cache(async function listMemberships(): Promise<M
   const { data, error } = await supabase
     .from("memberships")
     .select(
-      "tenant_id, roles!inner(key), tenants!inner(id, name, slug, business_type, timezone)",
+      "tenant_id, role_id, roles!inner(key), tenants!inner(id, name, slug, business_type, timezone)",
     )
     .eq("is_active", true);
 
@@ -49,6 +50,7 @@ export const listMemberships = cache(async function listMemberships(): Promise<M
 
   return data.map((row) => ({
     tenant_id: row.tenant_id,
+    role_id: row.role_id,
     role_key: row.roles.key,
     tenant: row.tenants,
   }));

@@ -38,7 +38,8 @@ create table public.tenant_settings (
                   'min_lead_minutes', 120,      -- en erken kaç dk sonrasına randevu
                   'max_advance_days', 60,       -- en fazla kaç gün ilerisi
                   'cancel_window_minutes', 240, -- kaç dk kala müşteri iptal edemez
-                  'hold_minutes', 10            -- public sayfada slot tutma süresi
+                  'hold_minutes', 10,           -- public sayfada slot tutma süresi
+                  'slot_step_minutes', 15       -- slot ızgarasının ve sürüklemenin adımı
                 ),
   branding      jsonb not null default '{}'::jsonb,
   updated_at    timestamptz not null default now()

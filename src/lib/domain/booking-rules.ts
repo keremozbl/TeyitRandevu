@@ -5,10 +5,8 @@ import { z } from "zod";
  *
  * jsonb şemasız olduğu için buradaki ayrıştırma savunmacıdır: bozuk ya da eksik
  * bir anahtar yüzünden randevu sayfası çökmez, o anahtar varsayılana düşer.
- * Değerler veritabanındaki `jsonb_build_object` varsayılanıyla aynı.
- *
- * `slot_step_minutes` veritabanı varsayılanında yok; ayar arayüzü yazılınca
- * oraya da eklenecek. O güne kadar kod tarafındaki 15 dakika geçerli.
+ * Değerler veritabanındaki `jsonb_build_object` varsayılanıyla aynı — ikisi
+ * ayrışırsa yeni kurulan kurum kodun varsaydığından farklı davranır.
  */
 
 export const DEFAULT_BOOKING_RULES = {

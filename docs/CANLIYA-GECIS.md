@@ -198,6 +198,8 @@ Bilinmesi yeterli.
 | Hasta kartında belge yükleme yok | Storage kovası ve politikaları henüz kurulmadı; kart belgesiz de işe yarıyor | Röntgen/onam formu istendiğinde |
 | Listede "sıradaki randevu" en fazla 300 ileri randevu tarar | Klinik ölçeğinde ileri tarihli randevu bunun altında; aşılırsa bazı satırda saat boş görünür, yanlış görünmez | Randevu hacmi büyüyünce tek sorguluk bir görünüm |
 | Arayüz terminolojisi sabit ("Hasta") | `tenant_settings.terminology` yazılıyor ama okunmuyor; ilk dikey diş kliniği | Berber ya da başka dikey canlıya çıkınca |
+| Hizmet fiyatı KDV dahil mi hariç mi belirsiz | `price` ve `vat_rate` ayrı tutuluyor ama fatura üretilmediği için ayrım henüz görünmüyor | Ödeme ve fatura modülünde |
+| Şube düzenleme arayüzü yok | Kurulum sihirbazı ilk şubeyi açıyor; tek şubeli kurumda kavram arayüzde hiç görünmüyor | Zincir müşteri geldiğinde |
 | Kullanıcı daveti yok | Davet e-postası kurumun SMTP'sini istiyor (B3); rol ve izin düzenleme onsuz da çalışıyor | SMTP bağlanınca |
 | Üyelik düzenleme yok: rol değiştirme, şube kapsamı, hekim eşlemesi | Tek kullanıcılı kurumda gereksiz; ikinci kullanıcı olmadan test edilemiyor da | İkinci kullanıcı eklenince — davetle birlikte |
 | Kullanıcı e-postası servis rolüyle çözülüyor | `auth.users` PostgREST'e kapalı ve `profiles` tablosu yok; kimlikler RLS'ten geçmiş üyelik satırlarından geliyor, servis rolü yalnızca id→e-posta çeviriyor | Denetim kaydı ya da "notu kim yazdı" gerektiğinde `profiles` tablosu |

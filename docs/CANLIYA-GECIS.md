@@ -4,7 +4,7 @@ Test ortamında sorun çıkarmayan ama canlıda çıkacak şeyler. Her madde bil
 bir borç — hangisi olduğunu ve nasıl kapatılacağını yazıyorum ki sonradan
 "neden böyle yapılmış" diye bakılmasın.
 
-Son güncelleme: 22 Ağustos 2026 · Durum: Faz 1 (kimlik + kurulum tamam)
+Son güncelleme: 28 Ağustos 2026 · Durum: Faz 3 (public randevu sayfası canlı)
 
 ---
 
@@ -36,6 +36,29 @@ Pilot kliniğe demo yapacağınız gün proje uykuda olabilir. Pilot başlamadan
 
 Frankfurt bölgesi seçildi ama standart sözleşme imzalanıp Kurul'a bildirilmedi.
 Gerçek hasta verisi girmeden önce tamamlanmalı — Plan Bölüm 12.2.
+
+### A4. Süresi dolan slot tutmaları `pg_cron` ile süpürülmeli
+
+Public sayfada müşteri formu doldururken slot `pending` + `hold_expires_at` ile
+tutuluyor (Plan 6c). Süre dolduğunda satır ölüyor ama **tablodan düşmüyor**:
+`appointments_no_overlap` kısıtı onu hâlâ dolu sayar.
+
+Şu an temizlik yazma yolunda yapılıyor — `booking_hold` ve `create_appointment`
+o kaynağın ölü tutmalarını yazmadan hemen önce siliyor
+(`private.sweep_expired_holds`). Uygunluk listesi ve panel ızgarası da süresi
+dolmuş tutmaları zaten görmezden geliyor. Yani **görünür bir hata üretmiyor**;
+ama kimse o kaynağa randevu yazmazsa satır tabloda kalmaya devam ediyor.
+
+**Çözüm:** `pg_cron` ile dakikalık bir süpürme. A1'deki bölüm işiyle aynı
+`pg_cron` kurulumuna biniyor, ikisi birlikte yapılabilir.
+
+```sql
+-- taslak
+select cron.schedule('hold-sweep', '* * * * *', $$
+  delete from public.appointments
+   where status = 'pending' and hold_expires_at is not null and hold_expires_at < now();
+$$);
+```
 
 ---
 
@@ -138,7 +161,9 @@ gerekçeleriyle duruyor.
 |---|---|
 | Denetim kaydı: kim hangi hasta kaydını açtı | Tablo var, **yazan kod yok** — hasta kartı geldiğinden beri bu boşluk somut: kart açmak da tıbbi not okumak da kayıt düşürmüyor |
 | Tıbbi notların sütun bazlı şifrelenmesi | Yapılmadı |
-| Aydınlatma ve açık rıza akışı | `consents` tablosu var, **arayüz yok** |
+| Aydınlatma ve açık rıza akışı | ✅ **Yapıldı** — public randevu sayfasında ayrı kutu, ayrı kayıt; metin sürümü, IP, tarayıcı ve kanal `consents` tablosuna yazılıyor. Panelden açılan randevuda hâlâ yok (resepsiyon telefonla randevu alırken rıza kaydı düşmüyor) |
+| Rıza metinlerinin hukukçu onayı | Metinler `src/lib/legal/consent-texts.ts` içinde ve sürümlü (`2026-08-28.1`), ama **avukat görmedi**. Özellikle iki nokta: sağlık verisinin hukuki sebebi (açık rıza mı, KVKK m.6/3 sağlık hizmeti istisnası mı) ve yurt dışı aktarım paragrafının A3 ile tutarlılığı. Metin değişince `CONSENT_VERSION` de değişmeli |
+| Rıza geri alma (`revoked_at`) akışı | Sütun var, arayüz yok — hasta "rızamı geri alıyorum" dediğinde kaydı işaretleyecek bir yer yok |
 | Saklama ve imha politikası, silme talebi akışı | Yapılmadı |
 | Veri ihlali bildirim prosedürü (72 saat) | Yazılmadı |
 | VERBİS kaydı | Yapılmadı |
@@ -195,6 +220,10 @@ Bilinmesi yeterli.
 | `business_type` şablon anahtarına FK'siz | Şablonlar kodda, tablo değil | Şablonlar veritabanına taşınırsa |
 | Tenant değiştirici arayüzü yok | Çoğu kullanıcı tek kurumda | Çok kurumlu kullanıcı çıkınca |
 | `audit_logs` bölümlerinde politika yok | İzin verilmemiş = erişim yok | Gerekmez |
+| Public sayfada hız sınırı kabaca: aynı IP'den en fazla 5 canlı slot tutması, aynı telefondan günde 3 online randevu | Tablo ya da Redis istemeyen, tek sorgulu iki fren; kötüye kullanımın gerçek maliyeti (klinik takviminin doldurulması) bu iki eşikle sınırlanıyor | Gerçek bir kötüye kullanım görülünce ya da CAPTCHA gerekince |
+| Hizmet-kaynak eşlemesi için arayüz yok | Kurulum sihirbazı her hizmeti tüm personel kaynaklarına bağlıyor; **sonradan eklenen hekim hiçbir hizmete bağlı olmuyor ve public sayfada hiç görünmüyor**. Panelden randevu vermek çalışmaya devam ediyor | İkinci hekim eklenip online randevuya açılmak istendiğinde |
+| Online randevu `pending` kalıyor, otomatik onay yok | Kliniğin görmediği randevuyu "onaylı" saymak yanlış olurdu; panelde onay bekleyen olarak görünüyor | Bildirim kanalları gelince: otomatik onay + teyit mesajı birlikte anlamlı |
+| Public sayfada kurum logosu ve rengi kullanılmıyor | `tenant_settings.branding` okunuyor ama çizilmiyor; Storage kovası da yok (logo yüklenecek yer) | Belge yükleme ile aynı işte — Storage kurulduğunda |
 | Hasta kartında belge yükleme yok | Storage kovası ve politikaları henüz kurulmadı; kart belgesiz de işe yarıyor | Röntgen/onam formu istendiğinde |
 | Listede "sıradaki randevu" en fazla 300 ileri randevu tarar | Klinik ölçeğinde ileri tarihli randevu bunun altında; aşılırsa bazı satırda saat boş görünür, yanlış görünmez | Randevu hacmi büyüyünce tek sorguluk bir görünüm |
 | Arayüz terminolojisi sabit ("Hasta") | `tenant_settings.terminology` yazılıyor ama okunmuyor; ilk dikey diş kliniği | Berber ya da başka dikey canlıya çıkınca |
@@ -216,7 +245,7 @@ Bilinmesi yeterli.
 
 ## Sıra önerisi
 
-1. **A1** denetim kaydı yazımıyla birlikte (71 gün, ama denetim kaydı zaten C'de)
+1. **A1 + A4** `pg_cron` kurulumu tek işte: denetim kaydı bölümleri ve ölü slot tutmalarının süpürülmesi
 2. **B3 + B4** SMTP ve auth ayarları — pilot öncesi
 3. **B2** demo hesabın ve demo kurumun silinmesi — gerçek hasta verisi girmeden önce
 4. **C** KVKK kalemleri — gerçek hasta verisi girmeden önce

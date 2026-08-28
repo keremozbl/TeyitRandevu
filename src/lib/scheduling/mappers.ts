@@ -27,8 +27,16 @@ export type TimeOffRow = Pick<Tables<"time_off">, "resource_id" | "starts_at" | 
 
 export type BlockingAppointmentRow = Pick<
   Tables<"appointments">,
-  "resource_id" | "blocked_from" | "blocked_to" | "status"
->;
+  "resource_id" | "blocked_from" | "blocked_to"
+> & {
+  /**
+   * Yoksa satır DOLU kabul edilir. Public randevu sayfası aralıkları
+   * `booking_availability` fonksiyonundan alıyor ve orada iptal/gelmedi zaten
+   * süzülmüş; dışarı durum bilgisi hiç çıkmıyor. Eksik durumun yer kaplaması
+   * güvenli yön: hata hâlinde slot fazladan kapanır, fazladan açılmaz.
+   */
+  status?: Enums<"appointment_status">;
+};
 
 export type ServiceRow = Pick<
   Tables<"services">,
@@ -125,7 +133,7 @@ export function buildResourceSchedules({
     schedules.get(row.resource_id)?.timeOff.push(toInterval(row));
   }
   for (const row of appointments) {
-    if (!blocksTime(row.status)) continue;
+    if (row.status && !blocksTime(row.status)) continue;
     schedules.get(row.resource_id)?.busy.push(toBlockedInterval(row));
   }
 

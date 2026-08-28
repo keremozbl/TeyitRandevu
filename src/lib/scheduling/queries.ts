@@ -49,6 +49,8 @@ export type CalendarAppointment = {
   status: Enums<"appointment_status">;
   customerName: string | null;
   serviceName: string | null;
+  /** Public sayfada doldurulmayı bekleyen slot tutması — henüz randevu değil */
+  isHold: boolean;
 };
 
 export type ResourceDay = {
@@ -226,7 +228,7 @@ export async function loadDaySchedule({
     supabase
       .from("appointments")
       .select(
-        "id, resource_id, starts_at, ends_at, blocked_from, blocked_to, status, customers(full_name), services(name)",
+        "id, resource_id, starts_at, ends_at, blocked_from, blocked_to, status, hold_expires_at, customers(full_name), services(name)",
       )
       .in("resource_id", resourceIds)
       .lt("blocked_from", dayEndIso)
@@ -242,7 +244,13 @@ export async function loadDaySchedule({
     if (result.error) throw new Error(`${label} okunamadı: ${result.error.message}`);
   }
 
-  const appointmentRows = appointmentsResult.data ?? [];
+  // Süresi dolmuş slot tutmaları ızgarada görünmez: onlar ölü satır, bir
+  // sonraki yazmada silinecekler (private.sweep_expired_holds). Görünselerdi
+  // resepsiyon dolu sanıp boş bir saati atlardı.
+  const now = Date.now();
+  const appointmentRows = (appointmentsResult.data ?? []).filter(
+    (row) => !row.hold_expires_at || new Date(row.hold_expires_at).getTime() > now,
+  );
 
   const schedules = buildResourceSchedules({
     resourceIds,
@@ -263,6 +271,7 @@ export async function loadDaySchedule({
       status: row.status,
       customerName: row.customers?.full_name ?? null,
       serviceName: row.services?.name ?? null,
+      isHold: row.hold_expires_at !== null,
     };
   });
 

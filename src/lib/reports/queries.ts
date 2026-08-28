@@ -61,7 +61,7 @@ export async function loadProgram({
     supabase
       .from("appointments")
       .select(
-        "id, resource_id, starts_at, ends_at, status, notes, customers(full_name, phone), services(name, price)",
+        "id, resource_id, starts_at, ends_at, status, notes, hold_expires_at, customers(full_name, phone), services(name, price)",
       )
       .eq("branch_id", branch.id)
       .gte("starts_at", dayStart.toISOString())
@@ -82,6 +82,11 @@ export async function loadProgram({
   let noShowCount = 0;
 
   for (const row of rows) {
+    // Public sayfada doldurulmayı bekleyen slot tutması henüz randevu değil:
+    // adı yok, on dakika sonra ya randevu olacak ya da düşecek. Kâğıda basılan
+    // programda yeri yok.
+    if (row.hold_expires_at !== null) continue;
+
     if (row.status === "cancelled") {
       cancelledCount += 1;
       continue;

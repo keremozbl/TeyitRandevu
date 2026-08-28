@@ -267,7 +267,11 @@ function ResourceColumn({
               (appointment.blockedTo.getTime() - appointment.endsAt.getTime()) / 60_000,
             )}
             status={appointment.status}
-            customerName={appointment.customerName ?? "İsimsiz kayıt"}
+            customerName={
+              appointment.isHold
+                ? "Slot tutuluyor — online"
+                : (appointment.customerName ?? "İsimsiz kayıt")
+            }
             serviceName={appointment.serviceName}
             href={`/app/randevu/${appointment.id}${branchId ? `?sube=${branchId}` : ""}`}
             highlighted={appointment.id === highlightId}

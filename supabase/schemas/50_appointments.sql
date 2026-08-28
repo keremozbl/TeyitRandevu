@@ -41,6 +41,11 @@ create table public.appointments (
   -- public sayfada slot tutma: süresi dolan pending kayıtları pg_cron siler
   hold_expires_at   timestamptz,
 
+  -- Public randevu sayfasının bağlantısındaki sır: müşteri randevusunu bununla
+  -- görüntüler ve iptal eder. `id` kullanılmaz — id'ler başka yerlerde
+  -- (log, URL, hata mesajı) görünür ve tahmin edilebilir olmasa da paylaşılır.
+  public_token  uuid not null default gen_random_uuid(),
+
   cancelled_at      timestamptz,
   cancelled_reason  text,
   cancelled_by      uuid references auth.users (id) on delete set null,
@@ -82,6 +87,40 @@ create index appointments_service_idx     on public.appointments (service_id);
 -- Süresi dolmuş hold temizliği için dar indeks
 create index appointments_hold_idx on public.appointments (hold_expires_at)
   where status = 'pending' and hold_expires_at is not null;
+
+-- Public sayfanın tek arama yolu; benzersizlik aynı zamanda çakışma güvencesi
+create unique index appointments_public_token_idx on public.appointments (public_token);
+
+-- -----------------------------------------------------------------------------
+-- Süresi dolmuş slot tutmalarının temizliği.
+--
+-- Public sayfada müşteri formu doldururken slot `pending` + `hold_expires_at`
+-- ile tutulur (Bölüm 6c). Süre dolduğunda satır ÖLÜ olur ama çakışma kısıtı
+-- onu hâlâ dikkate alır: uygunluk listesi saati boş gösterirken yazma "dolu"
+-- der. Bu yüzden yazmadan hemen önce o kaynağın ölü tutmaları silinir.
+--
+-- `security definer`: bu tabloda DELETE politikası yok ve olması da istenmiyor
+-- (randevu silinmez, iptal edilir). Silinen şey randevu değil, hiç
+-- onaylanmamış bir tutma kaydı — içinde hasta verisi yok.
+--
+-- Kalıcı çözüm `pg_cron` ile dakikalık süpürme; o gelene kadar yazma
+-- yolundaki bu çağrı kısıtın yanlış "dolu" demesini engelliyor.
+-- -----------------------------------------------------------------------------
+create or replace function private.sweep_expired_holds(_resource_id uuid)
+returns void
+language sql
+security definer
+set search_path = ''
+as $$
+  delete from public.appointments
+   where resource_id = _resource_id
+     and status = 'pending'
+     and hold_expires_at is not null
+     and hold_expires_at < now();
+$$;
+
+revoke execute on function private.sweep_expired_holds(uuid) from public, anon;
+grant execute on function private.sweep_expired_holds(uuid) to authenticated;
 
 create trigger appointments_set_updated_at
   before update on public.appointments
@@ -330,6 +369,10 @@ begin
   end if;
 
   v_ends_at := _starts_at + make_interval(mins => _duration_min);
+
+  -- Public sayfada bırakılmış ölü slot tutmaları çakışma kısıtını yanıltmasın:
+  -- panelde boş görünen bir saate yazarken "dolu" hatası alınmaz.
+  perform private.sweep_expired_holds(_resource_id);
 
   -- blocked_from / blocked_to trigger tarafından yeniden hesaplanır; NOT NULL
   -- olduğu için buraya da yazılıyor.

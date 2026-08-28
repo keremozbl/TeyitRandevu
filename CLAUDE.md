@@ -43,7 +43,14 @@ zaman `Intl.DateTimeFormat("tr-TR")` / `Intl.NumberFormat("tr-TR")`.
 "hizmet bilgilendirmesi" ya da "ticari ileti" olarak etiketlenir. Ticari olanlar
 İYS onayı olmadan gönderilemez. Diş kliniklerine kampanya şablonu sunulmaz.
 
-**8. Tıbbi not ayrı tablodadır.** Postgres RLS satır seviyesindedir, sütun
+**8. Public sayfa `anon`a tablo yetkisi vermez.** Randevu sayfası veriye
+`booking_*` `security definer` fonksiyonları üzerinden erişir
+(`supabase/schemas/70_public_booking.sql`); her biri hangi alanı döndüreceğini
+tek tek seçer. Bir tabloya `anon` SELECT vermek, politika doğru yazılsa bile
+PostgREST'in sütunların tamamını, `or` filtrelerini ve gömülü ilişkileri
+açması demektir — randevu saatini verirken hasta listesini verirsiniz.
+
+**9. Tıbbi not ayrı tablodadır.** Postgres RLS satır seviyesindedir, sütun
 seviyesinde değil. Resepsiyonun randevuyu görüp tedavi notunu görmemesi ancak
 `customer_medical_notes` tablosunun ayrı politikasıyla sağlanır.
 

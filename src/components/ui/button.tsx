@@ -1,7 +1,7 @@
 import type { ComponentProps } from "react";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger";
-type Size = "sm" | "md";
+type Size = "sm" | "md" | "lg";
 
 const VARIANTS: Record<Variant, string> = {
   primary:
@@ -17,6 +17,8 @@ const VARIANTS: Record<Variant, string> = {
 const SIZES: Record<Size, string> = {
   sm: "h-7 px-2.5 text-[13px] gap-1.5",
   md: "h-9 px-3.5 gap-2",
+  // Public randevu sayfası için: parmakla dokunulacak, panel yoğunluğu geçerli değil
+  lg: "h-11 px-4 text-[15px] gap-2",
 };
 
 export function Button({

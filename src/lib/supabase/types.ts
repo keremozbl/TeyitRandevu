@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.15"
+    PostgrestVersion: "14.17"
   }
   public: {
     Tables: {
@@ -86,6 +86,7 @@ export type Database = {
           no_show_at: string | null
           notes: string | null
           price: number | null
+          public_token: string
           resource_id: string
           service_id: string | null
           source: string
@@ -113,6 +114,7 @@ export type Database = {
           no_show_at?: string | null
           notes?: string | null
           price?: number | null
+          public_token?: string
           resource_id: string
           service_id?: string | null
           source?: string
@@ -140,6 +142,7 @@ export type Database = {
           no_show_at?: string | null
           notes?: string | null
           price?: number | null
+          public_token?: string
           resource_id?: string
           service_id?: string | null
           source?: string
@@ -1306,6 +1309,44 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      booking_availability: {
+        Args: {
+          _from: string
+          _resource_ids: string[]
+          _slug: string
+          _to: string
+        }
+        Returns: Json
+      }
+      booking_cancel: {
+        Args: { _reason?: string; _token: string }
+        Returns: Json
+      }
+      booking_confirm: {
+        Args: {
+          _consents?: Json
+          _email?: string
+          _full_name: string
+          _ip?: unknown
+          _note?: string
+          _phone: string
+          _token: string
+          _user_agent?: string
+        }
+        Returns: Json
+      }
+      booking_hold: {
+        Args: {
+          _ip?: unknown
+          _resource_id: string
+          _service_id: string
+          _slug: string
+          _starts_at: string
+        }
+        Returns: Json
+      }
+      booking_lookup: { Args: { _token: string }; Returns: Json }
+      booking_page: { Args: { _slug: string }; Returns: Json }
       create_appointment: {
         Args: {
           _branch_id: string

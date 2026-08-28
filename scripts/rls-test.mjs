@@ -256,6 +256,204 @@ try {
   const { error: fnErr } = await a.client.rpc("allows", { _perm: "appointment.read", _tenant: tenantId });
   check(Boolean(fnErr), "private.allows RPC ile çağrılamıyor", "private fonksiyon DIŞARIDAN ÇAĞRILABİLDİ");
 
+
+  console.log("\n[13] Public randevu sayfası — anon rolü");
+  // Oturumsuz istemci: public sayfayı açan ziyaretçi neyse o.
+  const pub = createClient(URL, ANON, { auth: { persistSession: false } });
+  const slug = `rls-test-${stamp}`;
+
+  // Kural: anon HİÇBİR tabloyu okuyamaz, her şey booking_* fonksiyonlarından.
+  for (const t of ["tenants", "appointments", "customers", "services", "resources", "consents"]) {
+    const { data } = await pub.from(t).select("*");
+    check(!data?.length, `${t}: anon'a kapalı`, `${t}: anon ${data?.length} satır GÖRDÜ`);
+  }
+
+  const { data: bookingPage, error: bpErr } = await pub.rpc("booking_page", { _slug: slug });
+  check(!bpErr && bookingPage?.tenant?.id === tenantId, "booking_page kurumu döndü", "booking_page başarısız", bpErr?.message);
+  check(bookingPage?.services?.length === tpl.services.length,
+    `hizmetler geldi: ${bookingPage?.services?.length}`, `hizmet sayısı ${bookingPage?.services?.length}`);
+  check(!JSON.stringify(bookingPage ?? {}).includes("Test Hasta"),
+    "sayfada hasta verisi yok", "SAYFADA HASTA ADI SIZDI");
+
+  const { data: unknownSlug } = await pub.rpc("booking_page", { _slug: `yok-${stamp}` });
+  check(unknownSlug === null, "bilinmeyen slug null döner", "bilinmeyen slug veri döndü");
+
+  await admin.from("tenants").update({ status: "suspended" }).eq("id", tenantId);
+  const { data: suspended } = await pub.rpc("booking_page", { _slug: slug });
+  check(suspended === null, "askıya alınan kurumun sayfası kapalı", "ASKIDAKİ KURUM RANDEVU VERİYOR");
+  await admin.from("tenants").update({ status: "trial" }).eq("id", tenantId);
+
+  const availFrom = new Date();
+  const availTo = new Date(Date.now() + 10 * 86400000);
+  const { data: avail } = await pub.rpc("booking_availability", {
+    _slug: slug, _resource_ids: [r.id],
+    _from: availFrom.toISOString(), _to: availTo.toISOString(),
+  });
+  check(avail?.working_hours?.length === 10, `çalışma saatleri geldi: ${avail?.working_hours?.length}`,
+    `çalışma saati ${avail?.working_hours?.length}`);
+  const busyKeys = Object.keys(avail?.busy?.[0] ?? {});
+  check(busyKeys.every((k) => ["resource_id", "blocked_from", "blocked_to"].includes(k)),
+    `dolu aralıklar yalnız zaman taşıyor: ${busyKeys.join(", ")}`, `DOLU ARALIKTA FAZLA ALAN: ${busyKeys.join(", ")}`);
+
+  const { data: alienAvail } = await pub.rpc("booking_availability", {
+    _slug: slug, _resource_ids: [crypto.randomUUID()],
+    _from: availFrom.toISOString(), _to: availTo.toISOString(),
+  });
+  check(alienAvail?.working_hours?.length === 0, "yabancı kaynak süzülüyor", "YABANCI KAYNAĞIN SAATLERİ GELDİ");
+
+  const { error: wideErr } = await pub.rpc("booking_availability", {
+    _slug: slug, _resource_ids: [r.id], _from: availFrom.toISOString(),
+    _to: new Date(Date.now() + 200 * 86400000).toISOString(),
+  });
+  check(Boolean(wideErr), "aşırı geniş tarih aralığı reddedildi", "200 GÜNLÜK ARALIK KABUL EDİLDİ");
+
+  /** Hafta içine düşen, kurumun mesai saatindeki bir an (kurum UTC+03). */
+  const weekdaySlot = (daysAhead, utcHour) => {
+    const when = new Date();
+    when.setUTCDate(when.getUTCDate() + daysAhead);
+    when.setUTCHours(utcHour, 0, 0, 0);
+    while (when.getUTCDay() === 0 || when.getUTCDay() === 6) {
+      when.setUTCDate(when.getUTCDate() + 1);
+    }
+    return when;
+  };
+  const holdArgs = { _slug: slug, _service_id: s.id, _resource_id: r.id };
+
+  const { data: hClosed } = await pub.rpc("booking_hold", {
+    ...holdArgs, _starts_at: weekdaySlot(5, 0).toISOString(),  // 03:00 yerel
+  });
+  check(hClosed?.reason === "closed", "mesai dışı saat reddedildi", `mesai dışı: ${hClosed?.reason}`);
+
+  const { data: hSoon } = await pub.rpc("booking_hold", {
+    ...holdArgs, _starts_at: new Date(Date.now() + 30 * 60000).toISOString(),
+  });
+  check(hSoon?.reason === "too_soon", "minimum ön süre uygulandı", `ön süre: ${hSoon?.reason}`);
+
+  const { data: hFar } = await pub.rpc("booking_hold", {
+    ...holdArgs, _starts_at: new Date(Date.now() + 200 * 86400000).toISOString(),
+  });
+  check(hFar?.reason === "too_far", "ileri tarih sınırı uygulandı", `ileri tarih: ${hFar?.reason}`);
+
+  const { data: hAlien } = await pub.rpc("booking_hold", {
+    ...holdArgs, _resource_id: crypto.randomUUID(), _starts_at: weekdaySlot(5, 7).toISOString(),
+  });
+  check(hAlien?.reason === "resource_unavailable", "yabancı kaynağa randevu yazılamıyor",
+    `yabancı kaynak: ${hAlien?.reason}`);
+
+  const slotOne = weekdaySlot(5, 7);   // 10:00 yerel
+  const { data: hold } = await pub.rpc("booking_hold", { ...holdArgs, _starts_at: slotOne.toISOString() });
+  check(hold?.ok === true && Boolean(hold?.token), "slot tutuldu", `slot tutulamadı: ${hold?.reason}`);
+
+  const { data: holdAgain } = await pub.rpc("booking_hold", { ...holdArgs, _starts_at: slotOne.toISOString() });
+  check(holdAgain?.reason === "slot_taken", "tutulan slot ikinci kez verilmiyor", `ikinci tutma: ${holdAgain?.reason}`);
+
+  const { data: holdLeak } = await pub.from("appointments").select("id");
+  check(!holdLeak?.length, "anon tutma satırını okuyamıyor", "TUTMA SATIRI ANON'A GÖRÜNDÜ");
+
+  const consentPayload = [
+    { kind: "kvkk_aydinlatma", granted: true, text_version: "test.1" },
+    { kind: "acik_riza_saglik", granted: true, text_version: "test.1" },
+    { kind: "ticari_ileti", granted: false, text_version: "test.1" },
+  ];
+  const onlinePhone = "+905553334455";
+  const confirmArgs = { _token: hold?.token, _full_name: "Online Hasta", _phone: onlinePhone };
+
+  const { data: noConsent } = await pub.rpc("booking_confirm", { ...confirmArgs, _consents: [] });
+  check(noConsent?.reason === "consent_required", "rıza olmadan randevu oluşmuyor", `rızasız: ${noConsent?.reason}`);
+
+  const { data: onlyDisclosure } = await pub.rpc("booking_confirm", {
+    ...confirmArgs, _consents: [consentPayload[0]],
+  });
+  check(onlyDisclosure?.reason === "consent_required", "açık rıza ayrıca aranıyor",
+    `yalnız aydınlatma: ${onlyDisclosure?.reason}`);
+
+  const { data: badPhone } = await pub.rpc("booking_confirm", {
+    ...confirmArgs, _phone: "0555", _consents: consentPayload,
+  });
+  check(badPhone?.reason === "phone_invalid", "biçimsiz telefon reddedildi", `telefon: ${badPhone?.reason}`);
+
+  const { data: confirmed } = await pub.rpc("booking_confirm", {
+    ...confirmArgs, _consents: consentPayload, _ip: "203.0.113.7", _user_agent: "rls-test",
+  });
+  check(confirmed?.ok === true, "randevu oluştu", `randevu oluşmadı: ${confirmed?.reason}`);
+
+  const { data: consentRows } = await admin.from("consents")
+    .select("kind, granted, text_version, channel, ip").eq("tenant_id", tenantId);
+  check(consentRows?.length === 3, `üç rıza kaydı yazıldı: ${consentRows?.length}`, `rıza kaydı ${consentRows?.length}`);
+  const commercial = consentRows?.find((row) => row.kind === "ticari_ileti");
+  check(commercial?.granted === false, "reddedilen ticari ileti onayı da kayıtta", "ticari ileti reddi kaydedilmedi");
+  check(consentRows?.every((row) => row.channel === "online_booking" && row.text_version === "test.1"),
+    "kanal ve metin sürümü kayıtta", "kanal ya da sürüm eksik");
+  check(consentRows?.every((row) => row.ip === "203.0.113.7"), "rızanın IP'si kayıtta", "IP kaydedilmedi");
+
+  const { data: onlineCustomer } = await admin.from("customers")
+    .select("id, source, full_name").eq("tenant_id", tenantId).eq("phone", onlinePhone).maybeSingle();
+  check(onlineCustomer?.source === "online", "hasta kaydı online kaynaklı açıldı", `kaynak: ${onlineCustomer?.source}`);
+
+  const { data: reconfirm } = await pub.rpc("booking_confirm", { ...confirmArgs, _consents: consentPayload });
+  const { data: onlineAppointments } = await admin.from("appointments")
+    .select("id").eq("tenant_id", tenantId).eq("source", "online");
+  check(reconfirm?.reason === "already_confirmed" && onlineAppointments?.length === 1,
+    "ikinci gönderim yeni randevu açmıyor", `online randevu sayısı: ${onlineAppointments?.length}`);
+
+  const { data: look } = await pub.rpc("booking_lookup", { _token: hold?.token });
+  check(look?.customer?.full_name === "Online Hasta" && look?.hold_expires_at === null,
+    "randevu token ile görüntüleniyor", "booking_lookup beklenen kaydı vermedi");
+  const { data: lookMissing } = await pub.rpc("booking_lookup", { _token: crypto.randomUUID() });
+  check(lookMissing === null, "rastgele token hiçbir şey döndürmüyor", "RASTGELE TOKEN VERİ DÖNDÜ");
+
+  const { data: cancelled } = await pub.rpc("booking_cancel", { _token: hold?.token, _reason: "Test iptali" });
+  const { data: cancelledRow } = await admin.from("appointments")
+    .select("status, cancelled_at, cancelled_reason").eq("public_token", hold?.token).maybeSingle();
+  check(cancelled?.ok === true && cancelledRow?.status === "cancelled" && Boolean(cancelledRow?.cancelled_at),
+    "müşteri randevusunu iptal edebiliyor", "iptal edilemedi");
+  const { data: cancelTwice } = await pub.rpc("booking_cancel", { _token: hold?.token });
+  check(cancelTwice?.reason === "already_cancelled", "ikinci iptal zararsız", `ikinci iptal: ${cancelTwice?.reason}`);
+
+  // İptal penceresi: randevu saati yaklaşınca internetten iptal kapanır.
+  const slotTwo = weekdaySlot(5, 8);
+  const { data: hold2 } = await pub.rpc("booking_hold", { ...holdArgs, _starts_at: slotTwo.toISOString() });
+  await pub.rpc("booking_confirm", {
+    _token: hold2?.token, _full_name: "Online Hasta", _phone: onlinePhone, _consents: consentPayload,
+  });
+  const soonStart = new Date(Date.now() + 60 * 60000);
+  await admin.from("appointments").update({
+    starts_at: soonStart.toISOString(),
+    ends_at: new Date(soonStart.getTime() + 20 * 60000).toISOString(),
+  }).eq("public_token", hold2?.token);
+  const { data: lateCancel } = await pub.rpc("booking_cancel", { _token: hold2?.token });
+  check(lateCancel?.reason === "cancel_window", "iptal penceresi kapandığında iptal edilemiyor",
+    `pencere: ${lateCancel?.reason}`);
+
+  // Süresi dolan tutma: onay reddedilir, satır silinir, slot serbest kalır.
+  const slotThree = weekdaySlot(5, 9);
+  const { data: hold3 } = await pub.rpc("booking_hold", { ...holdArgs, _starts_at: slotThree.toISOString() });
+  await admin.from("appointments")
+    .update({ hold_expires_at: new Date(Date.now() - 60000).toISOString() })
+    .eq("public_token", hold3?.token);
+  const { data: expiredConfirm } = await pub.rpc("booking_confirm", {
+    _token: hold3?.token, _full_name: "Geç Kalan", _phone: "+905556667788", _consents: consentPayload,
+  });
+  check(expiredConfirm?.reason === "expired", "süresi dolan tutma onaylanamıyor", `süre: ${expiredConfirm?.reason}`);
+  const { data: expiredRow } = await admin.from("appointments").select("id").eq("public_token", hold3?.token);
+  check(expiredRow?.length === 0, "süresi dolan tutma silindi", "ÖLÜ TUTMA KAYDI KALDI");
+
+  // Süpürme: ölü tutma yazma yolunda temizlenmezse kısıt boş slotu dolu sanır.
+  const { data: hold4 } = await pub.rpc("booking_hold", { ...holdArgs, _starts_at: slotThree.toISOString() });
+  await admin.from("appointments")
+    .update({ hold_expires_at: new Date(Date.now() - 60000).toISOString() })
+    .eq("public_token", hold4?.token);
+  const { data: hold5 } = await pub.rpc("booking_hold", { ...holdArgs, _starts_at: slotThree.toISOString() });
+  check(hold5?.ok === true, "ölü tutma süpürüldü ve slot yeniden verildi", `süpürme: ${hold5?.reason}`);
+
+  const { error: sweepErr } = await pub.rpc("sweep_expired_holds", { _resource_id: r.id });
+  check(Boolean(sweepErr), "private.sweep_expired_holds dışarıdan çağrılamıyor", "SÜPÜRME FONKSİYONU AÇIK");
+
+  const { error: anonCreate } = await pub.rpc("create_appointment", {
+    ...rpcArgs, _starts_at: weekdaySlot(6, 7).toISOString(), _customer_name: "Korsan",
+  });
+  check(Boolean(anonCreate), "anon panel RPC'sini çağıramıyor", "ANON create_appointment ÇAĞIRDI");
+
 } catch (e) {
   no("BEKLENMEYEN HATA", e.message);
 } finally {

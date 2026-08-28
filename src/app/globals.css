@@ -194,3 +194,46 @@ p { text-wrap: pretty; margin: 0; }
     scroll-behavior: auto !important;
   }
 }
+
+/* --- yazdırma ----------------------------------------------------------------
+   Program çıktısı gerçekten kullanılacaksa kâğıtta okunur olmalı: hekim
+   üzerine elle not alıyor (Plan 8.3). Bu yüzden satırlar ferah, renkler
+   nötr ve bir kaynağın tablosu sayfa ortasında bölünmüyor. */
+
+@media print {
+  /* Koyu temadaki kullanıcı da beyaz kâğıda siyah mürekkeple çıkarsın */
+  :root,
+  :root[data-theme="dark"] {
+    --bg:            #FFFFFF;
+    --surface:       #FFFFFF;
+    --surface-2:     #FFFFFF;
+    --border:        #9A9A9A;
+    --border-strong: #6B6B6B;
+    --ink:           #000000;
+    --ink-2:         #262626;
+    --ink-3:         #4A4A4A;
+    --accent:        #000000;
+    --accent-soft:   #FFFFFF;
+  }
+
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+
+  html { color-scheme: light; }
+
+  body {
+    background: #FFFFFF;
+    font-size: 10pt;
+  }
+
+  /* Hekimin yazabileceği kadar satır yüksekliği */
+  table td {
+    padding-top: 7pt;
+    padding-bottom: 7pt;
+  }
+
+  /* Bağlantı adresleri kâğıda basılmaz; liste zaten kâğıtta okunuyor */
+  a[href]::after { content: ""; }
+}

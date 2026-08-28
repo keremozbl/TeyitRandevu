@@ -26,7 +26,7 @@ export default async function AppLayout({
 
   return (
     <div className="flex min-h-full flex-col">
-      <header className="sticky top-0 z-10 border-b border-border bg-bg">
+      <header className="sticky top-0 z-10 border-b border-border bg-bg print:hidden">
         <div className="flex h-12 items-center gap-4 px-4">
           <Link
             href="/app"

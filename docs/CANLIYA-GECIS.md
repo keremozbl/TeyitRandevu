@@ -198,6 +198,9 @@ Bilinmesi yeterli.
 | Hasta kartında belge yükleme yok | Storage kovası ve politikaları henüz kurulmadı; kart belgesiz de işe yarıyor | Röntgen/onam formu istendiğinde |
 | Listede "sıradaki randevu" en fazla 300 ileri randevu tarar | Klinik ölçeğinde ileri tarihli randevu bunun altında; aşılırsa bazı satırda saat boş görünür, yanlış görünmez | Randevu hacmi büyüyünce tek sorguluk bir görünüm |
 | Arayüz terminolojisi sabit ("Hasta") | `tenant_settings.terminology` yazılıyor ama okunmuyor; ilk dikey diş kliniği | Berber ya da başka dikey canlıya çıkınca |
+| Excel dosyasında biçim yok: başlık kalın değil, ücret para biçiminde değil | Dosya açılıyor, sütun genişlikleri var, sayı sayı olarak gidiyor — Excel toplayabiliyor. Stil için `styles.xml` gerekiyor | Zamanlanmış gönderimle birlikte |
+| Rapor zamanlaması yok: `report_definitions`, `report_schedules`, `report_runs` tabloları kurulmadı | Gönderim için bildirim kanalı altyapısı (Plan Bölüm 7) zaten yok; ekran ve dosya aynı satırlardan besleniyor, zamanlama üçüncü bir kod yolu açmayacak | Bildirim kanalları geldiğinde |
+| PDF çıktısı yok | Tarayıcının yazdır komutu A4 düzeninde PDF veriyor; sunucuda PDF üretmek ayrı bir bağımlılık | E-postayla PDF eki istendiğinde |
 | Hizmet fiyatı KDV dahil mi hariç mi belirsiz | `price` ve `vat_rate` ayrı tutuluyor ama fatura üretilmediği için ayrım henüz görünmüyor | Ödeme ve fatura modülünde |
 | Şube düzenleme arayüzü yok | Kurulum sihirbazı ilk şubeyi açıyor; tek şubeli kurumda kavram arayüzde hiç görünmüyor | Zincir müşteri geldiğinde |
 | Kullanıcı daveti yok | Davet e-postası kurumun SMTP'sini istiyor (B3); rol ve izin düzenleme onsuz da çalışıyor | SMTP bağlanınca |

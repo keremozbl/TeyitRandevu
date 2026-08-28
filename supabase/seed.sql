@@ -34,6 +34,7 @@ insert into public.permissions (key, category, label, scopes, sort_order) values
   ('report.revenue.read',          'rapor',    'Ciro ve ödeme raporları',          array['tenant','branch']::public.permission_scope[],       520),
   ('report.manage',                'rapor',    'Rapor tanımla ve zamanla',         array['tenant']::public.permission_scope[],                530),
 
+  ('notification.read',            'bildirim', 'Gönderilen bildirimleri görüntüle', array['tenant','branch','own']::public.permission_scope[], 600),
   ('notification.template.manage', 'bildirim', 'Bildirim şablonlarını yönet',      array['tenant']::public.permission_scope[],                610),
   ('integration.calendar.connect', 'entegrasyon', 'Google Takvim bağla',           array['tenant','own']::public.permission_scope[],          710)
 on conflict (key) do update
@@ -83,6 +84,7 @@ insert into public.role_template_permissions (role_template_key, permission_key,
   ('hekim', 'customer.medical_notes.read',  'own'),
   ('hekim', 'customer.medical_notes.write', 'own'),
   ('hekim', 'report.operational.read',      'own'),
+  ('hekim', 'notification.read',            'own'),
   ('hekim', 'integration.calendar.connect', 'own');
 
 -- uygulayıcı: hekimin sağlık dışı karşılığı, tıbbi not yok
@@ -94,6 +96,7 @@ insert into public.role_template_permissions (role_template_key, permission_key,
   ('uygulayici', 'customer.read',                'tenant'),
   ('uygulayici', 'customer.write',               'tenant'),
   ('uygulayici', 'report.operational.read',      'own'),
+  ('uygulayici', 'notification.read',            'own'),
   ('uygulayici', 'integration.calendar.connect', 'own');
 
 -- asistan: bağlı olduğu hekimin kapsamında, tıbbi notu okur ama yazmaz
@@ -104,7 +107,8 @@ insert into public.role_template_permissions (role_template_key, permission_key,
   ('asistan', 'customer.read',               'tenant'),
   ('asistan', 'customer.write',              'tenant'),
   ('asistan', 'customer.medical_notes.read', 'own'),
-  ('asistan', 'report.operational.read',     'own');
+  ('asistan', 'report.operational.read',     'own'),
+  ('asistan', 'notification.read',           'own');
 
 -- resepsiyon: takvimin tamamı, tıbbi not YOK — bu bir KVKK gereği (Bölüm 8.2)
 insert into public.role_template_permissions (role_template_key, permission_key, scope) values
@@ -113,7 +117,8 @@ insert into public.role_template_permissions (role_template_key, permission_key,
   ('resepsiyon', 'resource.read',           'tenant'),
   ('resepsiyon', 'customer.read',           'tenant'),
   ('resepsiyon', 'customer.write',          'tenant'),
-  ('resepsiyon', 'report.operational.read', 'tenant');
+  ('resepsiyon', 'report.operational.read', 'tenant'),
+  ('resepsiyon', 'notification.read',       'tenant');
 
 -- muhasebe: sayılar evet, hasta dosyası hayır
 insert into public.role_template_permissions (role_template_key, permission_key, scope) values

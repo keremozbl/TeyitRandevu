@@ -521,3 +521,79 @@ grant select on public.audit_logs to authenticated;
 create policy audit_logs_read on public.audit_logs
   for select to authenticated
   using ( private.allows('audit.read', tenant_id) );
+
+-- -----------------------------------------------------------------------------
+-- message_templates ve notification_flows — kurumun ne yazdığı, ne zaman
+-- yolladığı. İçlerinde hasta verisi yok: kurumun her üyesi okuyabilir, ama
+-- yalnız şablon yetkisi olan değiştirir. Metnin ticari mi hizmet bilgilendirmesi
+-- mi olduğunu değiştirmek hukuki sonuç doğurur (CLAUDE.md kural 7); o yüzden
+-- yazma yetkisi ayrı bir izin.
+-- -----------------------------------------------------------------------------
+alter table public.message_templates enable row level security;
+alter table public.message_templates force row level security;
+grant select, insert, update, delete on public.message_templates to authenticated;
+
+create policy message_templates_read on public.message_templates
+  for select to authenticated
+  using ( (select private.is_tenant_member(tenant_id)) );
+
+create policy message_templates_insert on public.message_templates
+  for insert to authenticated
+  with check ( private.allows('notification.template.manage', tenant_id) );
+
+create policy message_templates_update on public.message_templates
+  for update to authenticated
+  using      ( private.allows('notification.template.manage', tenant_id) )
+  with check ( private.allows('notification.template.manage', tenant_id) );
+
+create policy message_templates_delete on public.message_templates
+  for delete to authenticated
+  using ( private.allows('notification.template.manage', tenant_id) );
+
+alter table public.notification_flows enable row level security;
+alter table public.notification_flows force row level security;
+grant select, insert, update, delete on public.notification_flows to authenticated;
+
+create policy notification_flows_read on public.notification_flows
+  for select to authenticated
+  using ( (select private.is_tenant_member(tenant_id)) );
+
+create policy notification_flows_insert on public.notification_flows
+  for insert to authenticated
+  with check ( private.allows('notification.template.manage', tenant_id) );
+
+create policy notification_flows_update on public.notification_flows
+  for update to authenticated
+  using      ( private.allows('notification.template.manage', tenant_id) )
+  with check ( private.allows('notification.template.manage', tenant_id) );
+
+create policy notification_flows_delete on public.notification_flows
+  for delete to authenticated
+  using ( private.allows('notification.template.manage', tenant_id) );
+
+-- -----------------------------------------------------------------------------
+-- notifications — outbox. BURADA hasta verisi var: ad, telefon, randevu saati
+-- ve gönderilen metnin kendisi. Bu yüzden randevularla aynı üç kapsam geçerli;
+-- kendi hastalarını gören hekim, başkasının hastasına giden mesajı görmez.
+--
+-- INSERT politikası YOK: kuyruğa yalnız akış motoru yazar
+-- (private.queue_appointment_notifications). Elle mesaj yazmak, hukuki
+-- etiketi (hizmet / ticari) atlamanın yolu olurdu.
+--
+-- DELETE politikası YOK: gönderilmiş mesaj kayıttır. "Hatırlattık" iddiasının
+-- kanıtı bu satır.
+-- -----------------------------------------------------------------------------
+alter table public.notifications enable row level security;
+alter table public.notifications force row level security;
+grant select, update on public.notifications to authenticated;
+
+create policy notifications_read on public.notifications
+  for select to authenticated
+  using ( private.allows('notification.read', tenant_id, branch_id, resource_id) );
+
+-- Bekleyen mesajı iptal etmek ya da başarısızı yeniden denemek: gönderilecek
+-- metni değiştirebilen kişinin işi.
+create policy notifications_update on public.notifications
+  for update to authenticated
+  using      ( private.allows('notification.template.manage', tenant_id) )
+  with check ( private.allows('notification.template.manage', tenant_id) );

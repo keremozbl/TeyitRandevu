@@ -12,6 +12,7 @@ const NAV = [
   { href: "/app/hizmetler", label: "Hizmetler" },
   { href: "/app/ekip", label: "Ekip" },
   { href: "/app/raporlar", label: "Raporlar" },
+  { href: "/app/bildirimler", label: "Bildirimler" },
   { href: "/app/ayarlar", label: "Ayarlar" },
 ];
 

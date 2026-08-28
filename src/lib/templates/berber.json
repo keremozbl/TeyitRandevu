@@ -55,10 +55,42 @@
   "appointment_fields": [],
 
   "notification_defaults": [
-    { "trigger": "appointment_created", "offset_minutes": 0, "channel": "sms", "is_commercial": false },
-    { "trigger": "before_start", "offset_minutes": -1440, "channel": "whatsapp", "is_commercial": false },
-    { "trigger": "before_start", "offset_minutes": -120, "channel": "sms", "is_commercial": false },
-    { "trigger": "birthday", "offset_minutes": 0, "channel": "sms", "is_commercial": true }
+    {
+      "key": "randevu_olusturuldu",
+      "name": "Randevu teyidi",
+      "trigger": "appointment_created",
+      "offset_minutes": 0,
+      "channel": "sms",
+      "is_commercial": false,
+      "body": "Merhaba {{musteri_adi}}, {{kurum_adi}} randevunuz oluşturuldu: {{tarih}} {{saat}} · {{hekim_adi}}. Değişiklik için: {{randevu_baglantisi}}"
+    },
+    {
+      "key": "hatirlatma_bir_gun",
+      "name": "Bir gün önce hatırlatma",
+      "trigger": "before_start",
+      "offset_minutes": -1440,
+      "channel": "whatsapp",
+      "is_commercial": false,
+      "body": "Merhaba {{musteri_adi}}, yarın {{saat}} randevunuz var ({{hekim_adi}}). Gelemeyecekseniz haber verin: {{randevu_baglantisi}}"
+    },
+    {
+      "key": "hatirlatma_iki_saat",
+      "name": "İki saat önce hatırlatma",
+      "trigger": "before_start",
+      "offset_minutes": -120,
+      "channel": "sms",
+      "is_commercial": false,
+      "body": "Merhaba {{musteri_adi}}, bugün {{saat}} randevunuzu hatırlatırız. {{kurum_adi}} · {{sube_telefon}}"
+    },
+    {
+      "key": "dogum_gunu_indirimi",
+      "name": "Doğum günü indirimi",
+      "trigger": "birthday",
+      "offset_minutes": 0,
+      "channel": "sms",
+      "is_commercial": true,
+      "body": "Merhaba {{musteri_adi}}, doğum gününüz kutlu olsun! Bu ay {{kurum_adi}} hizmetlerinde size özel indirim var. Bilgi: {{sube_telefon}} · İleti istemiyorsanız RET yazın."
+    }
   ],
 
   "notes": [

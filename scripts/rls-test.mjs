@@ -57,7 +57,7 @@ try {
 
   console.log("\n[3] Global kataloglar okunabilmeli");
   const { data: perms } = await a.client.from("permissions").select("key");
-  check(perms?.length === 21, `permissions: ${perms?.length} satır`, `permissions: ${perms?.length} (beklenen 21)`);
+  check(perms?.length === 22, `permissions: ${perms?.length} satır`, `permissions: ${perms?.length} (beklenen 22)`);
 
   console.log("\n[4] tenants tablosuna doğrudan INSERT engellenmeli");
   const { error: insErr } = await a.client.from("tenants")
@@ -69,6 +69,7 @@ try {
     terminology: tpl.terminology, booking_rules: tpl.booking_rules,
     branch_name: "Merkez", resources: tpl.resources, services: tpl.services,
     customer_fields: tpl.customer_fields, appointment_fields: tpl.appointment_fields,
+    notification_defaults: tpl.notification_defaults,
     working_hours: { weekdays: [1,2,3,4,5], starts_at: "09:00", ends_at: "18:00", break: tpl.working_hours.break },
   };
   const { data: tid, error: rpcErr } = await a.client.rpc("create_tenant_from_template", {
@@ -453,6 +454,170 @@ try {
     ...rpcArgs, _starts_at: weekdaySlot(6, 7).toISOString(), _customer_name: "Korsan",
   });
   check(Boolean(anonCreate), "anon panel RPC'sini çağıramıyor", "ANON create_appointment ÇAĞIRDI");
+
+
+  console.log("\n[14] Bildirim altyapısı");
+
+  const { data: flowRows } = await a.client
+    .from("notification_flows")
+    .select("id, trigger, is_active, template_id");
+  check(flowRows?.length === tpl.notification_defaults.length,
+    `akışlar şablondan kopyalandı: ${flowRows?.length}`, `akış sayısı ${flowRows?.length}`);
+
+  const { data: templateRows } = await a.client.from("message_templates").select("id, key, kind");
+  check(templateRows?.length === tpl.notification_defaults.length,
+    `şablonlar kopyalandı: ${templateRows?.length}`, `şablon sayısı ${templateRows?.length}`);
+
+  console.log("\n[14a] Randevu yazılınca kuyruk dolmalı");
+  const notifyStart = weekdaySlot(8, 7);
+  const { data: notifyAppointment, error: notifyErr } = await a.client.rpc("create_appointment", {
+    ...rpcArgs, _starts_at: notifyStart.toISOString(),
+    _customer_name: "Bildirim Hastası", _customer_phone: "+905557778899",
+  });
+  check(!notifyErr && Boolean(notifyAppointment), "randevu yazıldı", "randevu yazılamadı", notifyErr?.message);
+
+  const readQueue = async (appointmentId) =>
+    (await a.client.from("notifications")
+      .select("id, status, channel, kind, scheduled_at, to_address, last_error, flow_id")
+      .eq("appointment_id", appointmentId)).data ?? [];
+
+  const queued = await readQueue(notifyAppointment);
+  check(queued.length === 3, `üç bildirim kuyruğa girdi: ${queued.length}`,
+    `kuyrukta ${queued.length} satır (beklenen 3)`);
+  check(queued.every((row) => row.to_address === "+905557778899"),
+    "alıcı numarası kuyruğa donduruldu", "alıcı numarası yanlış");
+  check(queued.every((row) => row.status === "scheduled"),
+    "hepsi gönderilmeyi bekliyor", "beklenmeyen durum");
+
+  // Hatırlatmalar randevu saatine göre kurulmuş olmalı. "Randevu oluşturuldu"
+  // bildirimi de kuyrukta ve onun zamanı `now()` — en erken satır odur.
+  const scheduledAt = (rows) => rows.map((row) => new Date(row.scheduled_at).getTime());
+  check(scheduledAt(queued).includes(notifyStart.getTime() - 1440 * 60000),
+    "bir gün önceki hatırlatma doğru zamana kuruldu", "hatırlatma zamanı yanlış");
+  check(scheduledAt(queued).includes(notifyStart.getTime() - 120 * 60000),
+    "iki saat önceki hatırlatma doğru zamana kuruldu", "ikinci hatırlatma zamanı yanlış");
+
+  console.log("\n[14b] Randevu saati değişince kuyruk yeniden kurulmalı");
+  const movedStart = new Date(notifyStart.getTime() + 3600000);
+  await a.client.from("appointments")
+    .update({ starts_at: movedStart.toISOString(),
+              ends_at: new Date(movedStart.getTime() + 30 * 60000).toISOString() })
+    .eq("id", notifyAppointment);
+
+  const afterMove = await readQueue(notifyAppointment);
+  const movedTimes = scheduledAt(afterMove.filter((row) => row.status === "scheduled"));
+  check(movedTimes.includes(movedStart.getTime() - 1440 * 60000),
+    "hatırlatma yeni saate taşındı", "hatırlatma eski saatte kaldı");
+  check(!movedTimes.includes(notifyStart.getTime() - 1440 * 60000),
+    "eski saatteki hatırlatma kuyrukta kalmadı", "ESKİ SAATE KURULU HATIRLATMA DURUYOR");
+  check(afterMove.filter((row) => row.status === "scheduled").length === 3,
+    "kuyruk yeniden kuruldu, çoğalmadı", `kuyrukta ${afterMove.length} satır`);
+
+  console.log("\n[14c] Randevu iptal olunca bekleyen mesaj düşmeli");
+  await a.client.from("appointments").update({ status: "cancelled" }).eq("id", notifyAppointment);
+  const queueAfterCancel = await readQueue(notifyAppointment);
+  check(queueAfterCancel.every((row) => row.status === "cancelled"),
+    "iptalde bekleyen mesajlar düştü", "iptal sonrası hâlâ bekleyen mesaj var");
+  check(queueAfterCancel.every((row) => row.last_error === "Randevu iptal edildi"),
+    "niçin gitmediği kayıtta", "iptal sebebi yazılmadı");
+
+  console.log("\n[14d] İYS kapısı — ticari ileti onaysız gönderilmez");
+  const { data: promoTemplate, error: promoErr } = await a.client.from("message_templates")
+    .insert({
+      tenant_id: tenantId, key: "kampanya_testi", name: "Kampanya",
+      channel: "sms", kind: "commercial",
+      body: "Merhaba {{musteri_adi}}, size özel indirim. RET yazın.",
+    })
+    .select("id").single();
+  check(!promoErr, "ticari şablon yazıldı", "ticari şablon yazılamadı", promoErr?.message);
+
+  await a.client.from("notification_flows").insert({
+    tenant_id: tenantId, name: "Kampanya akışı", trigger: "appointment_created",
+    offset_minutes: 0, channel: "sms", template_id: promoTemplate.id,
+  });
+
+  const promoStart = weekdaySlot(9, 7);
+  const { data: promoAppointment } = await a.client.rpc("create_appointment", {
+    ...rpcArgs, _starts_at: promoStart.toISOString(),
+    _customer_name: "Onaysız Hasta", _customer_phone: "+905550001122",
+  });
+
+  const promoQueue = (await readQueue(promoAppointment)).filter((row) => row.kind === "commercial");
+  check(promoQueue.length === 1, "ticari ileti kuyruğa yazıldı", `ticari satır ${promoQueue.length}`);
+  check(promoQueue[0]?.status === "skipped",
+    "onaysız ticari ileti GÖNDERİLMEYECEK olarak işaretlendi",
+    `ticari ileti durumu: ${promoQueue[0]?.status}`);
+  check(/İYS/.test(promoQueue[0]?.last_error ?? ""),
+    "sebep kayıtta: İYS onayı yok", `sebep: ${promoQueue[0]?.last_error}`);
+
+  // Onay verilince aynı akış gönderilebilir olmalı
+  const { data: consented } = await a.client.from("customers")
+    .select("id").eq("phone", "+905550001122").single();
+  const { error: consentErr } = await a.client.from("consents").insert({
+    tenant_id: tenantId, customer_id: consented.id, kind: "ticari_ileti",
+    text_version: "test.1", granted: true, channel: "panel",
+  });
+  check(!consentErr, "ticari ileti onayı kaydedildi", "onay kaydedilemedi", consentErr?.message);
+
+  // Saat farklı: hafta sonu kayması iki randevuyu aynı güne düşürebiliyor ve
+  // aynı saatte çakışma kısıtına takılıyorlardı.
+  const consentedStart = weekdaySlot(9, 9);
+  const { data: consentedAppointment, error: consentedErr } = await a.client.rpc("create_appointment", {
+    ...rpcArgs, _starts_at: consentedStart.toISOString(), _customer_id: consented.id,
+  });
+  check(!consentedErr, "onaylı hastaya randevu yazıldı", "randevu yazılamadı", consentedErr?.message);
+  const consentedQueue = (await readQueue(consentedAppointment)).filter((row) => row.kind === "commercial");
+  check(consentedQueue[0]?.status === "scheduled",
+    "onay verilince ticari ileti kuyruğa girdi", `durum: ${consentedQueue[0]?.status}`);
+
+  console.log("\n[14e] Kuyruk yetkisi");
+  const { data: bNotifications } = await b.client.from("notifications").select("id");
+  check(!bNotifications?.length, "yabancı kullanıcı kuyruğu göremiyor",
+    `SIZDI: ${bNotifications?.length}`);
+  const { data: bTemplates } = await b.client.from("message_templates").select("id");
+  check(!bTemplates?.length, "yabancı kullanıcı şablonları göremiyor", `SIZDI: ${bTemplates?.length}`);
+
+  const { data: recNotifications } = await c.client.from("notifications").select("id");
+  check(recNotifications?.length > 0, "resepsiyon kuyruğu görüyor",
+    "resepsiyon kuyruğu GÖREMİYOR");
+
+  const { error: recTemplateWrite } = await c.client.from("message_templates")
+    .update({ body: "resepsiyon değiştiremez" }).eq("id", promoTemplate.id).select("id");
+  const { data: recAfter } = await a.client.from("message_templates")
+    .select("body").eq("id", promoTemplate.id).single();
+  check(!recAfter.body.includes("resepsiyon değiştiremez"),
+    "resepsiyon şablonu değiştiremiyor", "RESEPSİYON ŞABLONU DEĞİŞTİRDİ", recTemplateWrite?.message);
+
+  const { error: recInsert } = await c.client.from("notifications").insert({
+    tenant_id: tenantId, channel: "sms", kind: "service",
+    scheduled_at: new Date().toISOString(),
+  });
+  check(Boolean(recInsert), `kuyruğa elle mesaj yazılamıyor (${recInsert?.code})`,
+    "KUYRUĞA ELLE MESAJ YAZILDI");
+
+  console.log("\n[14f] Worker fonksiyonları yalnız servis rolüne açık");
+  const { error: claimByUser } = await a.client.rpc("claim_notifications", { _limit: 1 });
+  check(Boolean(claimByUser), "claim_notifications kullanıcıya kapalı", "KUYRUK KULLANICIYA AÇIK");
+
+  const { error: installByUser } = await a.client.rpc("install_notification_defaults", {
+    _tenant: tenantId, _defaults: [],
+  });
+  check(Boolean(installByUser), "install_notification_defaults kullanıcıya kapalı",
+    "VARSAYILAN KURULUMU KULLANICIYA AÇIK");
+
+  const { data: claimed, error: claimErr } = await admin.rpc("claim_notifications", { _limit: 5 });
+  check(!claimErr && Array.isArray(claimed), `servis rolü kuyruktan aldı: ${claimed?.length}`,
+    "servis rolü kuyruğu alamadı", claimErr?.message);
+  check((claimed ?? []).every((row) => row.status === "sending"),
+    "alınan satırlar 'gönderiliyor' oldu", "durum güncellenmedi");
+  // Onaylı hastanın ticari iletisi çıkabilir; çıkmaması gereken ONAYSIZ olan.
+  const claimedIds = new Set((claimed ?? []).map((row) => row.id));
+  check(!claimedIds.has(promoQueue[0]?.id),
+    "onaysız ticari ileti worker'a verilmedi", "ONAYSIZ TİCARİ İLETİ GÖNDERİME ÇIKTI");
+  const { data: promoStill } = await a.client.from("notifications")
+    .select("status").eq("id", promoQueue[0]?.id).single();
+  check(promoStill?.status === "skipped", "onaysız ticari ileti 'gönderilmedi' olarak duruyor",
+    `durum: ${promoStill?.status}`);
 
 } catch (e) {
   no("BEKLENMEYEN HATA", e.message);

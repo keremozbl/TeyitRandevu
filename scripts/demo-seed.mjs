@@ -105,6 +105,7 @@ if (!tenant) {
         ends_at: template.working_hours.ends_at,
         break: template.working_hours.break,
       },
+      notification_defaults: template.notification_defaults,
     },
   });
   if (error) throw new Error(`kurum kurulamadı: ${error.message}`);
@@ -113,6 +114,20 @@ if (!tenant) {
 } else {
   console.log("kurum zaten var: Demo Diş Kliniği");
 }
+
+// Bildirim şablonları ve akışları kuruma sonradan eklendi; daha eski bir
+// sürümde kurulmuş demo kurumda hiç yok. Fonksiyon idempotent: akışı olan
+// kuruma dokunmuyor.
+const { data: installed, error: notifyError } = await admin.rpc("install_notification_defaults", {
+  _tenant: tenant.id,
+  _defaults: template.notification_defaults,
+});
+if (notifyError) throw new Error(`bildirim varsayılanları: ${notifyError.message}`);
+console.log(
+  installed > 0
+    ? `bildirim şablonu ve akışı kuruldu: ${installed}`
+    : "bildirim akışları zaten var",
+);
 
 const { data: branch } = await app
   .from("branches")

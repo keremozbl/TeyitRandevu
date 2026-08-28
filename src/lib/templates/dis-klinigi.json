@@ -64,9 +64,33 @@
   ],
 
   "notification_defaults": [
-    { "trigger": "appointment_created", "offset_minutes": 0, "channel": "sms", "is_commercial": false },
-    { "trigger": "before_start", "offset_minutes": -1440, "channel": "whatsapp", "is_commercial": false },
-    { "trigger": "before_start", "offset_minutes": -120, "channel": "sms", "is_commercial": false }
+    {
+      "key": "randevu_olusturuldu",
+      "name": "Randevu teyidi",
+      "trigger": "appointment_created",
+      "offset_minutes": 0,
+      "channel": "sms",
+      "is_commercial": false,
+      "body": "Sayın {{musteri_adi}}, {{kurum_adi}} randevunuz oluşturuldu: {{tarih}} {{saat}} · {{hekim_adi}}. Randevunuzu görüntülemek ya da iptal etmek için: {{randevu_baglantisi}}"
+    },
+    {
+      "key": "hatirlatma_bir_gun",
+      "name": "Bir gün önce hatırlatma",
+      "trigger": "before_start",
+      "offset_minutes": -1440,
+      "channel": "whatsapp",
+      "is_commercial": false,
+      "body": "Sayın {{musteri_adi}}, yarın {{saat}} randevunuzu hatırlatırız ({{hekim_adi}} · {{sube_adi}}). Gelemeyecekseniz lütfen bize bildirin: {{randevu_baglantisi}}"
+    },
+    {
+      "key": "hatirlatma_iki_saat",
+      "name": "İki saat önce hatırlatma",
+      "trigger": "before_start",
+      "offset_minutes": -120,
+      "channel": "sms",
+      "is_commercial": false,
+      "body": "Sayın {{musteri_adi}}, bugün {{saat}} randevunuzu hatırlatırız. {{kurum_adi}} · {{sube_telefon}}"
+    }
   ],
 
   "notes": [

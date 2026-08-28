@@ -40,8 +40,12 @@ timezone'u. Hiçbir yerde naive datetime yok. Tarih ve para biçimlendirmesi her
 zaman `Intl.DateTimeFormat("tr-TR")` / `Intl.NumberFormat("tr-TR")`.
 
 **7. Ticari ileti ayrımı hukuki bir alandır.** Her bildirim şablonu
-"hizmet bilgilendirmesi" ya da "ticari ileti" olarak etiketlenir. Ticari olanlar
-İYS onayı olmadan gönderilemez. Diş kliniklerine kampanya şablonu sunulmaz.
+`message_kind` ile "hizmet bilgilendirmesi" ya da "ticari ileti" olarak
+etiketlenir. Ticari olanlar İYS onayı olmadan gönderilemez ve bu kısıt
+**veritabanında** uygulanır: kuyruğa yazan `queue_appointment_notifications`
+onaysız ticari iletiyi `skipped` olarak yazar, `claim_notifications` da
+gönderim anında onayı yeniden kontrol eder (rıza arada geri alınmış olabilir).
+Diş kliniklerine kampanya şablonu sunulmaz.
 
 **8. Public sayfa `anon`a tablo yetkisi vermez.** Randevu sayfası veriye
 `booking_*` `security definer` fonksiyonları üzerinden erişir

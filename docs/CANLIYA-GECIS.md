@@ -4,7 +4,7 @@ Test ortamında sorun çıkarmayan ama canlıda çıkacak şeyler. Her madde bil
 bir borç — hangisi olduğunu ve nasıl kapatılacağını yazıyorum ki sonradan
 "neden böyle yapılmış" diye bakılmasın.
 
-Son güncelleme: 28 Ağustos 2026 · Durum: Faz 3 (public randevu sayfası canlı)
+Son güncelleme: 28 Ağustos 2026 · Durum: Faz 4 (bildirim altyapısı kuruldu)
 
 ---
 
@@ -142,13 +142,52 @@ giriyor. Bu makinede tur başına ~110 ms ölçüldü, yani üretim derlemesinde
 sayfa ~530 ms. Aynı istekler Frankfurt'taki bir fonksiyondan atıldığında tur
 birkaç milisaniyeye iner.
 
-Vercel'de proje ayarından **Function Region → Frankfurt (fra1)** seçilecek.
-Seçilmezse varsayılan bölge Washington olur ve her tur okyanusu geçer.
+`vercel.json` içine `"regions": ["fra1"]` yazıldı; ilk dağıtımda proje
+ayarlarından da doğrulanacak. Seçilmezse varsayılan bölge Washington olur ve
+her tur okyanusu geçer.
 
 Ölçüm: `requireTenant()` istek başına `cache()` ile bir kez çalışıyor ve şube,
 ayar, kaynak sorguları aynı anda atılıyor (694 ms → 532 ms). Kalan turlar
 oturum doğrulaması (proxy + sayfa) ve günün verisi; bunları azaltmanın yolu
 `getClaims()` ile JWT'yi yerelde doğrulamak, o da ayrı bir karar.
+
+### B9. SMS / WhatsApp sağlayıcı sözleşmesi
+
+Bildirim altyapısının tamamı çalışıyor — kuyruk, zamanlama, şablon, İYS kapısı,
+yeniden deneme — ama **gerçek bir sağlayıcı bağlı değil**. Tek uygulama
+`src/lib/notifications/providers.ts` içindeki `log`: mesajı üretir, kuyruğa
+yazar, sunucu günlüğüne basar, **göndermez**. Panel bunu her satırda açıkça
+söylüyor ("log · gerçekten gönderilmedi").
+
+Hatırlatma bu ürünün asıl satış argümanı; pilot kurum bunsuz canlıya
+çıkamaz. Yapılacak iş bir `MessageProvider` uygulaması eklemek ve
+`PROVIDERS` eşlemesinde kanalı ona bağlamak.
+
+| Kanal | Aday | Not |
+|---|---|---|
+| SMS | NetGSM, İletimerkezi, Verimor | Türkçe karakter mesajı UCS-2'ye düşürüyor: 70 karakter/parça, iki katı fiyat. Şablon ekranı parça sayısını gösteriyor |
+| WhatsApp | WhatsApp Cloud API, 360dialog | Şablon onayı Meta tarafında günler sürüyor, erken başlatılmalı |
+| E-posta | Resend | B3 ile aynı iş: SPF/DKIM/DMARC |
+
+**İYS üyeliği** ticari ileti göndermenin ön şartı; kayıt olmadan kampanya
+mesajı gönderilemez (hatırlatma gönderilebilir, o hizmet bilgilendirmesi).
+
+### B10. Kuyruk zamanlayıcısı Vercel'de yapılandırılacak
+
+`vercel.json` içinde `/api/bildirim/gonder` beş dakikada bir çağrılıyor.
+İki şart var:
+
+1. **CRON_SECRET** Vercel'in Environment Variables ekranına yazılacak. Yoksa
+   uç nokta 503 döner ve kuyruk hiç boşalmaz — bilinçli: korumasız çalışmaz.
+2. **NEXT_PUBLIC_SITE_URL** üretim alan adına ayarlanacak. Hatırlatma
+   mesajındaki randevu bağlantısı bu kökle kuruluyor; boş kalırsa hastaya
+   `/r/klinik/randevu/…` diye tıklanamaz bir yol gider.
+3. **Dakikalık cron Pro planı istiyor.** Hobby planında cron günde bir kez
+   çalışır; "iki saat kala hatırlatma" o planda anlamsız olur. Pilot öncesi
+   plan yükseltmesi zaten A2 ve B5 için de gerekiyor.
+
+Alternatif: `pg_cron` + `pg_net` ile aynı uç noktayı veritabanından çağırmak.
+A1 ve A4 zaten `pg_cron` kurulumu gerektiriyor; üçü tek işte yapılabilir.
 
 ---
 
@@ -220,6 +259,13 @@ Bilinmesi yeterli.
 | `business_type` şablon anahtarına FK'siz | Şablonlar kodda, tablo değil | Şablonlar veritabanına taşınırsa |
 | Tenant değiştirici arayüzü yok | Çoğu kullanıcı tek kurumda | Çok kurumlu kullanıcı çıkınca |
 | `audit_logs` bölümlerinde politika yok | İzin verilmemiş = erişim yok | Gerekmez |
+| Doğum günü akışı KAPALI kuruluyor | Tetiklemek için günlük bir tarama gerekiyor (randevuya bağlı değil, hastaya bağlı); kuyruğa yazan tetikleyici randevu tablosunda. Açık görünüp çalışmayan akış, kurumun gönderdiğini sandığı ama gitmeyen mesaj demek | `pg_cron` kurulunca: günlük tarama + `birthday` tetikleyicisi |
+| Kademeli onay zinciri yok: cevap alınca zincirden çıkarma, kanal yükseltme | Akış motoru satırları bağımsız işliyor; "cevap geldi mi" sorusunun cevabı için gelen mesaj/DTMF webhook'u gerekiyor ve hiçbir sağlayıcı bağlı değil (B9). Zincirin kendisi Plan 7.2'nin asıl farkı | Sağlayıcı bağlanınca, IVR'den önce |
+| IVR tabloları (`ivr_scripts`, `call_sessions`) kurulmadı | Plan 7.5 bunları Faz 4'te istiyordu ama `voice` kanalı zaten sağlayıcısız; boş tablo şema gürültüsünden başka şey değil | Sesli arama talebi ölçülünce (Plan 11, F8 koşullu) |
+| Kendi hesabını getir (`tenant_providers`) yok | Plan 7.3'te "ilk günden" deniyor ama kimlik bilgilerini Vault'ta tutmak bir sağlayıcı entegrasyonu olmadan test edilemez | İlk BYO talebinde — büyük klinik kendi NetGSM sözleşmesini isteyince |
+| Kontör defteri ve kota yok (`credit_ledger`, `plan_features`) | Faturalama modülü hiç yok; gönderim ücreti `notifications.cost` sütununa yazılıyor, defter sonradan bu satırlardan kurulabilir | Abonelik ve faturalama modülünde |
+| Bekleme listesi otomatiği yok | Tablo var (`waitlist_entries`), boşalan slotu teklif eden akış yok; teklif göndermek için sağlayıcı gerekiyor (B9) | Sağlayıcı bağlandıktan sonra — Plan 7.7 |
+| Panelden elle mesaj gönderme yok | `notifications` tablosunda INSERT politikası bilerek yok: elle mesaj, hizmet/ticari ayrımını atlamanın yolu olurdu | Gerekirse şablon seçtiren, türü şablondan alan bir akışla |
 | Public sayfada hız sınırı kabaca: aynı IP'den en fazla 5 canlı slot tutması, aynı telefondan günde 3 online randevu | Tablo ya da Redis istemeyen, tek sorgulu iki fren; kötüye kullanımın gerçek maliyeti (klinik takviminin doldurulması) bu iki eşikle sınırlanıyor | Gerçek bir kötüye kullanım görülünce ya da CAPTCHA gerekince |
 | Hizmet-kaynak eşlemesi için arayüz yok | Kurulum sihirbazı her hizmeti tüm personel kaynaklarına bağlıyor; **sonradan eklenen hekim hiçbir hizmete bağlı olmuyor ve public sayfada hiç görünmüyor**. Panelden randevu vermek çalışmaya devam ediyor | İkinci hekim eklenip online randevuya açılmak istendiğinde |
 | Online randevu `pending` kalıyor, otomatik onay yok | Kliniğin görmediği randevuyu "onaylı" saymak yanlış olurdu; panelde onay bekleyen olarak görünüyor | Bildirim kanalları gelince: otomatik onay + teyit mesajı birlikte anlamlı |
@@ -246,9 +292,10 @@ Bilinmesi yeterli.
 ## Sıra önerisi
 
 1. **A1 + A4** `pg_cron` kurulumu tek işte: denetim kaydı bölümleri ve ölü slot tutmalarının süpürülmesi
-2. **B3 + B4** SMTP ve auth ayarları — pilot öncesi
-3. **B2** demo hesabın ve demo kurumun silinmesi — gerçek hasta verisi girmeden önce
-4. **C** KVKK kalemleri — gerçek hasta verisi girmeden önce
-4b. **B8** Vercel bölgesi — ilk dağıtımda, tek kutucuk
-5. **B1 + B5 + A2** anahtar yenileme, yedek, ücretli plan — pilot günü
-6. **D2** Docker — elle migration yazmak sıkıntı vermeye başlarsa
+2. **B9 + B10** bildirim sağlayıcısı ve kuyruk zamanlayıcısı — hatırlatma ürünün asıl satış argümanı
+3. **B3 + B4** SMTP ve auth ayarları — pilot öncesi
+4. **B2** demo hesabın ve demo kurumun silinmesi — gerçek hasta verisi girmeden önce
+5. **C** KVKK kalemleri — gerçek hasta verisi girmeden önce
+5b. **B8** Vercel bölgesi — ilk dağıtımda, tek kutucuk
+6. **B1 + B5 + A2** anahtar yenileme, yedek, ücretli plan — pilot günü
+7. **D2** Docker — elle migration yazmak sıkıntı vermeye başlarsa

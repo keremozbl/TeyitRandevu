@@ -49,6 +49,21 @@ export interface TemplateResource {
   color?: string;
 }
 
+export interface TemplateNotification {
+  /** message_templates.key — kurum içinde benzersiz */
+  key: string;
+  name: string;
+  trigger: "appointment_created" | "before_start" | "after_end" | "no_show" | "birthday";
+  /** Negatif = tetikleyiciden önce; -1440 "bir gün önce" */
+  offset_minutes: number;
+  channel: "sms" | "whatsapp" | "email" | "voice";
+  /** Ticari ileti ise İYS onayı ve ret hakkı zorunludur (CLAUDE.md kural 7). */
+  is_commercial: boolean;
+  /** `{{musteri_adi}}` gibi değişkenler taşır; bkz. lib/notifications/render */
+  body: string;
+  subject?: string;
+}
+
 export interface SectorTemplate {
   key: string;
   family: BusinessFamily;
@@ -73,13 +88,12 @@ export interface SectorTemplate {
   services: TemplateService[];
   customer_fields: TemplateField[];
   appointment_fields: TemplateField[];
-  notification_defaults: {
-    trigger: string;
-    offset_minutes: number;
-    channel: string;
-    /** Ticari ileti ise İYS onayı ve ret hakkı zorunludur. */
-    is_commercial: boolean;
-  }[];
+  /**
+   * Kurulumda kopyalanan bildirim şablonları ve akışları. Her satır hem metni
+   * (şablon) hem de ne zaman gideceğini (akış) tanımlar — ikisi kurulumda iki
+   * ayrı tabloya açılır.
+   */
+  notification_defaults: TemplateNotification[];
   notes?: string[];
 }
 

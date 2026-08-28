@@ -189,6 +189,14 @@ begin
     );
   end loop;
 
+  -- ---------------------------------------------------------------------------
+  -- Bildirim şablonları ve akışları (80_notifications). Sektör şablonundaki
+  -- metinler kuruma kopyalanır; kurum sonradan kendi metnini yazabilir.
+  -- ---------------------------------------------------------------------------
+  perform public.install_notification_defaults(
+    v_tenant, coalesce(_payload -> 'notification_defaults', '[]'::jsonb)
+  );
+
   return v_tenant;
 end;
 $$;

@@ -723,6 +723,253 @@ export type Database = {
           },
         ]
       }
+      message_templates: {
+        Row: {
+          body: string
+          channel: Database["public"]["Enums"]["notification_channel"]
+          created_at: string
+          id: string
+          is_active: boolean
+          key: string
+          kind: Database["public"]["Enums"]["message_kind"]
+          name: string
+          subject: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          channel: Database["public"]["Enums"]["notification_channel"]
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          key: string
+          kind?: Database["public"]["Enums"]["message_kind"]
+          name: string
+          subject?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          channel?: Database["public"]["Enums"]["notification_channel"]
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          key?: string
+          kind?: Database["public"]["Enums"]["message_kind"]
+          name?: string
+          subject?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_templates_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification_flows: {
+        Row: {
+          channel: Database["public"]["Enums"]["notification_channel"]
+          condition: Json
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          offset_minutes: number
+          requires_feature: string | null
+          sort_order: number
+          template_id: string
+          tenant_id: string
+          trigger: Database["public"]["Enums"]["flow_trigger"]
+          updated_at: string
+        }
+        Insert: {
+          channel: Database["public"]["Enums"]["notification_channel"]
+          condition?: Json
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          offset_minutes?: number
+          requires_feature?: string | null
+          sort_order?: number
+          template_id: string
+          tenant_id: string
+          trigger: Database["public"]["Enums"]["flow_trigger"]
+          updated_at?: string
+        }
+        Update: {
+          channel?: Database["public"]["Enums"]["notification_channel"]
+          condition?: Json
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          offset_minutes?: number
+          requires_feature?: string | null
+          sort_order?: number
+          template_id?: string
+          tenant_id?: string
+          trigger?: Database["public"]["Enums"]["flow_trigger"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_flows_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "message_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_flows_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          appointment_id: string | null
+          attempt_count: number
+          branch_id: string | null
+          channel: Database["public"]["Enums"]["notification_channel"]
+          claimed_at: string | null
+          cost: number | null
+          created_at: string
+          customer_id: string | null
+          flow_id: string | null
+          id: string
+          kind: Database["public"]["Enums"]["message_kind"]
+          last_error: string | null
+          payload: Json
+          provider: string | null
+          provider_ref: string | null
+          rendered_body: string | null
+          rendered_subject: string | null
+          resource_id: string | null
+          scheduled_at: string
+          sent_at: string | null
+          status: Database["public"]["Enums"]["notification_status"]
+          template_id: string | null
+          tenant_id: string
+          to_address: string | null
+          updated_at: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          attempt_count?: number
+          branch_id?: string | null
+          channel: Database["public"]["Enums"]["notification_channel"]
+          claimed_at?: string | null
+          cost?: number | null
+          created_at?: string
+          customer_id?: string | null
+          flow_id?: string | null
+          id?: string
+          kind: Database["public"]["Enums"]["message_kind"]
+          last_error?: string | null
+          payload?: Json
+          provider?: string | null
+          provider_ref?: string | null
+          rendered_body?: string | null
+          rendered_subject?: string | null
+          resource_id?: string | null
+          scheduled_at: string
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["notification_status"]
+          template_id?: string | null
+          tenant_id: string
+          to_address?: string | null
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          attempt_count?: number
+          branch_id?: string | null
+          channel?: Database["public"]["Enums"]["notification_channel"]
+          claimed_at?: string | null
+          cost?: number | null
+          created_at?: string
+          customer_id?: string | null
+          flow_id?: string | null
+          id?: string
+          kind?: Database["public"]["Enums"]["message_kind"]
+          last_error?: string | null
+          payload?: Json
+          provider?: string | null
+          provider_ref?: string | null
+          rendered_body?: string | null
+          rendered_subject?: string | null
+          resource_id?: string | null
+          scheduled_at?: string
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["notification_status"]
+          template_id?: string | null
+          tenant_id?: string
+          to_address?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_flow_id_fkey"
+            columns: ["flow_id"]
+            isOneToOne: false
+            referencedRelation: "notification_flows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_resource_id_fkey"
+            columns: ["resource_id"]
+            isOneToOne: false
+            referencedRelation: "resources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "message_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       permissions: {
         Row: {
           category: string
@@ -1347,6 +1594,42 @@ export type Database = {
       }
       booking_lookup: { Args: { _token: string }; Returns: Json }
       booking_page: { Args: { _slug: string }; Returns: Json }
+      claim_notifications: {
+        Args: { _limit?: number }
+        Returns: {
+          appointment_id: string | null
+          attempt_count: number
+          branch_id: string | null
+          channel: Database["public"]["Enums"]["notification_channel"]
+          claimed_at: string | null
+          cost: number | null
+          created_at: string
+          customer_id: string | null
+          flow_id: string | null
+          id: string
+          kind: Database["public"]["Enums"]["message_kind"]
+          last_error: string | null
+          payload: Json
+          provider: string | null
+          provider_ref: string | null
+          rendered_body: string | null
+          rendered_subject: string | null
+          resource_id: string | null
+          scheduled_at: string
+          sent_at: string | null
+          status: Database["public"]["Enums"]["notification_status"]
+          template_id: string | null
+          tenant_id: string
+          to_address: string | null
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "notifications"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       create_appointment: {
         Args: {
           _branch_id: string
@@ -1374,6 +1657,10 @@ export type Database = {
         }
         Returns: string
       }
+      install_notification_defaults: {
+        Args: { _defaults: Json; _tenant: string }
+        Returns: number
+      }
       is_slug_available: { Args: { _slug: string }; Returns: boolean }
     }
     Enums: {
@@ -1400,6 +1687,21 @@ export type Database = {
         | "multiselect"
         | "boolean"
         | "phone"
+      flow_trigger:
+        | "appointment_created"
+        | "before_start"
+        | "after_end"
+        | "no_show"
+        | "birthday"
+      message_kind: "service" | "commercial"
+      notification_channel: "sms" | "whatsapp" | "email" | "voice"
+      notification_status:
+        | "scheduled"
+        | "sending"
+        | "sent"
+        | "failed"
+        | "cancelled"
+        | "skipped"
       permission_scope: "own" | "branch" | "tenant"
       resource_kind: "staff" | "room" | "device"
       tenant_status: "trial" | "active" | "suspended" | "cancelled"
@@ -1555,6 +1857,23 @@ export const Constants = {
         "multiselect",
         "boolean",
         "phone",
+      ],
+      flow_trigger: [
+        "appointment_created",
+        "before_start",
+        "after_end",
+        "no_show",
+        "birthday",
+      ],
+      message_kind: ["service", "commercial"],
+      notification_channel: ["sms", "whatsapp", "email", "voice"],
+      notification_status: [
+        "scheduled",
+        "sending",
+        "sent",
+        "failed",
+        "cancelled",
+        "skipped",
       ],
       permission_scope: ["own", "branch", "tenant"],
       resource_kind: ["staff", "room", "device"],

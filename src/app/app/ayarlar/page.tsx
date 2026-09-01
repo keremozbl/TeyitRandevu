@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import { Alert } from "@/components/ui/alert";
+import { loadPermissions } from "@/lib/auth/permissions";
 import { requireTenant } from "@/lib/auth/session";
 import { parseBookingRules } from "@/lib/domain";
 import { timeZoneOptions } from "@/lib/settings/timezone";
@@ -17,6 +19,9 @@ export default async function AyarlarPage({
 }) {
   const { active } = await requireTenant();
   const { kaydedildi } = await searchParams;
+
+  const permissions = await loadPermissions();
+  const canReadAudit = permissions.can("audit.read");
 
   const supabase = await createClient();
   const { data: settings } = await supabase
@@ -51,6 +56,22 @@ export default async function AyarlarPage({
         }}
         timeZones={timeZoneOptions(active.tenant.timezone)}
       />
+
+      {canReadAudit && (
+        <section className="flex max-w-2xl flex-col gap-2 border-t border-border pt-4">
+          <h2 className="text-[15px] font-semibold text-ink">Denetim kaydı</h2>
+          <p className="text-[13px] text-ink-2">
+            Hasta kaydına kimin ne zaman eriştiği. KVKK gereği tutuluyor; silinemez ve
+            değiştirilemez.
+          </p>
+          <Link
+            href="/app/ayarlar/denetim"
+            className="inline-flex h-8 w-fit items-center rounded border border-border bg-surface px-2.5 text-[13px] font-medium text-ink no-underline transition-colors duration-150 hover:bg-surface-2"
+          >
+            Kayıtları aç
+          </Link>
+        </section>
+      )}
 
       <section className="flex max-w-2xl flex-col gap-1 border-t border-border pt-4">
         <h2 className="text-[13px] font-medium text-ink-2">Burada olmayanlar</h2>

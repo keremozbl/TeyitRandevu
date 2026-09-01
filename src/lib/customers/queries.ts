@@ -10,6 +10,8 @@
  * `loadPermissions()` ayırır.
  */
 
+import { recordAudit } from "@/lib/audit/log";
+import { requireUser } from "@/lib/auth/session";
 import { utcToPlainDate, type PlainDate } from "@/lib/domain";
 import { createClient } from "@/lib/supabase/server";
 import type { Enums } from "@/lib/supabase/types";
@@ -232,6 +234,36 @@ export async function loadCustomerCard({
       .order("label"),
   ]);
 
+  // Denetim kaydı sayfada değil BURADA yazılıyor: kartı okuyan her yol bu
+  // fonksiyondan geçer, o yüzden kaydı düşürmeyi unutmak mümkün olmasın
+  // (KVKK Bölüm 12.4). `requireUser` istek başına önbellekli, ek tur yok.
+  const notes = noteResult.data ?? [];
+  const { user } = await requireUser();
+  await recordAudit([
+    {
+      tenantId,
+      actorId: user.id,
+      action: "read",
+      entity: "customer",
+      entityId: customer.id,
+    },
+    // Tıbbi not okuması ayrı bir satır: "hasta kartını açtı" ile "tedavi
+    // notunu okudu" hukuken de pratikte de farklı iki olay. Not yoksa
+    // okuma da yok — boş sonuç kayıt üretmez.
+    ...(notes.length > 0
+      ? [
+          {
+            tenantId,
+            actorId: user.id,
+            action: "read" as const,
+            entity: "customer_medical_note" as const,
+            entityId: customer.id,
+            detail: { count: notes.length },
+          },
+        ]
+      : []),
+  ]);
+
   const now = Date.now();
   const visits: CustomerVisit[] = (visitResult.data ?? []).map((row) => ({
     id: row.id,
@@ -262,7 +294,7 @@ export async function loadCustomerCard({
     // Gelecek yakından uzağa okunur: sıradaki randevu en üstte olsun
     upcoming: visits.filter((visit) => visit.startsAt.getTime() >= now).reverse(),
     past: visits.filter((visit) => visit.startsAt.getTime() < now),
-    medicalNotes: (noteResult.data ?? []).map((row) => ({
+    medicalNotes: notes.map((row) => ({
       id: row.id,
       body: row.body,
       createdAt: toDate(row.created_at),

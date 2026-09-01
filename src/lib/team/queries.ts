@@ -10,7 +10,7 @@
  * listeye kimin gireceğine yine politika karar veriyor.
  */
 
-import { createAdminClient } from "@/lib/supabase/admin";
+import { resolveEmails } from "@/lib/auth/emails";
 import { createClient } from "@/lib/supabase/server";
 import type { Enums } from "@/lib/supabase/types";
 
@@ -170,36 +170,6 @@ export async function loadTeamMembers(
     branchIds: row.branch_ids ?? [],
     resourceName: row.resource_id ? (resourceNames.get(row.resource_id) ?? null) : null,
   }));
-}
-
-/**
- * Kullanıcı kimliklerini e-postaya çevirir.
- *
- * Kimlikler RLS'ten geçmiş üyelik satırlarından geliyor; servis rolü burada
- * yalnızca `auth.users` tablosunun PostgREST'e kapalı olmasını telafi ediyor,
- * kimin listeleneceğine karar vermiyor. Anahtar bulunamazsa liste e-postasız
- * çizilir — ekip ekranı yapılandırma eksiği yüzünden çökmemeli.
- */
-async function resolveEmails(userIds: string[]): Promise<Map<string, string>> {
-  const found = new Map<string, string>();
-  const unique = [...new Set(userIds)];
-  if (unique.length === 0) return found;
-
-  let admin: ReturnType<typeof createAdminClient>;
-  try {
-    admin = createAdminClient();
-  } catch {
-    return found;
-  }
-
-  const results = await Promise.all(
-    unique.map(async (id) => {
-      const { data } = await admin.auth.admin.getUserById(id);
-      return [id, data?.user?.email ?? null] as const;
-    }),
-  );
-  for (const [id, email] of results) if (email) found.set(id, email);
-  return found;
 }
 
 /** Kaynak formundaki şube seçimi. */

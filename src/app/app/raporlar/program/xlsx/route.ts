@@ -1,3 +1,4 @@
+import { recordAudit } from "@/lib/audit/log";
 import { loadPermissions } from "@/lib/auth/permissions";
 import { requireTenant } from "@/lib/auth/session";
 import { fileNameFor, sheetColumnWidths, toSheetRows } from "@/lib/reports/program";
@@ -15,7 +16,7 @@ import { buildXlsx } from "@/lib/reports/xlsx";
  * çıkıp çıkmayacağına `report.revenue.read` karar veriyor.
  */
 export async function GET(request: Request) {
-  const { active } = await requireTenant();
+  const { active, user } = await requireTenant();
   const url = new URL(request.url);
 
   const [loaded, permissions] = await Promise.all([
@@ -34,10 +35,29 @@ export async function GET(request: Request) {
   }
 
   const withRevenue = permissions.can("report.revenue.read");
+  const sheetRows = toSheetRows(loaded.report, { withRevenue });
   const file = buildXlsx({
     name: `Program ${loaded.report.date}`,
     columnWidths: sheetColumnWidths({ withRevenue }),
-    rows: toSheetRows(loaded.report, { withRevenue }),
+    rows: sheetRows,
+  });
+
+  // Dışa aktarım denetim kaydına girer: hasta listesi bir dosya hâlinde
+  // kurumun dışına çıkıyor. Ekranda aynı veriyi görmekle, onu indirip
+  // e-postayla göndermek arasındaki fark KVKK açısından tam da bu.
+  await recordAudit({
+    tenantId: active.tenant.id,
+    actorId: user.id,
+    action: "export",
+    entity: "report",
+    detail: {
+      report: "program",
+      date: loaded.report.date,
+      branch: loaded.report.branchName,
+      // Başlık satırı sayılmıyor: kaç randevunun dışarı çıktığı yazılıyor.
+      rows: Math.max(sheetRows.length - 1, 0),
+      revenue: withRevenue,
+    },
   });
 
   const name = fileNameFor(loaded.report);

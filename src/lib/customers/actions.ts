@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+import { changedCustomFields, changedFields } from "@/lib/audit/diff";
+import { recordAudit } from "@/lib/audit/log";
 import { loadPermissions, MEDICAL_READ } from "@/lib/auth/permissions";
 import { requireTenant } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
@@ -127,7 +129,7 @@ export async function createCustomerAction(
   _prev: CustomerFormState,
   formData: FormData,
 ): Promise<CustomerFormState> {
-  const { active } = await requireTenant();
+  const { active, user } = await requireTenant();
 
   const read = await readForm(formData, active.tenant.id);
   if (read.error) return read.error;
@@ -162,6 +164,15 @@ export async function createCustomerAction(
     return { error: `Hasta kaydedilemedi: ${error.message}` };
   }
 
+  await recordAudit({
+    tenantId: active.tenant.id,
+    actorId: user.id,
+    action: "create",
+    entity: "customer",
+    entityId: data.id,
+    detail: { source: "panel" },
+  });
+
   revalidatePath("/app/hastalar");
   const params = new URLSearchParams();
   if (twin) params.set("ikiz", twin.id);
@@ -173,7 +184,7 @@ export async function updateCustomerAction(
   _prev: CustomerFormState,
   formData: FormData,
 ): Promise<CustomerFormState> {
-  const { active } = await requireTenant();
+  const { active, user } = await requireTenant();
   const id = String(formData.get("id") ?? "");
   if (!z.uuid().safeParse(id).success) return { error: "Hasta bulunamadı." };
 
@@ -185,9 +196,13 @@ export async function updateCustomerAction(
 
   // Görünmeyen tıbbi alanların değerleri korunur: yetkisi olmayan biri kaydı
   // güncellediğinde göremediği veriyi silmiş olmamalı.
+  //
+  // Sütunların tamamı okunuyor çünkü denetim kaydı "hangi alanlar değişti"
+  // diyor; aynı sorguya sütun eklemek ek tur değil, `custom_data` zaten
+  // buradan geliyordu.
   const { data: current } = await supabase
     .from("customers")
-    .select("custom_data")
+    .select("full_name, phone, email, birth_date, notes, tags, branch_id, custom_data")
     .eq("tenant_id", active.tenant.id)
     .eq("id", id)
     .maybeSingle();
@@ -222,6 +237,44 @@ export async function updateCustomerAction(
       return { error: "Girilen bir değer kuralı bozuyor: telefon ve doğum tarihini kontrol edin." };
     }
     return { error: `Hasta güncellenemedi: ${error.message}` };
+  }
+
+  // Denetim kaydına alan ADLARI yazılır, değerleri değil (KVKK veri asgariliği).
+  // Hiçbir şey değişmediyse kayıt da yazılmaz: "kaydet"e basmak bir değişiklik
+  // değil, ve gürültü gerçek değişikliği gizler.
+  const changed = [
+    ...changedFields(
+      {
+        full_name: current.full_name,
+        phone: current.phone,
+        email: current.email,
+        birth_date: current.birth_date,
+        notes: current.notes,
+        tags: current.tags ?? [],
+        ...(values.branch_id ? { branch_id: current.branch_id } : {}),
+      },
+      {
+        full_name: values.full_name,
+        phone: values.phone,
+        email: values.email,
+        birth_date: values.birth_date,
+        notes: values.notes,
+        tags: values.tags,
+        ...(values.branch_id ? { branch_id: values.branch_id } : {}),
+      },
+    ),
+    ...changedCustomFields(previous, merged),
+  ];
+
+  if (changed.length > 0) {
+    await recordAudit({
+      tenantId: active.tenant.id,
+      actorId: user.id,
+      action: "update",
+      entity: "customer",
+      entityId: id,
+      detail: { fields: changed },
+    });
   }
 
   revalidatePath("/app/hastalar");
@@ -266,14 +319,18 @@ export async function addMedicalNoteAction(
     .maybeSingle();
   if (!customer) return { error: "Hasta bulunamadı ya da erişiminiz yok." };
 
-  const { error } = await supabase.from("customer_medical_notes").insert({
-    tenant_id: active.tenant.id,
-    customer_id: input.customer_id,
-    branch_id: customer.branch_id,
-    resource_id: input.resource_id || null,
-    body: input.body,
-    author_id: user.id,
-  });
+  const { data: note, error } = await supabase
+    .from("customer_medical_notes")
+    .insert({
+      tenant_id: active.tenant.id,
+      customer_id: input.customer_id,
+      branch_id: customer.branch_id,
+      resource_id: input.resource_id || null,
+      body: input.body,
+      author_id: user.id,
+    })
+    .select("id")
+    .single();
 
   if (error) {
     if (error.code === "42501") {
@@ -281,6 +338,16 @@ export async function addMedicalNoteAction(
     }
     return { error: `Not kaydedilemedi: ${error.message}` };
   }
+
+  // Notun METNİ denetim kaydına girmez; hangi hastaya not yazıldığı girer.
+  await recordAudit({
+    tenantId: active.tenant.id,
+    actorId: user.id,
+    action: "create",
+    entity: "customer_medical_note",
+    entityId: input.customer_id,
+    detail: { note_id: note.id },
+  });
 
   revalidatePath(`/app/hastalar/${input.customer_id}`);
   redirect(`/app/hastalar/${input.customer_id}?not=1`);

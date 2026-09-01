@@ -235,7 +235,7 @@ gerekçeleriyle duruyor.
 
 | Yükümlülük | Durum |
 |---|---|
-| Denetim kaydı: kim hangi hasta kaydını açtı | Tablo var, **yazan kod yok** — hasta kartı geldiğinden beri bu boşluk somut: kart açmak da tıbbi not okumak da kayıt düşürmüyor |
+| Denetim kaydı: kim hangi hasta kaydını açtı | ✅ **Yapıldı** — hasta kartı açma, tıbbi not okuma ve yazma, hasta kaydı açma ve değiştirme, program dosyasının indirilmesi ve denetim ekranının kendisi kayıt düşürüyor. Kayıt servis rolüyle ve yanıttan SONRA yazılıyor (`src/lib/audit/log.ts`); değişikliklerde alan **adları** yazılıyor, değerleri değil. Ekran: `/app/ayarlar/denetim`, `audit.read` izniyle. Takvim görüntüleme bilerek kayıt üretmiyor — orada tıbbi veri yok ve her yenileme bir satır yazsaydı liste okunamazdı |
 | Tıbbi notların sütun bazlı şifrelenmesi | Yapılmadı |
 | Aydınlatma ve açık rıza akışı | ✅ **Yapıldı** — public randevu sayfasında ayrı kutu, ayrı kayıt; metin sürümü, IP, tarayıcı ve kanal `consents` tablosuna yazılıyor. Panelden açılan randevuda hâlâ yok (resepsiyon telefonla randevu alırken rıza kaydı düşmüyor) |
 | Rıza metinlerinin hukukçu onayı | Metinler `src/lib/legal/consent-texts.ts` içinde ve sürümlü (`2026-08-28.1`), ama **avukat görmedi**. Özellikle iki nokta: sağlık verisinin hukuki sebebi (açık rıza mı, KVKK m.6/3 sağlık hizmeti istisnası mı) ve yurt dışı aktarım paragrafının A3 ile tutarlılığı. Metin değişince `CONSENT_VERSION` de değişmeli |
@@ -244,8 +244,20 @@ gerekçeleriyle duruyor.
 | Veri ihlali bildirim prosedürü (72 saat) | Yazılmadı |
 | VERBİS kaydı | Yapılmadı |
 
-Denetim kaydı en acili: hem yasal hem de A1'deki bölüm sorununu tetikleyecek
-olan bu.
+Denetim kaydı yazıldı; sıradaki en acil kalem **saklama ve imha politikası**.
+İki sebeple: `audit_logs` artık gerçekten büyüyor ve bölüm silen bir iş
+politikasız yazılamaz (A1), ayrıca hasta "kaydımı silin" dediğinde işletilecek
+bir akış hâlâ yok.
+
+**Denetim kaydında bilinçli olarak OLMAYANLAR** — hepsi ayrı birer karar:
+
+| Olmayan | Neden |
+|---|---|
+| Takvim ve randevu görüntüleme | Takvimde tıbbi veri yok; her ekran yenilemesi satır yazsaydı liste okunamaz hâle gelirdi |
+| Hasta listesi ve arama | Kartın açılması kaydediliyor; listede yalnızca ad ve telefon var |
+| Randevu oluşturma/değiştirme | Randevu tablosunun kendisi zaten kim ne zaman yazdı bilgisini taşıyor (`created_at`, durum damgaları) |
+| Silme kayıtları | Hasta kaydı zaten silinemiyor (DELETE politikası yok); tıbbi not silme arayüzü de yok |
+| Kaydın değiştirilemezliğinin kanıtı (hash zinciri) | Tabloya yalnızca servis rolü yazıyor ve UPDATE/DELETE politikası yok; zincir, veritabanı yöneticisine karşı koruma demek — o eşik ayrı bir karar |
 
 ---
 

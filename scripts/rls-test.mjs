@@ -253,6 +253,46 @@ try {
   check(!keys.includes("customer.medical_notes.read"),
     "resepsiyon rolünde tıbbi not izni yok", "resepsiyonda tıbbi not izni ÇIKTI");
 
+  // Denetim kaydı: okuması ayrı izin, yazması hiç kimsede yok. Satırın
+  // kendisi de veri: hangi hastanın kartının açıldığını söylüyor.
+  console.log();
+  console.log("[11d] Denetim kaydı — okuma ayrı izin, yazma kimsede yok");
+  const { error: auditSeedErr } = await admin.from("audit_logs").insert({
+    tenant_id: tenantId, actor_id: a.id, action: "read",
+    entity: "customer", entity_id: cust.id,
+  });
+  check(!auditSeedErr, "servis rolü denetim kaydı yazabiliyor",
+    "servis rolü yazamadı", auditSeedErr?.message);
+
+  const { data: auditOwner } = await a.client.from("audit_logs").select("id");
+  check(auditOwner?.length > 0, "owner denetim kaydını okuyabiliyor",
+    "owner denetim kaydını OKUYAMIYOR — audit.read izni kopyalanmamış olabilir");
+
+  const { data: auditRec } = await c.client.from("audit_logs").select("id");
+  check(auditRec?.length === 0, "resepsiyon denetim kaydını göremiyor", `SIZDI: ${auditRec?.length}`);
+
+  const { data: auditForeign } = await b.client.from("audit_logs").select("id");
+  check(auditForeign?.length === 0, "yabancı kullanıcı denetim kaydını göremiyor",
+    `SIZDI: ${auditForeign?.length}`);
+
+  // Kaydı yazan kişi onu üretememeli: uydurma satır, denetimin tamamını
+  // değersizleştirir.
+  const { error: auditWrite } = await a.client.from("audit_logs").insert({
+    tenant_id: tenantId, actor_id: a.id, action: "read", entity: "customer",
+  });
+  check(Boolean(auditWrite), `owner denetim kaydı YAZAMIYOR (${auditWrite?.code})`,
+    "OWNER DENETİM KAYDI YAZDI");
+
+  const { data: auditUpdated } = await a.client.from("audit_logs")
+    .update({ action: "export" }).eq("tenant_id", tenantId).select("id");
+  check((auditUpdated?.length ?? 0) === 0, "owner denetim kaydını değiştiremiyor",
+    `DEĞİŞTİRDİ: ${auditUpdated?.length}`);
+
+  const { data: auditDeleted } = await a.client.from("audit_logs")
+    .delete().eq("tenant_id", tenantId).select("id");
+  check((auditDeleted?.length ?? 0) === 0, "owner denetim kaydını silemiyor",
+    `SİLDİ: ${auditDeleted?.length}`);
+
   console.log("\n[12] Yetki fonksiyonları dışarıdan çağrılamamalı");
   const { error: fnErr } = await a.client.rpc("allows", { _perm: "appointment.read", _tenant: tenantId });
   check(Boolean(fnErr), "private.allows RPC ile çağrılamıyor", "private fonksiyon DIŞARIDAN ÇAĞRILABİLDİ");
@@ -624,6 +664,9 @@ try {
 } finally {
   console.log("\n[temizlik]");
   if (tenantId) {
+    // audit_logs'ta tenant FK'si YOK: denetim kaydı, sildiği kurumun ardından
+    // da durur. O yüzden test satırları elle siliniyor.
+    await admin.from("audit_logs").delete().eq("tenant_id", tenantId);
     const { error } = await admin.from("tenants").delete().eq("id", tenantId);
     console.log(error ? `  kurum silinemedi: ${error.message}` : "  kurum ve bağlı tüm kayıtlar silindi");
   }

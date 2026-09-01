@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -298,6 +298,78 @@ export type Database = {
         Relationships: []
       }
       audit_logs_2026_10: {
+        Row: {
+          action: string
+          actor_id: string | null
+          at: string
+          diff: Json | null
+          entity: string
+          entity_id: string | null
+          id: string
+          ip: unknown
+          tenant_id: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          at?: string
+          diff?: Json | null
+          entity: string
+          entity_id?: string | null
+          id?: string
+          ip?: unknown
+          tenant_id: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          at?: string
+          diff?: Json | null
+          entity?: string
+          entity_id?: string | null
+          id?: string
+          ip?: unknown
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      audit_logs_2026_11: {
+        Row: {
+          action: string
+          actor_id: string | null
+          at: string
+          diff: Json | null
+          entity: string
+          entity_id: string | null
+          id: string
+          ip: unknown
+          tenant_id: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          at?: string
+          diff?: Json | null
+          entity: string
+          entity_id?: string | null
+          id?: string
+          ip?: unknown
+          tenant_id: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          at?: string
+          diff?: Json | null
+          entity?: string
+          entity_id?: string | null
+          id?: string
+          ip?: unknown
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      audit_logs_2026_12: {
         Row: {
           action: string
           actor_id: string | null

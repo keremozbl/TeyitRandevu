@@ -4,28 +4,36 @@ Test ortamında sorun çıkarmayan ama canlıda çıkacak şeyler. Her madde bil
 bir borç — hangisi olduğunu ve nasıl kapatılacağını yazıyorum ki sonradan
 "neden böyle yapılmış" diye bakılmasın.
 
-Son güncelleme: 28 Ağustos 2026 · Durum: Faz 4 (bildirim altyapısı kuruldu)
+Son güncelleme: 1 Eylül 2026 · Durum: Faz 4 (zamanlanmış işler kuruldu)
 
 ---
 
 ## A. Zaman bombaları — tarihi olan işler
 
-### A1. `audit_logs` bölümleri 1 Kasım 2026'da bitiyor · **71 gün**
+### A1. `audit_logs` bölümleri ✅ çözüldü
 
-Tablo ay bazlı bölümlenmiş ve elle üç bölüm açıldı: 2026-08, 09, 10. **1 Kasım
-2026'dan sonra bu tabloya yapılan her INSERT hata verecek** — uygun bölüm
+Tablo ay bazlı bölümlenmiş ve elle üç bölüm açılmıştı: 2026-08, 09, 10. **1 Kasım
+2026'dan sonra bu tabloya yapılan her INSERT hata verecekti** — uygun bölüm
 bulunamadığı için. Denetim kaydı yazan bir trigger devreye girdikten sonra bu,
-hasta kaydı açmayı engelleyecek kadar yayılabilir.
+hasta kaydı açmayı engelleyecek kadar yayılırdı.
 
-**Çözüm:** `pg_cron` ile her ay sonraki üç ayın bölümünü önceden açan bir iş.
-Denetim kaydı yazımı devreye girmeden önce mutlaka.
+`pg_cron` kuruldu (`supabase/schemas/95_cron.sql`). `audit-partitions` işi her
+ayın 1'inde 03:00 UTC'de `private.ensure_audit_partitions(3)` çağırıyor: bulunan
+ay ve sonraki üç ay açık tutuluyor. Üç aylık pay, işin iki ay üst üste
+çalışmaması durumunda bile bölümün hazır olması için — zamanlanmış işin sessizce
+durması gerçek bir olasılık. 2026-11 ve 2026-12 bölümleri fonksiyon ilk
+çalıştırıldığında açıldı.
 
-```sql
--- taslak
-select cron.schedule('audit-partition', '0 3 1 * *', $$
-  select private.ensure_audit_partitions(3);
-$$);
-```
+**Bilinmesi gerekenler:**
+
+- Bölüm sınırları açıkça `+00` ile yazılıyor. `timestamptz` bir sınır, DDL'i
+  çalıştıran oturumun saat diliminde yorumlanır; yanlış dilim ay başındaki
+  kayıtların yanlış bölüme düşmesi demek.
+- Yeni bölüm ana tablodan RLS'i miras alıyor ama `force`'u almıyor; fonksiyon
+  onu elle açıyor. Bölümlere hiçbir role yetki verilmiyor.
+- **Eski bölümü silen kod yok.** Saklama ve imha politikası kararlaştırılmadı
+  (C tablosu); "yer açsın" diye veri silen bir iş, hukuken tutulması gereken
+  kaydı silen iş olabilir.
 
 ### A2. Ücretsiz Supabase projesi 7 gün hareketsizlikte duraklatılıyor
 
@@ -37,7 +45,7 @@ Pilot kliniğe demo yapacağınız gün proje uykuda olabilir. Pilot başlamadan
 Frankfurt bölgesi seçildi ama standart sözleşme imzalanıp Kurul'a bildirilmedi.
 Gerçek hasta verisi girmeden önce tamamlanmalı — Plan Bölüm 12.2.
 
-### A4. Süresi dolan slot tutmaları `pg_cron` ile süpürülmeli
+### A4. Süresi dolan slot tutmaları ✅ çözüldü
 
 Public sayfada müşteri formu doldururken slot `pending` + `hold_expires_at` ile
 tutuluyor (Plan 6c). Süre dolduğunda satır ölüyor ama **tablodan düşmüyor**:
@@ -49,15 +57,27 @@ o kaynağın ölü tutmalarını yazmadan hemen önce siliyor
 dolmuş tutmaları zaten görmezden geliyor. Yani **görünür bir hata üretmiyor**;
 ama kimse o kaynağa randevu yazmazsa satır tabloda kalmaya devam ediyor.
 
-**Çözüm:** `pg_cron` ile dakikalık bir süpürme. A1'deki bölüm işiyle aynı
-`pg_cron` kurulumuna biniyor, ikisi birlikte yapılabilir.
+`hold-sweep` işi dakikada bir `private.sweep_all_expired_holds()` çağırıyor.
+Yazma yolundaki kaynak bazlı süpürme **kaldırılmadı**: iş dakikada bir çalışsa
+bile aradaki 59 saniyede yazılan randevu ölü tutmaya takılabilirdi. İkisi
+birlikte çalışıyor — biri doğruluk için, diğeri temizlik için.
+
+Silinen satırda hasta verisi yok (ad ve telefon onay adımında yazılıyor) ve
+bekleyen bildirimi de yok: kuyruğa yazan fonksiyon `hold_expires_at is not null`
+satırında duruyor.
+
+**Üçüncü iş — `cron-history`:** pg_cron her çalıştırmayı
+`cron.job_run_details`'e yazıyor; dakikalık bir iş ayda ~43 bin satır demek.
+Gece 03:10 UTC'de bir haftadan eski kayıtlar siliniyor. Bir hafta, "iş çalışıyor
+mu, ne zaman hata verdi" sorusunu cevaplamaya yetiyor.
+
+İşlerin durumu tek sorguyla görülür:
 
 ```sql
--- taslak
-select cron.schedule('hold-sweep', '* * * * *', $$
-  delete from public.appointments
-   where status = 'pending' and hold_expires_at is not null and hold_expires_at < now();
-$$);
+select jobname, schedule, active from cron.job;
+select j.jobname, d.status, d.return_message, d.start_time
+  from cron.job_run_details d join cron.job j using (jobid)
+ order by d.start_time desc limit 20;
 ```
 
 ---
@@ -186,8 +206,25 @@ mesajı gönderilemez (hatırlatma gönderilebilir, o hizmet bilgilendirmesi).
    çalışır; "iki saat kala hatırlatma" o planda anlamsız olur. Pilot öncesi
    plan yükseltmesi zaten A2 ve B5 için de gerekiyor.
 
-Alternatif: `pg_cron` + `pg_net` ile aynı uç noktayı veritabanından çağırmak.
-A1 ve A4 zaten `pg_cron` kurulumu gerektiriyor; üçü tek işte yapılabilir.
+**Alternatif — artık hazır:** `pg_cron` kuruldu (A1/A4), yani kuyruk Vercel Pro
+olmadan da beş dakikada bir boşaltılabilir. Eksik olan tek şey uç noktanın
+dışarıdan erişilebilir bir adreste olması; bu yüzden iş **kurulmadı**, ilk
+dağıtımdan sonra eklenecek:
+
+```sql
+create extension if not exists pg_net;
+
+select cron.schedule('notification-drain', '*/5 * * * *', $$
+  select net.http_post(
+    url     := 'https://<alan-adı>/api/bildirim/gonder',
+    headers := jsonb_build_object('Authorization', 'Bearer ' || current_setting('app.cron_secret')));
+$$);
+```
+
+Sırrın SQL'e düz metin gömülmemesi için `alter database postgres set
+app.cron_secret = '...'` ile ayarlanır; Vault de bir seçenek. `pg_net` çağrıyı
+asenkron yapar, yanıtı `net._http_response` tablosunda tutar ve o tablonun da
+budanması gerekir.
 
 ---
 
@@ -259,7 +296,8 @@ Bilinmesi yeterli.
 | `business_type` şablon anahtarına FK'siz | Şablonlar kodda, tablo değil | Şablonlar veritabanına taşınırsa |
 | Tenant değiştirici arayüzü yok | Çoğu kullanıcı tek kurumda | Çok kurumlu kullanıcı çıkınca |
 | `audit_logs` bölümlerinde politika yok | İzin verilmemiş = erişim yok | Gerekmez |
-| Doğum günü akışı KAPALI kuruluyor | Tetiklemek için günlük bir tarama gerekiyor (randevuya bağlı değil, hastaya bağlı); kuyruğa yazan tetikleyici randevu tablosunda. Açık görünüp çalışmayan akış, kurumun gönderdiğini sandığı ama gitmeyen mesaj demek | `pg_cron` kurulunca: günlük tarama + `birthday` tetikleyicisi |
+| Doğum günü akışı KAPALI kuruluyor | Tetiklemek için günlük bir tarama gerekiyor (randevuya bağlı değil, hastaya bağlı); kuyruğa yazan tetikleyici randevu tablosunda. Açık görünüp çalışmayan akış, kurumun gönderdiğini sandığı ama gitmeyen mesaj demek | **Engeli kalktı** (`pg_cron` kuruldu): günlük tarama fonksiyonu + `birthday` işi yazılabilir. Yine de sağlayıcısız gönderim yok (B9) |
+| Üretilen tipler her ay bir bölüm tablosu daha içerecek | `gen types` `public` şemasındaki her tabloyu yazıyor, `audit_logs_2026_11` gibi bölümler de dahil. Kod bu tipleri kullanmıyor; gürültü, hata değil | `db:types` çıktısı okunmaz hale gelirse bölümleri ayrı bir şemaya taşımak |
 | Kademeli onay zinciri yok: cevap alınca zincirden çıkarma, kanal yükseltme | Akış motoru satırları bağımsız işliyor; "cevap geldi mi" sorusunun cevabı için gelen mesaj/DTMF webhook'u gerekiyor ve hiçbir sağlayıcı bağlı değil (B9). Zincirin kendisi Plan 7.2'nin asıl farkı | Sağlayıcı bağlanınca, IVR'den önce |
 | IVR tabloları (`ivr_scripts`, `call_sessions`) kurulmadı | Plan 7.5 bunları Faz 4'te istiyordu ama `voice` kanalı zaten sağlayıcısız; boş tablo şema gürültüsünden başka şey değil | Sesli arama talebi ölçülünce (Plan 11, F8 koşullu) |
 | Kendi hesabını getir (`tenant_providers`) yok | Plan 7.3'te "ilk günden" deniyor ama kimlik bilgilerini Vault'ta tutmak bir sağlayıcı entegrasyonu olmadan test edilemez | İlk BYO talebinde — büyük klinik kendi NetGSM sözleşmesini isteyince |
@@ -291,7 +329,7 @@ Bilinmesi yeterli.
 
 ## Sıra önerisi
 
-1. **A1 + A4** `pg_cron` kurulumu tek işte: denetim kaydı bölümleri ve ölü slot tutmalarının süpürülmesi
+1. ~~**A1 + A4** `pg_cron` kurulumu~~ — ✅ 1 Eylül 2026
 2. **B9 + B10** bildirim sağlayıcısı ve kuyruk zamanlayıcısı — hatırlatma ürünün asıl satış argümanı
 3. **B3 + B4** SMTP ve auth ayarları — pilot öncesi
 4. **B2** demo hesabın ve demo kurumun silinmesi — gerçek hasta verisi girmeden önce

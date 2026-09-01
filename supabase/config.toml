@@ -21,6 +21,7 @@ schema_paths = [
   "./schemas/70_public_booking.sql",
   "./schemas/80_notifications.sql",
   "./schemas/90_rls.sql",
+  "./schemas/95_cron.sql",
 ]
 
 [api]

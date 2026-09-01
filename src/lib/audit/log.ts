@@ -37,7 +37,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 export type AuditAction = "read" | "create" | "update" | "delete" | "export";
 
 /** Kaydın hangi varlığa ait olduğu; tablo adlarıyla aynı tutuluyor. */
-export type AuditEntity = "customer" | "customer_medical_note" | "report";
+export type AuditEntity = "customer" | "customer_medical_note" | "consent" | "report";
 
 /** `diff` sütununa yazılabilecek değerler — hasta verisi değil, üstveri. */
 export type AuditDetail = Record<string, string | number | boolean | null | string[]>;

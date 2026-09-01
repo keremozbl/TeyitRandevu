@@ -659,6 +659,41 @@ try {
   check(promoStill?.status === "skipped", "onaysız ticari ileti 'gönderilmedi' olarak duruyor",
     `durum: ${promoStill?.status}`);
 
+  // Rıza geri alma: panelin yazdığı satırın gönderim kapısını GERÇEKTEN
+  // kapatması gerekiyor. Arayüzde "geri alındı" yazıp mesajın gitmeye devam
+  // etmesi, kaydın hiç olmamasından kötüdür.
+  console.log("\n[14g] Rıza geri alınınca ticari ileti durmalı");
+  const { error: revokeErr } = await a.client.from("consents").insert({
+    tenant_id: tenantId, customer_id: consented.id, kind: "ticari_ileti",
+    text_version: "test.1", granted: false, revoked_at: new Date().toISOString(),
+    channel: "panel",
+  });
+  check(!revokeErr, "geri alma satırı yazıldı", "geri alma yazılamadı", revokeErr?.message);
+
+  // Rıza satırı DEĞİŞTİRİLEMEZ: geri alma yeni satırdır, eskisi olduğu gibi durur.
+  const { data: consentUpdated } = await a.client.from("consents")
+    .update({ granted: true }).eq("customer_id", consented.id).select("id");
+  check((consentUpdated?.length ?? 0) === 0, "verilmiş rıza satırı değiştirilemiyor",
+    `DEĞİŞTİRDİ: ${consentUpdated?.length}`);
+
+  const revokedStart = weekdaySlot(9, 11);
+  const { data: revokedAppointment, error: revokedApptErr } = await a.client.rpc("create_appointment", {
+    ...rpcArgs, _starts_at: revokedStart.toISOString(), _customer_id: consented.id,
+  });
+  check(!revokedApptErr, "geri alma sonrası randevu yazıldı", "randevu yazılamadı",
+    revokedApptErr?.message);
+
+  const revokedQueue = (await readQueue(revokedAppointment)).filter((row) => row.kind === "commercial");
+  check(revokedQueue[0]?.status === "skipped",
+    "rıza geri alınınca ticari ileti kuyruğa 'gönderilmedi' düştü",
+    `durum: ${revokedQueue[0]?.status}`);
+
+  // Hizmet bilgilendirmesi etkilenmemeli: hatırlatma rızaya bağlı değil.
+  const revokedService = (await readQueue(revokedAppointment)).filter((row) => row.kind === "service");
+  check(revokedService.length > 0 && revokedService.every((row) => row.status !== "skipped"),
+    "hatırlatma rıza geri alınsa da gönderilecek",
+    `hizmet satırları: ${revokedService.map((row) => row.status).join(", ")}`);
+
 } catch (e) {
   no("BEKLENMEYEN HATA", e.message);
 } finally {

@@ -4,7 +4,7 @@ Test ortamında sorun çıkarmayan ama canlıda çıkacak şeyler. Her madde bil
 bir borç — hangisi olduğunu ve nasıl kapatılacağını yazıyorum ki sonradan
 "neden böyle yapılmış" diye bakılmasın.
 
-Son güncelleme: 1 Eylül 2026 · Durum: Faz 4 (zamanlanmış işler kuruldu)
+Son güncelleme: 1 Eylül 2026 · Durum: Faz 4 (zamanlanmış işler, denetim kaydı, rıza yönetimi)
 
 ---
 
@@ -237,10 +237,10 @@ gerekçeleriyle duruyor.
 |---|---|
 | Denetim kaydı: kim hangi hasta kaydını açtı | ✅ **Yapıldı** — hasta kartı açma, tıbbi not okuma ve yazma, hasta kaydı açma ve değiştirme, program dosyasının indirilmesi ve denetim ekranının kendisi kayıt düşürüyor. Kayıt servis rolüyle ve yanıttan SONRA yazılıyor (`src/lib/audit/log.ts`); değişikliklerde alan **adları** yazılıyor, değerleri değil. Ekran: `/app/ayarlar/denetim`, `audit.read` izniyle. Takvim görüntüleme bilerek kayıt üretmiyor — orada tıbbi veri yok ve her yenileme bir satır yazsaydı liste okunamazdı |
 | Tıbbi notların sütun bazlı şifrelenmesi | Yapılmadı |
-| Aydınlatma ve açık rıza akışı | ✅ **Yapıldı** — public randevu sayfasında ayrı kutu, ayrı kayıt; metin sürümü, IP, tarayıcı ve kanal `consents` tablosuna yazılıyor. Panelden açılan randevuda hâlâ yok (resepsiyon telefonla randevu alırken rıza kaydı düşmüyor) |
+| Aydınlatma ve açık rıza akışı | ✅ **Yapıldı** — public randevu sayfasında ayrı kutu, ayrı kayıt; metin sürümü, IP, tarayıcı ve kanal `consents` tablosuna yazılıyor. Panelde de: hasta kartındaki "Rıza kayıtları" bölümünden üç rıza ayrı ayrı `channel = 'panel'` olarak düşülüyor. O kayıt, rızanın klinikte sözlü ya da imzayla alındığını belgeler — hasta metni ekranda okumadı ve arayüz bunu açıkça söylüyor. Kaydı kimin düştüğü denetim kaydında |
 | Rıza metinlerinin hukukçu onayı | Metinler `src/lib/legal/consent-texts.ts` içinde ve sürümlü (`2026-08-28.1`), ama **avukat görmedi**. Özellikle iki nokta: sağlık verisinin hukuki sebebi (açık rıza mı, KVKK m.6/3 sağlık hizmeti istisnası mı) ve yurt dışı aktarım paragrafının A3 ile tutarlılığı. Metin değişince `CONSENT_VERSION` de değişmeli |
-| Rıza geri alma (`revoked_at`) akışı | Sütun var, arayüz yok — hasta "rızamı geri alıyorum" dediğinde kaydı işaretleyecek bir yer yok |
-| Saklama ve imha politikası, silme talebi akışı | Yapılmadı |
+| Rıza geri alma (`revoked_at`) akışı | ✅ **Yapıldı** — hasta kartındaki "Geri al" düğmesi. Geri alma satırı DEĞİŞTİRMEZ, yeni satır yazar (`granted = false`, `revoked_at` dolu): `consents` üzerinde UPDATE politikası yok ve verilmiş bir rızanın düzeltilebilmesi kaydın kanıt değerini sıfırlardı. Ticari ileti kapısı en son satıra baktığı için geri alma anında etki eder — `rls:test` bunu doğruluyor: geri almadan sonraki randevunun ticari iletisi `skipped`, hatırlatması etkilenmiyor |
+| Saklama ve imha politikası, silme talebi akışı | Yapılmadı — **sıradaki kalem.** İki karar bekliyor: (1) saklama süreleri (hasta dosyası sağlık mevzuatından, randevu ve ticari kayıt zamanaşımından, denetim kaydı ayrı) — bunlar avukata sorulacak, koda sabit yazılmadan önce; (2) silme = **anonimleştirme**, hard delete değil: randevu geçmişi ticari kayıt (Plan 11.4). Politika yazılmadan `audit_logs` bölümlerini silen bir iş de yazılamaz (A1) |
 | Veri ihlali bildirim prosedürü (72 saat) | Yazılmadı |
 | VERBİS kaydı | Yapılmadı |
 

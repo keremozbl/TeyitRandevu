@@ -15,6 +15,8 @@ const SUMMARIES: Record<Key, string> = {
   "create:customer": "hasta kaydı açtı",
   "update:customer": "hasta kaydını değiştirdi",
   "delete:customer": "hasta kaydını sildi",
+  "create:consent": "rıza kaydı düştü",
+  "delete:consent": "rızayı geri aldı",
   "create:customer_medical_note": "tıbbi not yazdı",
   "update:customer_medical_note": "tıbbi notu değiştirdi",
   "delete:customer_medical_note": "tıbbi notu sildi",
@@ -49,6 +51,18 @@ const REPORT_LABELS: Record<string, string> = {
 };
 
 /**
+ * Rıza türleri. `consent_kind` enum'unun kısa karşılıkları burada AYRICA
+ * duruyor: bu dosya birim testinden çağrılıyor ve hiçbir sunucu modülüne
+ * bağlı olmamalı (Node'un test koşucusu `@/` alias'ını çözemiyor).
+ */
+const CONSENT_LABELS: Record<string, string> = {
+  kvkk_aydinlatma: "aydınlatma metni",
+  acik_riza_saglik: "sağlık verisi açık rızası",
+  ticari_ileti: "ticari ileti izni",
+  cerez: "çerez onayı",
+};
+
+/**
  * Satırın ikinci satırında görünen ayrıntı. `diff` sütununda hasta verisi
  * yok; burada da üretilmiyor — yalnızca alan adları ve sayılar.
  */
@@ -64,6 +78,14 @@ export function detailText(detail: Record<string, unknown> | null): string | nul
   if (typeof detail.report === "string") {
     parts.push(REPORT_LABELS[detail.report] ?? detail.report);
   }
+
+  if (typeof detail.kind === "string") {
+    parts.push(CONSENT_LABELS[detail.kind] ?? detail.kind);
+  }
+
+  if (typeof detail.version === "string") parts.push(`metin ${detail.version}`);
+
+  if (detail.channel === "panel") parts.push("panelden kaydedildi");
 
   if (typeof detail.date === "string") parts.push(detail.date);
 

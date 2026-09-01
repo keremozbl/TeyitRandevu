@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { Alert } from "@/components/ui/alert";
-import { loadPermissions, MEDICAL_READ, MEDICAL_WRITE } from "@/lib/auth/permissions";
+import { CUSTOMER_WRITE, loadPermissions, MEDICAL_READ, MEDICAL_WRITE } from "@/lib/auth/permissions";
 import { requireTenant } from "@/lib/auth/session";
 import { updateCustomerAction } from "@/lib/customers/actions";
 import { ageFrom, formatFieldValue, visibleFields } from "@/lib/customers/fields";
@@ -13,10 +13,12 @@ import {
   type CustomerVisit,
   type MedicalNote,
 } from "@/lib/customers/queries";
+import { loadConsents } from "@/lib/legal/consents";
 import { STATUS_STYLES } from "@/lib/scheduling/status";
 import { formatPhoneTr } from "@/lib/utils/phone";
 
 import { CustomerForm } from "../customer-form";
+import { ConsentList } from "./consent-list";
 import { MedicalNoteForm } from "./medical-note-form";
 
 export const metadata: Metadata = { title: "Hasta" };
@@ -26,25 +28,29 @@ export default async function HastaPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ kaydedildi?: string; ikiz?: string; not?: string }>;
+  searchParams: Promise<{ kaydedildi?: string; ikiz?: string; not?: string; riza?: string }>;
 }) {
   const { active } = await requireTenant();
   const { id } = await params;
-  const { kaydedildi, ikiz, not } = await searchParams;
+  const { kaydedildi, ikiz, not, riza } = await searchParams;
 
   const permissions = await loadPermissions();
   const canReadMedical = permissions.can(MEDICAL_READ);
   const canWriteMedical = permissions.can(MEDICAL_WRITE);
+  const canWriteCustomer = permissions.can(CUSTOMER_WRITE);
 
-  const card = await loadCustomerCard({
-    tenantId: active.tenant.id,
-    customerId: id,
-    timeZone: active.tenant.timezone,
-    withMedicalNotes: canReadMedical,
-  });
+  // Üçü paralel: rıza kayıtları ve şube listesi karta bir tur daha eklemesin.
+  const [card, consents, branches] = await Promise.all([
+    loadCustomerCard({
+      tenantId: active.tenant.id,
+      customerId: id,
+      timeZone: active.tenant.timezone,
+      withMedicalNotes: canReadMedical,
+    }),
+    loadConsents(active.tenant.id, id),
+    loadBranchOptions(active.tenant.id),
+  ]);
   if (!card) notFound();
-
-  const branches = await loadBranchOptions(active.tenant.id);
   const { customer } = card;
   const age = customer.birthDate ? ageFrom(customer.birthDate) : null;
   const fields = visibleFields(card.fields, canReadMedical);
@@ -104,6 +110,14 @@ export default async function HastaPage({
 
       {kaydedildi && <Alert tone="success">Hasta bilgileri kaydedildi.</Alert>}
       {not && <Alert tone="success">Tıbbi not eklendi.</Alert>}
+      {riza === "riza" && <Alert tone="success">Rıza kaydı düşüldü.</Alert>}
+      {riza === "riza_geri" && (
+        <Alert tone="success">
+          Rıza geri alındı. Ticari ileti izniyse bundan sonraki kampanya mesajları
+          gönderilmeyecek; bekleyenler gönderim anında yeniden kontrol edilir.
+        </Alert>
+      )}
+      {riza && riza !== "riza" && riza !== "riza_geri" && <Alert tone="error">{riza}</Alert>}
       {ikiz && (
         <Alert tone="error">
           Bu telefon numarası başka bir kayıtta da var.{" "}
@@ -151,6 +165,13 @@ export default async function HastaPage({
           </dl>
         </section>
       )}
+
+      <ConsentList
+        customerId={customer.id}
+        consents={consents}
+        canWrite={canWriteCustomer}
+        formatter={dayTime}
+      />
 
       {customer.notes && (
         <section className="flex flex-col gap-2">

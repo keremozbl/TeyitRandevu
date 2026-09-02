@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { MOCKS } from "@/components/marketing/product-mocks";
+import { SectorCarousel } from "@/components/marketing/sector-carousel";
 import {
   BODY,
   BTN_PRIMARY,
@@ -14,7 +15,7 @@ import {
   H3,
   LEAD,
 } from "@/components/marketing/ui";
-import { FAMILY_LABELS, listTemplates } from "@/lib/templates";
+import { listSectorSlides } from "@/lib/marketing/sectors";
 import {
   CAPABILITIES,
   COMPLIANCE,
@@ -194,26 +195,7 @@ export default function AnaSayfa() {
             </p>
           </div>
 
-          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {listTemplates().map((template) => (
-              <li
-                key={template.key}
-                className="flex min-w-0 flex-col gap-2 rounded-lg border border-border bg-surface p-5"
-              >
-                <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
-                  {FAMILY_LABELS[template.family]}
-                </p>
-                <h3 className="text-[17px] font-semibold tracking-tight text-ink">
-                  {template.label}
-                </h3>
-                <p className="text-[14px] leading-relaxed text-ink-2">{template.description}</p>
-                <p className="mt-auto pt-2 text-[13px] text-ink-3">
-                  {template.terminology.customer_plural} · {template.terminology.resource_plural} ·{" "}
-                  <span data-numeric>{template.services.length}</span> hazır hizmet
-                </p>
-              </li>
-            ))}
-          </ul>
+          <SectorCarousel slides={listSectorSlides()} />
 
           <p className="max-w-2xl pt-8 text-[15px] leading-[1.7] text-ink-2">
             <strong className="font-medium text-ink">Listede yoksa da olur.</strong> Motor sektöre

@@ -219,6 +219,13 @@ table, .tabular, time, [data-numeric] {
 h1, h2, h3, h4 { text-wrap: balance; margin: 0; font-weight: 600; }
 p { text-wrap: pretty; margin: 0; }
 
+/* Sektör seçicide panel değişimi — yalnızca opacity ve transform.
+   prefers-reduced-motion aşağıda zaten süreyi sıfırlıyor. */
+@keyframes sektor-giris {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;

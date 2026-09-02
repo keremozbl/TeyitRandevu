@@ -23,6 +23,20 @@ export const PRODUCT = {
   stage: "Ürün pilot aşamasında: ilk kliniklerle birlikte kuruluyor.",
 } as const;
 
+/**
+ * Ana sayfadaki güven şeridi.
+ *
+ * Rakiplerin yerinde "16.000 işletme", "4.8 yıldız" yazıyor; bizde henüz
+ * öyle bir sayı yok ve uydurulmuyor (yukarıdaki iki dürüstlük kuralı). Yerine
+ * doğrulanabilir olgular: nerede durduğu, neyin garanti edildiği.
+ */
+export const TRUST = [
+  { label: "Çift rezervasyon", value: "Veritabanı kısıtı" },
+  { label: "Veri konumu", value: "AB · Frankfurt" },
+  { label: "KVKK", value: "Rıza + denetim kaydı" },
+  { label: "Kurulum", value: "Pilotta birlikte, ücretsiz" },
+] as const;
+
 export type Capability = {
   key: string;
   title: string;
@@ -97,6 +111,20 @@ export const COMPLIANCE = [
  * -------------------------------------------------------------------------- */
 
 export const PRICING_IS_DRAFT = true;
+
+/**
+ * Aylık ücret metni.
+ *
+ * `style: "currency"` ₺ (U+20BA) basıyor; arayüz fontunda o glif yok, tarayıcı
+ * yedek fonta düşüyor ve sonuç ekranda £ gibi okunuyor — fiyat sayfasında
+ * kabul edilemez bir yanlış anlama. Sayı yine Intl ile biçimleniyor (binlik
+ * ayracı nokta), para birimi düz metin "TL".
+ */
+const priceNumber = new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 0 });
+
+export function formatMonthly(amount: number): string {
+  return `${priceNumber.format(amount)} TL`;
+}
 
 export type Plan = {
   key: string;

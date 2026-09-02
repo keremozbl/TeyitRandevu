@@ -1,6 +1,6 @@
 import type { ComponentProps } from "react";
 
-type Variant = "primary" | "secondary" | "ghost" | "danger";
+type Variant = "primary" | "secondary" | "ghost" | "danger" | "brand";
 type Size = "sm" | "md" | "lg";
 
 const VARIANTS: Record<Variant, string> = {
@@ -12,6 +12,10 @@ const VARIANTS: Record<Variant, string> = {
     "bg-transparent text-ink-2 border-transparent hover:bg-surface-2 hover:text-ink",
   danger:
     "bg-surface text-st-noshow border-border hover:bg-st-noshow-soft hover:border-st-noshow",
+  // Yalnızca pazarlama sitesi: marka yeşili panelde "onaylandı" durumuyla
+  // karışmasın diye orada kullanılmıyor (globals.css `--brand`).
+  brand:
+    "bg-brand text-brand-ink border-brand hover:bg-brand-strong hover:border-brand-strong",
 };
 
 const SIZES: Record<Size, string> = {

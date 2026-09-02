@@ -44,6 +44,17 @@
   --st-noshow:    #A63A29;   --st-noshow-soft:    #F6DFDA;
   --st-cancelled: #6B7472;   --st-cancelled-soft: #E8EAE7;
 
+  /* --- pazarlama markası ------------------------------------------------------
+     Panelin aksanı teal; marka yeşili YALNIZCA pazarlama sitesinde kullanılır.
+     Sebep: panelde "onaylandı" durumu yeşil ve marka rengi onunla aynı ailede
+     olursa durum rengi anlamını kaybeder. Plan 9: "pazarlama sitesi başka bir
+     dil konuşabilir, panel konuşamaz". */
+  --brand:        #0A6B4F;
+  --brand-strong: #085840;
+  --brand-ink:    #FFFFFF;
+  --brand-tint:   #E8F3EC;
+  --brand-line:   #BCD9C8;
+
   --focus: #0E5F6E;
 
   /* --- ölçüler --------------------------------------------------------------
@@ -81,6 +92,12 @@
     --st-noshow:    #E08A76;   --st-noshow-soft:    #37201A;
     --st-cancelled: #7E8886;   --st-cancelled-soft: #21292B;
 
+    --brand:        #3FCB96;
+    --brand-strong: #5CDCAA;
+    --brand-ink:    #04241A;
+    --brand-tint:   #0E2B22;
+    --brand-line:   #1E4A3A;
+
     --focus: #3FA9BC;
   }
 }
@@ -106,6 +123,12 @@
   --st-arrived:   #3FA9BC;   --st-arrived-soft:   #123239;
   --st-noshow:    #E08A76;   --st-noshow-soft:    #37201A;
   --st-cancelled: #7E8886;   --st-cancelled-soft: #21292B;
+
+  --brand:        #3FCB96;
+  --brand-strong: #5CDCAA;
+  --brand-ink:    #04241A;
+  --brand-tint:   #0E2B22;
+  --brand-line:   #1E4A3A;
 
   --focus: #3FA9BC;
 }
@@ -135,6 +158,12 @@
   --color-st-noshow-soft:    var(--st-noshow-soft);
   --color-st-cancelled:      var(--st-cancelled);
   --color-st-cancelled-soft: var(--st-cancelled-soft);
+
+  --color-brand:        var(--brand);
+  --color-brand-strong: var(--brand-strong);
+  --color-brand-ink:    var(--brand-ink);
+  --color-brand-tint:   var(--brand-tint);
+  --color-brand-line:   var(--brand-line);
 
   --radius-DEFAULT: var(--radius);
   --radius-sm:      var(--radius-sm);
@@ -218,6 +247,9 @@ p { text-wrap: pretty; margin: 0; }
     --ink-3:         #4A4A4A;
     --accent:        #000000;
     --accent-soft:   #FFFFFF;
+    --brand:         #000000;
+    --brand-tint:    #FFFFFF;
+    --brand-line:    #9A9A9A;
   }
 
   @page {

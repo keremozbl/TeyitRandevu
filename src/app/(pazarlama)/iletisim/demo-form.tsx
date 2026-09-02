@@ -33,9 +33,9 @@ export function DemoForm({ source }: { source: string }) {
 
   if (state.ok) {
     return (
-      <div className="flex flex-col gap-3 rounded border border-st-confirmed bg-st-confirmed-soft p-5">
-        <h2 className="text-[15px] font-semibold text-ink">Talebiniz alındı</h2>
-        <p className="text-[14px] leading-relaxed text-ink-2">
+      <div className="flex flex-col gap-3 rounded-lg border border-st-confirmed bg-st-confirmed-soft p-5">
+        <h2 className="text-[17px] font-semibold text-ink">Talebiniz alındı</h2>
+        <p className="text-[15px] leading-relaxed text-ink-2">
           En kısa sürede dönüş yapacağız. Bu arada{" "}
           <Link href="/#urun" className="underline underline-offset-2">
             ürünün ne yaptığına
@@ -129,7 +129,7 @@ export function DemoForm({ source }: { source: string }) {
           <input
             type="checkbox"
             name="onay_ticari"
-            className="mt-[3px] size-4 shrink-0 accent-[var(--accent)]"
+            className="mt-[3px] size-4 shrink-0 accent-[var(--brand)]"
           />
           <span className="flex flex-col gap-0.5">
             <span className="text-[13px] text-ink">{DEMO_MARKETING_LINE}</span>
@@ -139,7 +139,7 @@ export function DemoForm({ source }: { source: string }) {
       </div>
 
       <div className="flex items-center gap-3">
-        <Button type="submit" disabled={pending}>
+        <Button type="submit" variant="brand" size="lg" disabled={pending}>
           {pending ? "Gönderiliyor…" : "Talebi Gönder"}
         </Button>
         <p aria-live="polite" className="text-[12px] text-ink-3">

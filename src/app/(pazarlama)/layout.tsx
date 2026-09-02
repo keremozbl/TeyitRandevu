@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { ThemeToggle } from "@/components/theme-toggle";
+import { BTN_SMALL, Container, Wordmark } from "@/components/marketing/ui";
 import { SITE_CONTACT } from "@/lib/legal/site-texts";
 import { PRODUCT } from "@/lib/marketing/content";
 
@@ -8,7 +9,7 @@ import { PRODUCT } from "@/lib/marketing/content";
  * Pazarlama sitesinin kabuğu.
  *
  * Panelden ayrı bir route grubu: `/app` yoğun bir operasyon aracı, burası
- * okunacak bir sayfa. Token'lar aynı, ölçek farklı.
+ * okunacak bir sayfa. Token'lar aynı, ölçek ve marka rengi farklı.
  *
  * Bu grupta Supabase'e hiç gidilmiyor — sayfalar statik üretiliyor ve
  * Frankfurt'a tur atmıyor. Tek istisna demo formu; o da bir server action.
@@ -16,8 +17,8 @@ import { PRODUCT } from "@/lib/marketing/content";
 
 const NAV = [
   { href: "/#urun", label: "Ürün" },
-  { href: "/#kvkk", label: "KVKK" },
   { href: "/fiyat", label: "Fiyat" },
+  { href: "/#kvkk", label: "KVKK" },
   { href: "/iletisim", label: "İletişim" },
 ];
 
@@ -26,30 +27,26 @@ export default function PazarlamaLayout({ children }: { children: React.ReactNod
     <div className="flex min-h-full flex-col">
       <a
         href="#icerik"
-        className="sr-only rounded border border-border bg-surface px-3 py-2 text-[13px] text-ink focus-visible:not-sr-only focus-visible:absolute focus-visible:left-4 focus-visible:top-4 focus-visible:z-20"
+        className="sr-only rounded border border-border bg-surface px-3 py-2 text-[14px] text-ink focus-visible:not-sr-only focus-visible:absolute focus-visible:left-4 focus-visible:top-4 focus-visible:z-20"
       >
         İçeriğe geç
       </a>
 
       {/* Saydam + bulanık başlık bilerek yok: glassmorphism kaçınılanlar
-          listesinde (globals.css) ve altından kayan yoğun ızgarayı okunmaz
-          yapıyor. Panel başlığıyla aynı: düz zemin, tek çizgi. */}
+          listesinde (globals.css) ve altından kayan ürün ızgarasını okunmaz
+          yapıyor. Düz zemin, tek çizgi. */}
       <header className="sticky top-0 z-10 border-b border-border bg-bg">
-        <div className="mx-auto flex h-14 w-full max-w-5xl items-center gap-4 px-4">
-          <Link
-            href="/"
-            className="text-[15px] font-semibold tracking-tight text-ink no-underline"
-            translate="no"
-          >
-            {PRODUCT.name}
+        <Container className="flex h-[60px] items-center gap-6">
+          <Link href="/" className="no-underline" aria-label="TeyitRandevu ana sayfa">
+            <Wordmark />
           </Link>
 
-          <nav aria-label="Site menüsü" className="ml-2 hidden gap-4 sm:flex">
+          <nav aria-label="Site menüsü" className="hidden gap-5 md:flex">
             {NAV.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className="text-[13px] text-ink-2 no-underline transition-colors duration-150 hover:text-ink"
+                className="text-[14px] text-ink-2 no-underline transition-colors duration-150 hover:text-ink"
               >
                 {item.label}
               </Link>
@@ -60,64 +57,81 @@ export default function PazarlamaLayout({ children }: { children: React.ReactNod
             <ThemeToggle />
             <Link
               href="/giris"
-              className="hidden h-8 items-center rounded px-2.5 text-[13px] text-ink-2 no-underline transition-colors duration-150 hover:bg-surface-2 hover:text-ink sm:inline-flex"
+              className={`${BTN_SMALL} hidden text-ink-2 hover:bg-surface-2 hover:text-ink sm:inline-flex`}
             >
               Giriş
             </Link>
             <Link
               href="/iletisim"
-              className="inline-flex h-8 items-center rounded border border-accent bg-accent px-3 text-[13px] font-medium text-accent-ink no-underline transition-colors duration-150 hover:bg-accent-hover"
+              className={`${BTN_SMALL} border border-brand bg-brand text-brand-ink hover:border-brand-strong hover:bg-brand-strong`}
             >
               Demo isteyin
             </Link>
           </div>
-        </div>
+        </Container>
+
+        {/* Mobilde menü kaybolmasın: açılır panel yerine kayan tek sıra —
+            JavaScript istemez, klavye ve ekran okuyucu için sorunsuz. */}
+        <nav
+          aria-label="Site menüsü (mobil)"
+          className="flex gap-4 overflow-x-auto border-t border-border px-5 py-2 md:hidden"
+        >
+          {NAV.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="shrink-0 text-[14px] text-ink-2 no-underline hover:text-ink"
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
       </header>
 
       <main id="icerik" className="flex-1">
         {children}
       </main>
 
-      <footer className="border-t border-border">
-        <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-10">
-          <div className="flex flex-wrap gap-x-10 gap-y-6">
-            <div className="flex min-w-0 max-w-sm flex-col gap-1.5">
-              <p className="text-[15px] font-semibold tracking-tight text-ink" translate="no">
-                {PRODUCT.name}
-              </p>
-              <p className="text-[13px] text-ink-2">{PRODUCT.summary}</p>
-              <p className="text-[12px] text-ink-3">{PRODUCT.stage}</p>
+      <footer className="border-t border-border bg-surface-2">
+        <Container className="flex flex-col gap-8 py-12">
+          <div className="flex flex-wrap gap-x-12 gap-y-8">
+            <div className="flex min-w-0 max-w-sm flex-col gap-2">
+              <Wordmark />
+              <p className="text-[14px] leading-relaxed text-ink-2">{PRODUCT.summary}</p>
+              <p className="text-[13px] text-ink-3">{PRODUCT.stage}</p>
             </div>
 
-            <nav aria-label="Alt menü" className="flex flex-col gap-1.5">
-              <p className="text-[12px] font-medium uppercase tracking-wide text-ink-3">Ürün</p>
-              <Link href="/#urun" className="text-[13px] text-ink-2 no-underline hover:text-ink">
+            <nav aria-label="Alt menü" className="flex flex-col gap-2">
+              <p className="font-mono text-[12px] uppercase tracking-[0.14em] text-ink-3">Ürün</p>
+              <Link href="/#urun" className="text-[14px] text-ink-2 no-underline hover:text-ink">
                 Neler yapıyor
               </Link>
-              <Link href="/fiyat" className="text-[13px] text-ink-2 no-underline hover:text-ink">
+              <Link href="/fiyat" className="text-[14px] text-ink-2 no-underline hover:text-ink">
                 Fiyat
               </Link>
-              <Link href="/giris" className="text-[13px] text-ink-2 no-underline hover:text-ink">
+              <Link href="/giris" className="text-[14px] text-ink-2 no-underline hover:text-ink">
                 Giriş
               </Link>
             </nav>
 
-            <nav aria-label="Hukuki" className="flex flex-col gap-1.5">
-              <p className="text-[12px] font-medium uppercase tracking-wide text-ink-3">Hukuki</p>
-              <Link href="/kvkk" className="text-[13px] text-ink-2 no-underline hover:text-ink">
+            <nav aria-label="Hukuki" className="flex flex-col gap-2">
+              <p className="font-mono text-[12px] uppercase tracking-[0.14em] text-ink-3">
+                Hukuki
+              </p>
+              <Link href="/kvkk" className="text-[14px] text-ink-2 no-underline hover:text-ink">
                 Aydınlatma metni
               </Link>
-              <Link href="/iletisim" className="text-[13px] text-ink-2 no-underline hover:text-ink">
+              <Link href="/iletisim" className="text-[14px] text-ink-2 no-underline hover:text-ink">
                 İletişim
               </Link>
             </nav>
           </div>
 
-          <p className="border-t border-border pt-5 text-[12px] text-ink-3">
+          <p className="border-t border-border pt-6 text-[13px] text-ink-3">
             Kayıtlar {SITE_CONTACT.dataRegion} bölgesindeki sunucularda tutulur. Bu site pazarlama
             ya da izleme çerezi kullanmaz.
           </p>
-        </div>
+        </Container>
       </footer>
     </div>
   );

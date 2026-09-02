@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { ThemeToggle } from "@/components/theme-toggle";
 import { requireTenant } from "@/lib/auth/session";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 
@@ -56,6 +57,7 @@ export default async function AppLayout({
             <span className="hidden min-w-0 max-w-[16rem] truncate text-[13px] text-ink-2 md:inline">
               {user.email}
             </span>
+            <ThemeToggle />
             <form action="/auth/cikis" method="post">
               <button
                 type="submit"

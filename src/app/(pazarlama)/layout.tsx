@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { ThemeToggle } from "@/components/theme-toggle";
 import { SITE_CONTACT } from "@/lib/legal/site-texts";
 import { PRODUCT } from "@/lib/marketing/content";
 
@@ -56,6 +57,7 @@ export default function PazarlamaLayout({ children }: { children: React.ReactNod
           </nav>
 
           <div className="ml-auto flex items-center gap-2">
+            <ThemeToggle />
             <Link
               href="/giris"
               className="hidden h-8 items-center rounded px-2.5 text-[13px] text-ink-2 no-underline transition-colors duration-150 hover:bg-surface-2 hover:text-ink sm:inline-flex"

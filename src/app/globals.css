@@ -152,9 +152,13 @@ html {
   /* Koyu temada tarayıcının kendi kontrollerini de düzeltir:
      scrollbar, native select, date picker */
   color-scheme: light dark;
+  /* Tercih yapıldığında tarayıcı kontrolleri de o temaya sabitlenir */
   /* Yapışkan başlık, odaklanan ya da kancayla gelinen öğeyi örtmesin */
   scroll-padding-top: 5.5rem;
 }
+
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"]  { color-scheme: dark; }
 
 body {
   background: var(--bg);

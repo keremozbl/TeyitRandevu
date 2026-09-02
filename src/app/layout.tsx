@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Schibsted_Grotesk, Geist_Mono } from "next/font/google";
 
 import { siteUrl } from "@/lib/marketing/site-url";
+import { THEME_COLOR, THEME_INIT_SCRIPT } from "@/lib/theme";
 
 import "./globals.css";
 
@@ -36,11 +37,11 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image" },
 };
 
+// Tek etiket: rengi tema anahtarı güncelliyor (bkz. `applyTheme`). Media
+// koşullu iki etiket, kullanıcı işletim sisteminin tersini seçtiğinde
+// tarayıcı çubuğunu sayfayla ters renkte bırakırdı.
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#F7F7F5" },
-    { media: "(prefers-color-scheme: dark)", color: "#0F1416" },
-  ],
+  themeColor: THEME_COLOR.light,
 };
 
 export default function RootLayout({
@@ -49,10 +50,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
+    // `data-theme="light"`: varsayılan açık tema. Betik, kayıtlı tercihi ilk
+    // boyamadan önce yerine koyar; React bu özniteliği yönetmediği için
+    // suppressHydrationWarning gerekiyor.
     <html
       lang="tr"
+      data-theme="light"
+      suppressHydrationWarning
       className={`${ui.variable} ${data.variable} h-full antialiased`}
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );

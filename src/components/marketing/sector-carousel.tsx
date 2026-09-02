@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRef, useState, useSyncExternalStore } from "react";
 
@@ -205,6 +206,17 @@ export function SectorCarousel({ slides }: { slides: SectorSlide[] }) {
           </div>
 
           <div className="flex min-w-0 flex-col gap-3">
+            {/* Fotoğraf sektörü bir bakışta anlatıyor; ürünün kendisi hemen
+                altında duruyor ki fotoğraf iddiayı değil ortamı taşısın. */}
+            <div className="relative aspect-[16/9] overflow-hidden rounded border border-border">
+              <Image
+                src={chosen.photo.src}
+                alt={chosen.photo.alt}
+                fill
+                sizes="(min-width: 1024px) 26rem, 100vw"
+                className="object-cover"
+              />
+            </div>
             <DayPreview slide={chosen} />
             {chosen.reminder && (
               <div className="rounded border border-border bg-surface-2 p-3">

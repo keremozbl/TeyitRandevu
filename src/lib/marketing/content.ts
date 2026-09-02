@@ -83,6 +83,73 @@ export const CAPABILITIES: Capability[] = [
   },
 ];
 
+/**
+ * Kanallar — hangi yoldan mesaj gidiyor, hangisi hazır.
+ *
+ * Rakiplerin hepsi "WhatsApp entegrasyonu" diye bir rozet koyuyor. Bizde de
+ * altyapı var ama operatör sözleşmesi yok; durum satır satır yazılıyor
+ * (dürüstlük kuralı 1). "Hazır" = bugün çalışıyor.
+ */
+export const CHANNELS = [
+  { name: "Online randevu sayfası", state: "hazır", detail: "Kurumun kendi adresinde, KVKK rızasıyla" },
+  { name: "A4 çıktı ve Excel", state: "hazır", detail: "Günün programı, ekranla aynı veriden" },
+  { name: "SMS", state: "altyapı hazır", detail: "Şablon, zamanlama ve kuyruk çalışıyor; operatör pilotla bağlanıyor" },
+  { name: "WhatsApp", state: "altyapı hazır", detail: "Aynı kuyruk, aynı kurallar" },
+  { name: "E-posta", state: "altyapı hazır", detail: "Şablonlar hazır, gönderim sağlayıcıya bağlı" },
+  { name: "Telefondan randevu", state: "planlı", detail: "Aynı çakışma kısıtına çarpacak" },
+] as const;
+
+/**
+ * Defter/Excel karşılaştırması.
+ *
+ * Gerçek rakip başka bir yazılım değil, defter ve Excel: kurumların çoğu
+ * bugün onu kullanıyor. Karşılaştırma başka bir markayı değil, bugünkü
+ * alışkanlığı hedef alıyor.
+ */
+export const COMPARISON = [
+  {
+    topic: "Aynı saate iki kayıt",
+    before: "Fark edilirse düzeltilir; iki hasta kapıda karşılaşır",
+    after: "Veritabanı kabul etmiyor, ikinci kayıt hiç açılmıyor",
+  },
+  {
+    topic: "Hatırlatma",
+    before: "Sekreter tek tek arıyor, unutulan oluyor",
+    after: "Şablon ve kuyruk hazır; her satır gönderildi mi söylüyor",
+  },
+  {
+    topic: "Günün programı",
+    before: "Sabah elle hazırlanıyor, öğlen değişiklik listeye yansımıyor",
+    after: "Ekran, A4 ve Excel aynı veriden; biri güncelken diğeri eski olamaz",
+  },
+  {
+    topic: "Kim neye baktı",
+    before: "Kayıt yok",
+    after: "Kartı kimin açtığı denetim kaydında; kaydı yazan silemiyor",
+  },
+  {
+    topic: "Yeni çalışan",
+    before: "Dosyanın tamamını görüyor",
+    after: "Rolü ne görmesi gerekiyorsa onu görüyor; sınır veritabanında",
+  },
+] as const;
+
+/** Nasıl başlanıyor — üç adım, süresi belli. */
+export const START_STEPS = [
+  {
+    title: "Demoyu deneyin",
+    body: "Sektörünüzü seçin, kurulumu doldurun, kendi kurumunuzun takvimine düşün. Kayıt istemez, bir dakika sürer.",
+  },
+  {
+    title: "Kurulumu birlikte yapalım",
+    body: "Hizmetleriniz, çalışanlarınız, çalışma saatleriniz ve mevcut müşteri listeniz aktarılır. Pilot dönemde ücretsiz.",
+  },
+  {
+    title: "İlk hafta yanınızdayız",
+    body: "Gerçek kullanımdan sonra eksikleri konuşuyoruz; ürünün sıradaki işi kliniğinizin günlük işine göre belirleniyor.",
+  },
+] as const;
+
 /** KVKK bölümü: iddia değil, tutulan kayıtların listesi. */
 export const COMPLIANCE = [
   {

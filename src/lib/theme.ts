@@ -25,10 +25,13 @@ export const THEME_COLOR = { light: "#F7F7F5", dark: "#0F1416" } as const;
  * `<head>` içinde, HTML ayrıştırılırken senkron çalışır: ilk boyamadan önce
  * `data-theme` yerine oturur, tema geçişi göz kırpması olmaz. `useEffect`
  * hidrasyondan sonra çalıştığı için burada işe yaramaz.
+ *
+ * Aynı betik `data-js` de yazıyor: kaydırma animasyonlarının gizleme kuralı
+ * ona bağlı, yani JavaScript çalışmayan tarayıcıda içerik gizlenmiyor.
  */
-export const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem(${JSON.stringify(
+export const THEME_INIT_SCRIPT = `(function(){var r=document.documentElement;r.setAttribute("data-js","1");try{var t=localStorage.getItem(${JSON.stringify(
   THEME_STORAGE_KEY,
-)});var r=document.documentElement;if(t==="dark"||t==="light"){r.setAttribute("data-theme",t)}else if(t==="system"){r.removeAttribute("data-theme")}}catch(e){}})()`;
+)});if(t==="dark"||t==="light"){r.setAttribute("data-theme",t)}else if(t==="system"){r.removeAttribute("data-theme")}}catch(e){}})()`;
 
 export function isTheme(value: unknown): value is Theme {
   return value === "light" || value === "dark" || value === "system";

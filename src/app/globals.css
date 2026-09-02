@@ -219,6 +219,45 @@ table, .tabular, time, [data-numeric] {
 h1, h2, h3, h4 { text-wrap: balance; margin: 0; font-weight: 600; }
 p { text-wrap: pretty; margin: 0; }
 
+/* --- hareket ------------------------------------------------------------------
+   Kaydırdıkça beliren bölümler. Gizleme YALNIZCA JavaScript varken geçerli:
+   `data-js` özniteliğini <head> içindeki senkron betik yazıyor, betik
+   çalışmazsa içerik olduğu gibi görünür. Yalnızca opacity ve transform. */
+
+:root[data-js] [data-reveal] {
+  transition-property: opacity, transform;
+  transition-duration: 520ms;
+  transition-timing-function: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+:root[data-js] [data-reveal="kapali"] {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+:root[data-js] [data-reveal="acik"] {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-js] [data-reveal] {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* Hero girişte bir kez oynar; döngü yok, durdurma denetimi gerektirmiyor. */
+@keyframes giris-yukari {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes giris-saga {
+  from { opacity: 0; transform: translateX(-10px); }
+  to   { opacity: 1; transform: none; }
+}
+
 /* Sektör seçicide panel değişimi — yalnızca opacity ve transform.
    prefers-reduced-motion aşağıda zaten süreyi sıfırlıyor. */
 @keyframes sektor-giris {

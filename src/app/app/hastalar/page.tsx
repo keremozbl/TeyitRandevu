@@ -2,10 +2,18 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { requireTenant } from "@/lib/auth/session";
+import { lower } from "@/lib/domain";
 import { loadCustomerList, type CustomerRow } from "@/lib/customers/queries";
 import { formatPhoneTr } from "@/lib/utils/phone";
 
-export const metadata: Metadata = { title: "Hastalar" };
+/**
+ * Başlık kurumun kendi diliyle. `requireTenant` istek boyunca `cache()`
+ * içinde: sayfa gövdesi de aynı sonucu kullanıyor, ikinci bir sorgu yok.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const { active } = await requireTenant();
+  return { title: active.terms.customer_plural };
+}
 
 export default async function HastalarPage({
   searchParams,
@@ -45,7 +53,7 @@ export default async function HastalarPage({
   return (
     <div className="flex flex-col gap-4 p-4">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <h1 className="text-lg tracking-tight">Hastalar</h1>
+        <h1 className="text-lg tracking-tight">{active.terms.customer_plural}</h1>
         <p className="text-[13px] text-ink-2" data-numeric>
           {list.total === 0
             ? "kayıt yok"
@@ -61,7 +69,7 @@ export default async function HastalarPage({
         <form method="get" action="/app/hastalar" className="flex items-end gap-2">
           <div className="flex flex-col gap-1.5">
             <label htmlFor="q" className="text-[13px] font-medium text-ink">
-              Hasta ara
+              {active.terms.customer_singular} ara
             </label>
             <input
               id="q"
@@ -94,12 +102,12 @@ export default async function HastalarPage({
           href="/app/hastalar/yeni"
           className="ml-auto inline-flex h-8 items-center rounded border border-accent bg-accent px-2.5 text-[13px] font-medium text-accent-ink no-underline transition-colors duration-150 hover:bg-accent-hover"
         >
-          Yeni Hasta
+          Yeni {active.terms.customer_singular}
         </Link>
       </div>
 
       {list.rows.length === 0 ? (
-        <EmptyState search={list.search} />
+        <EmptyState search={list.search} customer={active.terms.customer_singular} />
       ) : (
         <>
           <ul className="flex flex-col divide-y divide-border overflow-hidden rounded border border-border bg-surface">
@@ -194,7 +202,7 @@ function PageLink({
   );
 }
 
-function EmptyState({ search }: { search: string }) {
+function EmptyState({ search, customer }: { search: string; customer: string }) {
   return (
     <div className="flex max-w-lg flex-col items-start gap-2 rounded border border-dashed border-border p-8">
       {search ? (
@@ -212,16 +220,16 @@ function EmptyState({ search }: { search: string }) {
         </>
       ) : (
         <>
-          <h2 className="text-ink">Henüz hasta kaydı yok</h2>
+          <h2 className="text-ink">Henüz {lower(customer)} kaydı yok</h2>
           <p className="text-[13px] text-ink-2">
-            Hasta kaydı iki yoldan açılır: buradan elle ya da randevu yazarken “yeni hasta”
-            seçilerek. İkisi de aynı kaydı üretir.
+            {customer} kaydı iki yoldan açılır: buradan elle ya da randevu yazarken “yeni{" "}
+            {lower(customer)}” seçilerek. İkisi de aynı kaydı üretir.
           </p>
           <Link
             href="/app/hastalar/yeni"
             className="text-[13px] text-accent underline underline-offset-2"
           >
-            İlk hastayı ekle
+            İlk {lower(customer)} kaydını aç
           </Link>
         </>
       )}

@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 
+import { parseTerminology, type Terminology } from "@/lib/domain/terminology";
 import { createClient } from "@/lib/supabase/server";
 
 export const TENANT_COOKIE = "tr_tenant";
@@ -17,6 +18,11 @@ export type MembershipSummary = {
     business_type: string;
     timezone: string;
   };
+  /**
+   * Kurumun kendi dili — "Hasta" mı "Danışan" mı. Üyelik sorgusuna gömülü
+   * geliyor: ayrı bir sorgu, her sayfa için Frankfurt'a bir tur daha demekti.
+   */
+  terms: Terminology;
 };
 
 /**
@@ -42,18 +48,25 @@ export const listMemberships = cache(async function listMemberships(): Promise<M
   const { data, error } = await supabase
     .from("memberships")
     .select(
-      "tenant_id, role_id, roles!inner(key), tenants!inner(id, name, slug, business_type, timezone)",
+      "tenant_id, role_id, roles!inner(key), tenants!inner(id, name, slug, business_type, timezone, tenant_settings(terminology))",
     )
     .eq("is_active", true);
 
   if (error || !data) return [];
 
-  return data.map((row) => ({
-    tenant_id: row.tenant_id,
-    role_id: row.role_id,
-    role_key: row.roles.key,
-    tenant: row.tenants,
-  }));
+  return data.map((row) => {
+    const { tenant_settings, ...tenant } = row.tenants;
+    return {
+      tenant_id: row.tenant_id,
+      role_id: row.role_id,
+      role_key: row.roles.key,
+      tenant,
+      // tenant_settings bire bir ilişki ama PostgREST dizi döndürebiliyor.
+      terms: parseTerminology(
+        (Array.isArray(tenant_settings) ? tenant_settings[0] : tenant_settings)?.terminology,
+      ),
+    };
+  });
 });
 
 /**

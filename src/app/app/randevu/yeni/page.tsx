@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { requireTenant } from "@/lib/auth/session";
-import { zonedTimeToUtc } from "@/lib/domain";
+import { lower, zonedTimeToUtc } from "@/lib/domain";
 import { loadBookingContext, resolveDate } from "@/lib/scheduling/queries";
 
 import { AppointmentForm } from "./appointment-form";
@@ -41,7 +41,8 @@ export default async function YeniRandevuPage({
         <div className="flex max-w-md flex-col items-start gap-2 rounded border border-dashed border-border p-8">
           <h2 className="text-ink">Randevu yazılacak kaynak yok</h2>
           <p className="text-[13px] text-ink-2">
-            Randevular hekim, ünit ya da oda gibi kaynakların üzerine düşer. En az bir kaynak
+            Randevular {lower(active.terms.resource_plural)}, oda ya da cihaz gibi kaynakların
+            üzerine düşer. En az bir kaynak
             eklendiğinde bu form kullanılabilir.
           </p>
           <Link href="/app" className="text-[13px] text-accent underline underline-offset-2">
@@ -81,6 +82,7 @@ export default async function YeniRandevuPage({
         resourceId={resourceId}
         search={q ?? ""}
         preselectCustomerId={hasta ?? ""}
+        terms={active.terms}
         backHref={backHref}
       />
     </div>

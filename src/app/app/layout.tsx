@@ -8,10 +8,15 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { NavLink } from "./nav-link";
 import { SetupNotice } from "./setup-notice";
 
-const NAV = [
+/**
+ * Menü kurumun kendi diliyle: diş kliniğinde "Hastalar", berberde
+ * "Müşteriler", diyetisyende "Danışanlar". Terim `tenant_settings` içinde ve
+ * üyelik sorgusuyla birlikte geliyor (session.ts) — ek sorgu yok.
+ */
+const nav = (customers: string, services: string) => [
   { href: "/app", label: "Takvim" },
-  { href: "/app/hastalar", label: "Hastalar" },
-  { href: "/app/hizmetler", label: "Hizmetler" },
+  { href: "/app/hastalar", label: customers },
+  { href: "/app/hizmetler", label: services },
   { href: "/app/ekip", label: "Ekip" },
   { href: "/app/raporlar", label: "Raporlar" },
   { href: "/app/bildirimler", label: "Bildirimler" },
@@ -88,7 +93,7 @@ export default async function AppLayout({
         )}
 
         <nav aria-label="Ana menü" className="flex gap-0.5 overflow-x-auto px-3">
-          {NAV.map((item) => (
+          {nav(active.terms.customer_plural, active.terms.service_plural).map((item) => (
             <NavLink key={item.href} href={item.href}>
               {item.label}
             </NavLink>

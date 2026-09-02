@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { createAppointmentAction, type AppointmentFormState } from "@/lib/appointments/actions";
 import type { BookingContext } from "@/lib/scheduling/queries";
+import { lower, type Terminology } from "@/lib/domain";
 import { formatPhoneTr } from "@/lib/utils/phone";
 
 const EMPTY: AppointmentFormState = {};
@@ -21,15 +22,18 @@ export function AppointmentForm({
   search,
   preselectCustomerId,
   backHref,
+  terms,
 }: {
   context: BookingContext;
   date: string;
   time: string;
   resourceId: string;
   search: string;
-  /** Hasta kartından gelindiyse o hasta seçili açılır */
+  /** Kayıt kartından gelindiyse o kişi seçili açılır */
   preselectCustomerId: string;
   backHref: string;
+  /** Kurumun kendi dili: "Hasta" / "Danışan" / "Müşteri" */
+  terms: Terminology;
 }) {
   const [state, formAction, pending] = useActionState(createAppointmentAction, EMPTY);
   const [serviceId, setServiceId] = useState("");
@@ -67,7 +71,11 @@ export function AppointmentForm({
         <input type="hidden" name="kaynak" value={resourceId} />
         <input type="hidden" name="sube" value={context.branch.id} />
         <div className="flex-1">
-          <Field id="q" label="Hasta ara" hint="Ad ya da telefonun bir parçası yeter.">
+          <Field
+            id="q"
+            label={`${terms.customer_singular} ara`}
+            hint="Ad ya da telefonun bir parçası yeter."
+          >
             <Input
               id="q"
               name="q"
@@ -86,11 +94,14 @@ export function AppointmentForm({
         <input type="hidden" name="branch_id" value={context.branch.id} />
 
         <fieldset className="flex flex-col gap-2">
-          <legend className="pb-1.5 text-[13px] font-medium text-ink">Hasta</legend>
+          <legend className="pb-1.5 text-[13px] font-medium text-ink">
+            {terms.customer_singular}
+          </legend>
 
           {context.customers.length === 0 && search && (
             <p className="text-[13px] text-ink-2">
-              “{search}” için kayıt bulunamadı. Aşağıdan yeni hasta olarak ekleyebilirsiniz.
+              “{search}” için kayıt bulunamadı. Aşağıdan yeni {lower(terms.customer_singular)}{" "}
+              olarak ekleyebilirsiniz.
             </p>
           )}
 
@@ -127,7 +138,9 @@ export function AppointmentForm({
                   onChange={() => setCustomer(NEW_CUSTOMER)}
                   className="shrink-0"
                 />
-                <span className="font-medium text-ink">Yeni hasta</span>
+                <span className="font-medium text-ink">
+                  Yeni {lower(terms.customer_singular)}
+                </span>
               </label>
 
               <div className="flex flex-col gap-3 sm:flex-row">
@@ -247,7 +260,11 @@ export function AppointmentForm({
           </Select>
         </Field>
 
-        <Field id="notes" label="Not" hint="İdari not. Tedavi notu hasta kartında ayrı tutulur.">
+        <Field
+          id="notes"
+          label="Not"
+          hint={`İdari not. Tıbbi not ${lower(terms.customer_singular)} kartında ayrı tutulur.`}
+        >
           <Textarea id="notes" name="notes" rows={2} />
         </Field>
 

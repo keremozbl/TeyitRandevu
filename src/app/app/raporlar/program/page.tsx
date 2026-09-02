@@ -3,7 +3,7 @@ import Link from "next/link";
 
 import { loadPermissions } from "@/lib/auth/permissions";
 import { requireTenant } from "@/lib/auth/session";
-import { addDays, zonedTimeToUtc } from "@/lib/domain";
+import { addDays, lower, zonedTimeToUtc, type Terminology } from "@/lib/domain";
 import { programTotals, statusLabel, type ProgramGroup } from "@/lib/reports/program";
 import { loadProgram } from "@/lib/reports/queries";
 import { formatMoney } from "@/lib/services/pricing";
@@ -154,13 +154,19 @@ export default async function ProgramPage({
           {report.groups
             .filter((group) => group.entries.length > 0)
             .map((group) => (
-              <ResourceTable key={group.resourceId} group={group} withRevenue={withRevenue} />
+              <ResourceTable
+                key={group.resourceId}
+                group={group}
+                withRevenue={withRevenue}
+                terms={active.terms}
+              />
             ))}
         </div>
       )}
 
       <p className="text-[12px] text-ink-3 print:hidden">
-        Çıktıda “Not” sütunu bilerek boş: hekim kâğıdın üzerine yazıyor. Tarayıcının yazdır
+        Çıktıda “Not” sütunu bilerek boş: {lower(active.terms.resource_singular)} kâğıdın üzerine
+        yazıyor. Tarayıcının yazdır
         komutuyla (Ctrl+P) A4 düzeninde çıkar.
       </p>
     </div>
@@ -170,9 +176,11 @@ export default async function ProgramPage({
 function ResourceTable({
   group,
   withRevenue,
+  terms,
 }: {
   group: ProgramGroup;
   withRevenue: boolean;
+  terms: Terminology;
 }) {
   return (
     <section className="flex break-inside-avoid flex-col gap-1.5">
@@ -188,13 +196,13 @@ function ResourceTable({
                 Bitiş
               </th>
               <th scope="col" className="py-1 pr-2 font-normal">
-                Hasta
+                {terms.customer_singular}
               </th>
               <th scope="col" className="w-36 py-1 pr-2 font-normal">
                 Telefon
               </th>
               <th scope="col" className="py-1 pr-2 font-normal">
-                Tedavi
+                {terms.service_singular}
               </th>
               <th scope="col" className="w-28 py-1 pr-2 font-normal">
                 Durum

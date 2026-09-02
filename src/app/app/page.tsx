@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import { undoCancelAction } from "@/lib/appointments/edit-actions";
 import { requireTenant } from "@/lib/auth/session";
-import { addDays, utcToPlainDate, zonedTimeToUtc } from "@/lib/domain";
+import { addDays, lower, utcToPlainDate, zonedTimeToUtc } from "@/lib/domain";
 import { loadDaySchedule, type CalendarAppointment } from "@/lib/scheduling/queries";
 import { GRID_STATUSES, STATUS_STYLES } from "@/lib/scheduling/status";
 
@@ -134,7 +134,7 @@ export default async function TakvimPage({
       ) : schedule.resources.length === 0 ? (
         <EmptyState
           title="Bu şubede kaynak yok"
-          detail="Randevular hekim, ünit ya da oda gibi kaynakların üzerine düşer. Ekip ekranından en az bir kaynak eklendiğinde sütunlar burada belirir."
+          detail={`Randevular ${lower(active.terms.resource_plural)}, oda ya da cihaz gibi kaynakların üzerine düşer. Ekip ekranından en az bir kaynak eklendiğinde sütunlar burada belirir.`}
         />
       ) : (
         <>

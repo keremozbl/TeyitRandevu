@@ -107,6 +107,10 @@ npm run demo:seed -- --temizle    # kurumu, bağlı tüm kayıtları ve hesabı 
 Pilot kuruma açılmadan önce çalıştırılacak; demo verisi gerçek hasta
 kayıtlarıyla aynı veritabanında durmamalı.
 
+**Vitrin kurumu bundan ayrı ve silinmiyor:** `/demo` düğmesinin açtığı
+"Vitrin Diş Kliniği" ürünün vitrinidir, geliştirme artığı değil (B12). Silinecek
+olan yalnızca bu geliştirme hesabıdır.
+
 ### B3. Kendi SMTP'niz bağlanacak
 
 Supabase'in varsayılan e-posta göndericisi geliştirme içindir: saatte birkaç
@@ -263,6 +267,42 @@ o yüzden kiracıya bağlı `consents` tablosuna yazılmıyor.
 
 
 ---
+
+### B12. Canlı demo (vitrin kurumu) — yayın öncesi üç iş
+
+Site ziyaretçisi `/demo` sayfasındaki düğmeyle kayıt olmadan panele giriyor:
+sunucu, ortak bir hesapla `signInWithPassword` çağırıp `/app`'e yönlendiriyor.
+Ayrıcalıklı istemci yok; ziyaretçinin yalnızca vitrin kurumunu görmesini
+sağlayan şey RLS. Kurulum:
+
+```bash
+npm run demo:seed -- --vitrin              # kurar ve bugünü tazeler (idempotent)
+npm run demo:seed -- --vitrin --temizle    # kurumu ve hesabı siler
+```
+
+| Ortam değişkeni | Ne işe yarar |
+|---|---|
+| `DEMO_PUBLIC_PAROLA` | **zorunlu**; tanımlı değilse `/demo` "canlı demo kapalı" der ve giriş düğmesi çizilmez. Deposunda varsayılanı yok. |
+| `DEMO_PUBLIC_EPOSTA` | isteğe bağlı; varsayılan `vitrin@teyitrandevu.com` (alan adı B11 ile değişecek) |
+
+Yayın öncesi kapatılacak üç açık:
+
+1. **Periyodik sıfırlama yok.** Ziyaretçiler kurumu bozacak (randevu silecek,
+   ayar değiştirecek). Bugün tek çare betiği elle çalıştırmak. Gereken:
+   `--vitrin` kurulumunu günlük çalıştıran bir iş — Vercel cron + `CRON_SECRET`
+   korumalı bir route (B10'daki kuyruk zamanlayıcısıyla aynı desen) ya da
+   pg_cron. Betiğin randevu yazan bölümü bunun için `src/lib/demo/` altına
+   taşınmalı; şu an yalnız betikte.
+2. **Vercel'de `DEMO_PUBLIC_PAROLA` tanımlanacak.** Tanımlanmazsa demo sessizce
+   kapalı açılır — sayfa bunu söylüyor ama ana sayfadaki birincil CTA oraya
+   gidiyor.
+3. **Kötüye kullanım sınırı yok.** Hesap ortak olduğu için her tıklama aynı
+   kullanıcıya bir Supabase Auth girişi demek; yoğun trafikte Auth hız sınırına
+   çarpar. En azından IP başına giriş sınırı (`submit_demo_request`'teki günlük
+   5 talep sınırıyla aynı fikir) gerekiyor.
+
+Ayrıca vitrin kurumunda denetim kaydı ziyaretçilerin okumalarıyla doluyor; bu
+kurum saklama politikasının (C tablosu) ilk müşterisi olacak.
 
 ## C. KVKK — planda söz verilip henüz yapılmayanlar
 

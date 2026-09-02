@@ -8,13 +8,20 @@
  * Randevular `create_appointment` RPC'si ile ve kullanıcının kendi JWT'siyle
  * yazılır — yani demo verisi de RLS'ten ve çakışma kısıtından geçer.
  *
+ * İki kurum var ve ikisi de aynı betikten kuruluyor:
+ *   - varsayılan: geliştirme hesabı ("Demo Diş Kliniği"), tek kişilik
+ *   - `--vitrin`: sitedeki "Demoyu deneyin" düğmesinin açtığı herkese açık
+ *     kurum. Parolası deposunda tutulmaz; `DEMO_PUBLIC_PAROLA` zorunlu.
+ *
  * Kullanım:
  *   npm run demo:seed              hesabı ve bugünü kurar (tekrar çalıştırılabilir)
- *   npm run demo:seed -- --temizle kurumu ve kullanıcıyı siler
+ *   npm run demo:seed -- --vitrin  herkese açık vitrin kurumunu kurar/tazeler
+ *   npm run demo:seed -- --temizle kurumu ve kullanıcıyı siler (--vitrin ile birlikte de)
  */
 import { createClient } from "@supabase/supabase-js";
 
 import { utcToPlainDate, zonedTimeToUtc } from "../src/lib/domain/time.ts";
+import { DEMO_EMAIL_DEFAULT, DEMO_TENANT_NAME, DEMO_TENANT_SLUG } from "../src/lib/demo/config.ts";
 
 const URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -25,10 +32,22 @@ if (!URL || !ANON || !SECRET) {
   process.exit(1);
 }
 
-const EMAIL = process.env.DEMO_EMAIL ?? "keremozbal@gmail.com";
-const PASSWORD = process.env.DEMO_PAROLA ?? "TeyitDemo2026!";
-const SLUG = "demo-dis-klinigi";
+const VITRIN = process.argv.includes("--vitrin");
+
+const EMAIL = VITRIN
+  ? (process.env.DEMO_PUBLIC_EPOSTA ?? DEMO_EMAIL_DEFAULT)
+  : (process.env.DEMO_EMAIL ?? "keremozbal@gmail.com");
+const PASSWORD = VITRIN
+  ? process.env.DEMO_PUBLIC_PAROLA
+  : (process.env.DEMO_PAROLA ?? "TeyitDemo2026!");
+const SLUG = VITRIN ? DEMO_TENANT_SLUG : "demo-dis-klinigi";
+const NAME = VITRIN ? DEMO_TENANT_NAME : "Demo Diş Kliniği";
 const TZ = "Europe/Istanbul";
+
+if (VITRIN && !PASSWORD) {
+  console.error("\n.env eksik: DEMO_PUBLIC_PAROLA (vitrin hesabının parolası)\n");
+  process.exit(1);
+}
 
 const admin = createClient(URL, SECRET, { auth: { persistSession: false } });
 
@@ -86,7 +105,7 @@ let { data: tenant } = await app.from("tenants").select("id, name").eq("slug", S
 
 if (!tenant) {
   const { data: tenantId, error } = await app.rpc("create_tenant_from_template", {
-    _name: "Demo Diş Kliniği",
+    _name: NAME,
     _slug: SLUG,
     _family: template.family,
     _business_type: template.key,
@@ -109,10 +128,10 @@ if (!tenant) {
     },
   });
   if (error) throw new Error(`kurum kurulamadı: ${error.message}`);
-  tenant = { id: tenantId, name: "Demo Diş Kliniği" };
-  console.log("kurum kuruldu: Demo Diş Kliniği");
+  tenant = { id: tenantId, name: NAME };
+  console.log(`kurum kuruldu: ${NAME}`);
 } else {
-  console.log("kurum zaten var: Demo Diş Kliniği");
+  console.log(`kurum zaten var: ${NAME}`);
 }
 
 // Bildirim şablonları ve akışları kuruma sonradan eklendi; daha eski bir
@@ -318,6 +337,8 @@ if (!leave?.length) {
 }
 
 console.log(`\n${created} randevu, ${PEOPLE.length} hasta, 1 izin yazıldı (${today})`);
-console.log("\n  npm run dev  →  http://localhost:3000/giris");
+console.log(
+  VITRIN ? "\n  sitede:  /demo  →  Demoyu başlat" : "\n  npm run dev  →  http://localhost:3000/giris",
+);
 console.log(`  e-posta: ${EMAIL}`);
 console.log(`  parola : ${PASSWORD}\n`);

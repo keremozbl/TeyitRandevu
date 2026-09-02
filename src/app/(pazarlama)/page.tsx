@@ -54,16 +54,16 @@ export default function AnaSayfa() {
             </p>
 
             <div className="flex flex-wrap items-center gap-3">
-              <Link href="/iletisim" className={BTN_PRIMARY}>
-                Pilot için görüşelim
+              <Link href="/demo" className={BTN_PRIMARY}>
+                Demoyu deneyin
               </Link>
-              <Link href="#urun" className={BTN_SECONDARY}>
-                Ürünü gezin
+              <Link href="/iletisim" className={BTN_SECONDARY}>
+                Pilot için görüşelim
               </Link>
             </div>
 
             <ul className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px] text-ink-3">
-              {["Kurulum ve eğitim pilotta ücretsiz", "Kredi kartı istemez", "Veriler AB’de"].map(
+              {["Kayıt istemez", "Kurulum ve eğitim pilotta ücretsiz", "Veriler AB’de"].map(
                 (item, index) => (
                   <li key={item} className="flex items-center gap-4">
                     {index > 0 && <span aria-hidden="true" className="h-3 w-px bg-border-strong" />}
@@ -295,8 +295,8 @@ export default function AnaSayfa() {
             <Link href="/iletisim" className={BTN_PRIMARY}>
               Demo isteyin
             </Link>
-            <Link href="/fiyat" className={BTN_SECONDARY}>
-              Paketlere bakın
+            <Link href="/demo" className={BTN_SECONDARY}>
+              Önce kendiniz deneyin
             </Link>
           </div>
         </Container>

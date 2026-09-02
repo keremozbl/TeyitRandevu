@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { ThemeToggle } from "@/components/theme-toggle";
 import { requireTenant } from "@/lib/auth/session";
+import { DEMO_TENANT_SLUG } from "@/lib/demo/config";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 
 import { NavLink } from "./nav-link";
@@ -25,6 +26,7 @@ export default async function AppLayout({
   if (!isSupabaseConfigured()) return <SetupNotice />;
 
   const { active, memberships, user } = await requireTenant();
+  const isDemo = active.tenant.slug === DEMO_TENANT_SLUG;
 
   return (
     <div className="flex min-h-full flex-col">
@@ -68,6 +70,22 @@ export default async function AppLayout({
             </form>
           </div>
         </div>
+
+        {/* Vitrin kurumu herkese açık: ziyaretçi buraya gerçek hasta bilgisi
+            yazmasın diye uyarı gizlenebilir bir yerde değil, başlığın altında
+            sabit duruyor. */}
+        {isDemo && (
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-st-pending bg-st-pending-soft px-4 py-1.5 text-[13px] text-st-pending">
+            <strong className="font-medium">Vitrin kurumu.</strong>
+            <span>
+              Gördüğünüz her şey örnek veridir; gerçek hasta bilgisi girmeyin. Kayıtlar düzenli
+              olarak sıfırlanır.
+            </span>
+            <Link href="/iletisim" className="underline underline-offset-2">
+              Kendi kurumunuz için demo isteyin
+            </Link>
+          </p>
+        )}
 
         <nav aria-label="Ana menü" className="flex gap-0.5 overflow-x-auto px-3">
           {NAV.map((item) => (

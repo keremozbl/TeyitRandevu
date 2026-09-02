@@ -18,6 +18,7 @@ import { PRODUCT } from "@/lib/marketing/content";
 const NAV = [
   { href: "/#urun", label: "Ürün" },
   { href: "/fiyat", label: "Fiyat" },
+  { href: "/demo", label: "Canlı demo" },
   { href: "/#kvkk", label: "KVKK" },
   { href: "/iletisim", label: "İletişim" },
 ];
@@ -62,10 +63,10 @@ export default function PazarlamaLayout({ children }: { children: React.ReactNod
               Giriş
             </Link>
             <Link
-              href="/iletisim"
+              href="/demo"
               className={`${BTN_SMALL} border border-brand bg-brand text-brand-ink hover:border-brand-strong hover:bg-brand-strong`}
             >
-              Demo isteyin
+              Demoyu deneyin
             </Link>
           </div>
         </Container>
@@ -108,6 +109,9 @@ export default function PazarlamaLayout({ children }: { children: React.ReactNod
               </Link>
               <Link href="/fiyat" className="text-[14px] text-ink-2 no-underline hover:text-ink">
                 Fiyat
+              </Link>
+              <Link href="/demo" className="text-[14px] text-ink-2 no-underline hover:text-ink">
+                Canlı demo
               </Link>
               <Link href="/giris" className="text-[14px] text-ink-2 no-underline hover:text-ink">
                 Giriş

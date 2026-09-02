@@ -27,14 +27,25 @@ const WEEKDAYS = [
 
 const STEPS = ["Kurum", "Sektör", "Çalışma saatleri"];
 
-export function OnboardingWizard({ templates }: { templates: SectorTemplate[] }) {
+export function OnboardingWizard({
+  templates,
+  initialTemplate,
+  demo = false,
+}: {
+  templates: SectorTemplate[];
+  /** Siteden sektör seçilerek gelindiyse o şablon açık gelir */
+  initialTemplate?: string;
+  /** Demo hesabı: kurulum bittiğinde takvime örnek bir gün yazılır */
+  demo?: boolean;
+}) {
   const [state, action, pending] = useActionState(createTenantAction, EMPTY);
 
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
   const [slugTouched, setSlugTouched] = useState(false);
   const [slug, setSlug] = useState("");
-  const [templateKey, setTemplateKey] = useState(templates[0]?.key ?? "");
+  const [branchName, setBranchName] = useState("");
+  const [templateKey, setTemplateKey] = useState(initialTemplate ?? templates[0]?.key ?? "");
 
   const template = useMemo(
     () => templates.find((t) => t.key === templateKey),
@@ -76,12 +87,24 @@ export function OnboardingWizard({ templates }: { templates: SectorTemplate[] })
     <main className="mx-auto flex w-full max-w-xl flex-col gap-8 px-6 py-14">
       <header className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
-          <h1 className="text-2xl tracking-tight">Kurumunuzu kuralım</h1>
+          <h1 className="text-2xl tracking-tight">
+            {demo ? "Demo kurumunuzu kuralım" : "Kurumunuzu kuralım"}
+          </h1>
           <p className="text-ink-2">
             Sektörünüzü seçin; hizmetler, çalışma saatleri ve roller hazır gelsin.
             Hepsini sonradan değiştirebilirsiniz.
           </p>
         </div>
+
+        {/* Demoda bu ekran ürünün ilk beş dakikası: ziyaretçi neyi seçtiğinin
+            takvimde ne yaptığını görsün diye ne olacağı önceden yazılıyor. */}
+        {demo && (
+          <Alert tone="info">
+            Bu bir demo kurulumu: gerçek kurumunuzu kurar gibi doldurun. Bitirdiğinizde panel
+            sizin dilinizle açılacak ve takvimde örnek bir gün hazır olacak. Kurum bir gün sonra
+            silinir.
+          </Alert>
+        )}
 
         {/* Adım göstergesi — sıra bilgi taşıyor, süsleme değil */}
         <ol className="flex gap-1.5">
@@ -103,17 +126,42 @@ export function OnboardingWizard({ templates }: { templates: SectorTemplate[] })
 
       {state.error && <Alert tone="error">{state.error}</Alert>}
 
-      <form action={action} className="flex flex-col gap-6">
-        {/* Tüm adımların değerleri tek formda taşınır; adım değişince kaybolmasın */}
+      <form
+        action={action}
+        onSubmit={(event) => {
+          // Son adımdan önce Enter'a basmak formu göndermesin: alanların yarısı
+          // henüz doldurulmadı. Enter, "Devam"ın kendisi olur.
+          if (step < STEPS.length - 1) {
+            event.preventDefault();
+            if (canContinue) setStep((current) => current + 1);
+          }
+        }}
+        className="flex flex-col gap-6"
+      >
+        {/*
+          Değerlerin TAMAMI gizli alanlarda taşınır.
+
+          Görünür alanlar adım adım DOM'a girip çıkıyor; React onları
+          söktüğünde form verisinden de düşüyorlardı. Son adımda gönderilen
+          formda `name` hiç yoktu ve kurulum "expected string, received null"
+          ile patlıyordu. Görünür kontroller artık yalnızca durumu düzenliyor,
+          forma giden şey burası.
+        */}
+        <input type="hidden" name="name" value={name} />
         <input type="hidden" name="slug" value={effectiveSlug} />
         <input type="hidden" name="template" value={templateKey} />
+        <input type="hidden" name="branch_name" value={branchName} />
+        <input type="hidden" name="starts_at" value={startsAt} />
+        <input type="hidden" name="ends_at" value={endsAt} />
+        {weekdays.map((day) => (
+          <input key={day} type="hidden" name="weekdays" value={day} />
+        ))}
 
         {step === 0 && (
           <div className="flex flex-col gap-4">
             <Field id="name" label="Kurum adı" required>
               <Input
                 id="name"
-                name="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Örnek Klinik / Salon"
@@ -150,7 +198,12 @@ export function OnboardingWizard({ templates }: { templates: SectorTemplate[] })
               label="Şube adı"
               hint="Tek adresiniz varsa boş bırakın; arayüzde hiç görünmez."
             >
-              <Input id="branch_name" name="branch_name" placeholder="Merkez" />
+              <Input
+                id="branch_name"
+                value={branchName}
+                onChange={(e) => setBranchName(e.target.value)}
+                placeholder="Merkez"
+              />
             </Field>
           </div>
         )}
@@ -224,7 +277,6 @@ export function OnboardingWizard({ templates }: { templates: SectorTemplate[] })
                     >
                       <input
                         type="checkbox"
-                        name="weekdays"
                         value={d.value}
                         checked={on}
                         onChange={() => toggleWeekday(d.value)}
@@ -241,7 +293,6 @@ export function OnboardingWizard({ templates }: { templates: SectorTemplate[] })
               <Field id="starts_at" label="Açılış" required>
                 <Input
                   id="starts_at"
-                  name="starts_at"
                   type="time"
                   value={startsAt}
                   onChange={(e) => setStartsAt(e.target.value)}
@@ -251,7 +302,6 @@ export function OnboardingWizard({ templates }: { templates: SectorTemplate[] })
               <Field id="ends_at" label="Kapanış" required>
                 <Input
                   id="ends_at"
-                  name="ends_at"
                   type="time"
                   value={endsAt}
                   onChange={(e) => setEndsAt(e.target.value)}
@@ -310,7 +360,13 @@ export function OnboardingWizard({ templates }: { templates: SectorTemplate[] })
             </Button>
           ) : (
             <Button type="submit" variant="primary" disabled={pending}>
-              {pending ? "Kurum oluşturuluyor…" : "Kurumu Oluştur"}
+              {pending
+                ? demo
+                  ? "Kurum kuruluyor, örnek gün yazılıyor…"
+                  : "Kurum oluşturuluyor…"
+                : demo
+                  ? "Kur ve Takvime Geç"
+                  : "Kurumu Oluştur"}
             </Button>
           )}
         </div>

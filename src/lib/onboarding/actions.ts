@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { TENANT_COOKIE } from "@/lib/auth/session";
+import { isDemoUser } from "@/lib/demo/config";
+import { seedSampleDay } from "@/lib/demo/sample-day";
 import { createClient } from "@/lib/supabase/server";
 import type { Json } from "@/lib/supabase/types";
 import { getTemplate } from "@/lib/templates";
@@ -92,6 +94,17 @@ export async function createTenantAction(
   }
 
   if (data) {
+    // Demo hesabıysa takvim boş açılmasın: kurulumun hemen ardından gerçekçi
+    // bir gün yazılır. Karar istemciden gelen bir bayrağa değil, hesabın
+    // `app_metadata` işaretine bakıyor — kimse kendi kurumuna örnek veri
+    // yazdırmak için form alanı uydurmasın.
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (isDemoUser(user)) {
+      await seedSampleDay(supabase, { tenantId: data, timeZone: "Europe/Istanbul" });
+    }
+
     (await cookies()).set(TENANT_COOKIE, data, {
       httpOnly: true,
       sameSite: "lax",

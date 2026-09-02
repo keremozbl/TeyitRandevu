@@ -107,9 +107,9 @@ npm run demo:seed -- --temizle    # kurumu, bağlı tüm kayıtları ve hesabı 
 Pilot kuruma açılmadan önce çalıştırılacak; demo verisi gerçek hasta
 kayıtlarıyla aynı veritabanında durmamalı.
 
-**Vitrin kurumu bundan ayrı ve silinmiyor:** `/demo` düğmesinin açtığı
-"Vitrin Diş Kliniği" ürünün vitrinidir, geliştirme artığı değil (B12). Silinecek
-olan yalnızca bu geliştirme hesabıdır.
+**Ziyaretçilerin açtığı demo kurumları bundan ayrı yönetiliyor:** onlar geçici
+ve `npm run demo:temizle` ile siliniyor (B12). Burada silinecek olan yalnızca
+bu geliştirme hesabı ve elle kurulmuş ortak vitrin kurumudur.
 
 ### B3. Kendi SMTP'niz bağlanacak
 
@@ -274,41 +274,50 @@ o yüzden kiracıya bağlı `consents` tablosuna yazılmıyor.
 
 ---
 
-### B12. Canlı demo (vitrin kurumu) — yayın öncesi üç iş
+### B12. Canlı demo — yayın öncesi üç iş
 
-Site ziyaretçisi `/demo` sayfasındaki düğmeyle kayıt olmadan panele giriyor:
-sunucu, ortak bir hesapla `signInWithPassword` çağırıp `/app`'e yönlendiriyor.
-Ayrıcalıklı istemci yok; ziyaretçinin yalnızca vitrin kurumunu görmesini
-sağlayan şey RLS. Kurulum:
+`/demo` sayfasında ziyaretçi sektörünü seçip düğmeye bastığında **ona özel bir
+hesap** açılıyor (servis rolüyle, `app_metadata.demo = true`), sıradan
+`signInWithPassword` ile oturum kuruluyor ve kurulum sihirbazına
+düşüyor. Kurulumu kendisi dolduruyor; biter bitmez `seedSampleDay` o kuruma
+gerçekçi bir gün yazıyor ve takvime iniyor.
 
-```bash
-npm run demo:seed -- --vitrin              # kurar ve bugünü tazeler (idempotent)
-npm run demo:seed -- --vitrin --temizle    # kurumu ve hesabı siler
-```
+Neden ortak bir demo kurumu değil: ortak kurumda ziyaretçiler birbirinin
+randevusunu siler, kurulum ekranı hiç görünmez ve panel herkese aynı dili
+gösterir. Kendi kurumunu kuran ziyaretçi "Danışanlar", "Ustalar" yazan bir
+panele düşüyor — ürünün asıl iddiası bu.
 
 | Ortam değişkeni | Ne işe yarar |
 |---|---|
-| `DEMO_PUBLIC_PAROLA` | **zorunlu**; tanımlı değilse `/demo` "canlı demo kapalı" der ve giriş düğmesi çizilmez. Deposunda varsayılanı yok. |
-| `DEMO_PUBLIC_EPOSTA` | isteğe bağlı; varsayılan `vitrin@teyitrandevu.com` (alan adı B11 ile değişecek) |
+| `SUPABASE_SERVICE_ROLE_KEY` | zaten gerekli; demo hesabı bununla açılıyor |
+| `DEMO_KAPALI=1` | demoyu kapatır — sayfa "kapalı" der, düğme çizilmez |
+| `DEMO_PUBLIC_PAROLA` | yalnızca eski ortak vitrin kurumu için (`npm run demo:seed -- --vitrin`) |
+
+```bash
+npm run demo:temizle            # 24 saatten eski demo hesap ve kurumlarını siler
+npm run demo:temizle -- --kuru  # yalnızca listeler
+npm run demo:temizle -- --hepsi # yaşına bakmadan hepsini siler
+```
 
 Yayın öncesi kapatılacak üç açık:
 
-1. **Periyodik sıfırlama yok.** Ziyaretçiler kurumu bozacak (randevu silecek,
-   ayar değiştirecek). Bugün tek çare betiği elle çalıştırmak. Gereken:
-   `--vitrin` kurulumunu günlük çalıştıran bir iş — Vercel cron + `CRON_SECRET`
-   korumalı bir route (B10'daki kuyruk zamanlayıcısıyla aynı desen) ya da
-   pg_cron. Betiğin randevu yazan bölümü bunun için `src/lib/demo/` altına
-   taşınmalı; şu an yalnız betikte.
-2. **Vercel'de `DEMO_PUBLIC_PAROLA` tanımlanacak.** Tanımlanmazsa demo sessizce
-   kapalı açılır — sayfa bunu söylüyor ama ana sayfadaki birincil CTA oraya
-   gidiyor.
-3. **Kötüye kullanım sınırı yok.** Hesap ortak olduğu için her tıklama aynı
-   kullanıcıya bir Supabase Auth girişi demek; yoğun trafikte Auth hız sınırına
-   çarpar. En azından IP başına giriş sınırı (`submit_demo_request`'teki günlük
-   5 talep sınırıyla aynı fikir) gerekiyor.
+1. **Temizlik işi zamanlanmadı.** Her ziyaretçi bir auth kullanıcısı ve bir
+   kurum bırakıyor. `npm run demo:temizle` elle çalışıyor; günlük bir cron
+   gerekiyor (Vercel cron + `CRON_SECRET` korumalı route ya da pg_cron).
+   Çalışmazsa auth kullanıcı sayısı ve kiracı tablosu şişer.
+2. **Hız sınırı gerçek değil.** `lib/demo/actions.ts` içindeki sayaç süreç
+   belleğinde: Vercel'de her örnek kendi sayacını tutar. Kalıcı bir sınır
+   (IP tablosu ya da `submit_demo_request` gibi bir SQL fonksiyonu) gerekiyor;
+   aksi halde bir betik saatte binlerce hesap açabilir.
+3. **Demo verisi canlı projede.** Demo kurumları gerçek müşteri kurumlarıyla
+   aynı veritabanında duruyor. İzolasyonu RLS sağlıyor ve `rls:test` bunu her
+   sürümde doğruluyor, ama B2 temizliğiyle birlikte demo hesaplarının da
+   düzenli silindiğinden emin olunmalı.
 
-Ayrıca vitrin kurumunda denetim kaydı ziyaretçilerin okumalarıyla doluyor; bu
-kurum saklama politikasının (C tablosu) ilk müşterisi olacak.
+Panelde demo hesabıyla gezilirken başlığın altında sabit bir uyarı duruyor:
+gerçek kişi bilgisi girilmemesi ve kurumun bir gün sonra silineceği. Uyarı
+gizlenebilir değil — buraya KVKK kapsamında veri girilmesi ihtimali tasarımın
+kendisiyle ilgili.
 
 ## C. KVKK — planda söz verilip henüz yapılmayanlar
 

@@ -15,7 +15,8 @@
     "db:types": "node scripts/db.mjs types",
     "rls:test": "node --env-file-if-exists=.env scripts/rls-test.mjs",
     "platform:admin": "node --env-file-if-exists=.env --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/platform-admin.mjs",
-    "demo:seed": "node --env-file-if-exists=.env --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/demo-seed.mjs"
+    "demo:seed": "node --env-file-if-exists=.env --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/demo-seed.mjs",
+    "demo:temizle": "node --env-file-if-exists=.env --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/demo-cleanup.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",

@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { ThemeToggle } from "@/components/theme-toggle";
 import { requireTenant } from "@/lib/auth/session";
-import { DEMO_TENANT_SLUG } from "@/lib/demo/config";
+import { DEMO_TENANT_SLUG, isDemoUser } from "@/lib/demo/config";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 
 import { NavLink } from "./nav-link";
@@ -31,7 +31,7 @@ export default async function AppLayout({
   if (!isSupabaseConfigured()) return <SetupNotice />;
 
   const { active, memberships, user } = await requireTenant();
-  const isDemo = active.tenant.slug === DEMO_TENANT_SLUG;
+  const isDemo = isDemoUser(user) || active.tenant.slug === DEMO_TENANT_SLUG;
 
   return (
     <div className="flex min-h-full flex-col">
@@ -81,10 +81,10 @@ export default async function AppLayout({
             sabit duruyor. */}
         {isDemo && (
           <p className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-st-pending bg-st-pending-soft px-4 py-1.5 text-[13px] text-st-pending">
-            <strong className="font-medium">Vitrin kurumu.</strong>
+            <strong className="font-medium">Demo kurumu.</strong>
             <span>
-              Gördüğünüz her şey örnek veridir; gerçek hasta bilgisi girmeyin. Kayıtlar düzenli
-              olarak sıfırlanır.
+              Gördüğünüz her şey örnek veridir; gerçek kişi bilgisi girmeyin. Bu kurum bir gün
+              sonra silinir.
             </span>
             <Link href="/iletisim" className="underline underline-offset-2">
               Kendi kurumunuz için demo isteyin

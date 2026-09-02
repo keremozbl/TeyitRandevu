@@ -1,5 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Schibsted_Grotesk, Geist_Mono } from "next/font/google";
+
+import { siteUrl } from "@/lib/marketing/site-url";
+
 import "./globals.css";
 
 // latin-ext olmadan ğ ş ı İ ç ö ü eksik kalır — Türkçe için zorunlu.
@@ -17,12 +20,20 @@ const data = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  // Paylaşım kartındaki ve sitemap'teki adres aynı yerden gelir (site-url.ts).
+  metadataBase: new URL(siteUrl()),
   title: {
     default: "TeyitRandevu",
     template: "%s · TeyitRandevu",
   },
   description:
     "Klinik ve işletmeler için randevu, hasta takibi ve otomatik hatırlatma sistemi.",
+  openGraph: {
+    type: "website",
+    locale: "tr_TR",
+    siteName: "TeyitRandevu",
+  },
+  twitter: { card: "summary_large_image" },
 };
 
 export const viewport: Viewport = {

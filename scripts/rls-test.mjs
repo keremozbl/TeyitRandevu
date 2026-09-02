@@ -293,6 +293,54 @@ try {
   check((auditDeleted?.length ?? 0) === 0, "owner denetim kaydını silemiyor",
     `SİLDİ: ${auditDeleted?.length}`);
 
+  // Demo talepleri platforma ait, kiracıya değil: hiçbir klinik kullanıcısı
+  // başkasının satış kaydını görmemeli.
+  console.log();
+  console.log("[11e] Demo talepleri — yalnız platform yöneticisinde");
+  // Oturumsuz istemci: siteyi açan ziyaretçi neyse o. (Public randevu
+  // bölümündeki `pub` daha aşağıda tanımlanıyor.)
+  const visitor = createClient(URL, ANON, { auth: { persistSession: false } });
+  const demoEmail = `demo-test-${stamp}@teyit.test`;
+  const { data: demoWrite, error: demoWriteErr } = await visitor.rpc("submit_demo_request", {
+    _full_name: "Demo Testi",
+    _email: demoEmail,
+    _notice_version: "test.1",
+    _org_name: "Test Kliniği",
+    _marketing_ok: false,
+  });
+  check(!demoWriteErr && demoWrite?.ok === true, "anon demo talebi bırakabiliyor",
+    "talep yazılamadı", demoWriteErr?.message ?? JSON.stringify(demoWrite));
+
+  const { data: demoAnon } = await visitor.from("demo_requests").select("id");
+  check(!demoAnon?.length, "anon talepleri okuyamıyor", `SIZDI: ${demoAnon?.length}`);
+
+  const { data: demoOwner } = await a.client.from("demo_requests").select("id");
+  check(!demoOwner?.length, "platform yöneticisi olmayan kullanıcı talepleri göremiyor",
+    `SIZDI: ${demoOwner?.length}`);
+
+  const { error: demoDirect } = await a.client.from("demo_requests").insert({
+    full_name: "Elle", email: "elle@teyit.test", notice_version: "test.1",
+  });
+  check(Boolean(demoDirect), `tabloya doğrudan yazılamıyor (${demoDirect?.code})`,
+    "DEMO TALEBİ TABLOYA DOĞRUDAN YAZILDI");
+
+  const { data: adminSelf } = await a.client.from("platform_admins").select("user_id");
+  check(!adminSelf?.length, "kullanıcı platform yöneticisi değil", "BEKLENMEYEN YÖNETİCİ SATIRI");
+
+  const { error: adminInsert } = await a.client.from("platform_admins")
+    .insert({ user_id: a.id, label: "kendini yönetici yaptı" });
+  check(Boolean(adminInsert), `kullanıcı kendini yönetici yapamıyor (${adminInsert?.code})`,
+    "KULLANICI KENDİNİ PLATFORM YÖNETİCİSİ YAPTI");
+
+  // Yönetici olunca aynı sorgu görmeli — politika gerçekten bu tabloya bakıyor.
+  await admin.from("platform_admins").insert({ user_id: a.id, label: "rls-test" });
+  const { data: demoAsAdmin } = await a.client.from("demo_requests").select("id, email");
+  check((demoAsAdmin ?? []).some((row) => row.email === demoEmail),
+    "platform yöneticisi talepleri görüyor", "yönetici talepleri GÖREMİYOR");
+  await admin.from("platform_admins").delete().eq("user_id", a.id);
+
+  await admin.from("demo_requests").delete().eq("email", demoEmail);
+
   console.log("\n[12] Yetki fonksiyonları dışarıdan çağrılamamalı");
   const { error: fnErr } = await a.client.rpc("allows", { _perm: "appointment.read", _tenant: tenantId });
   check(Boolean(fnErr), "private.allows RPC ile çağrılamıyor", "private fonksiyon DIŞARIDAN ÇAĞRILABİLDİ");

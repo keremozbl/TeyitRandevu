@@ -646,6 +646,63 @@ export type Database = {
           },
         ]
       }
+      demo_requests: {
+        Row: {
+          business_type: string | null
+          created_at: string
+          email: string
+          full_name: string
+          handled_at: string | null
+          id: string
+          internal_note: string | null
+          ip: unknown
+          marketing_ok: boolean
+          message: string | null
+          notice_version: string
+          org_name: string | null
+          phone: string | null
+          source: string | null
+          status: Database["public"]["Enums"]["demo_request_status"]
+          user_agent: string | null
+        }
+        Insert: {
+          business_type?: string | null
+          created_at?: string
+          email: string
+          full_name: string
+          handled_at?: string | null
+          id?: string
+          internal_note?: string | null
+          ip?: unknown
+          marketing_ok?: boolean
+          message?: string | null
+          notice_version: string
+          org_name?: string | null
+          phone?: string | null
+          source?: string | null
+          status?: Database["public"]["Enums"]["demo_request_status"]
+          user_agent?: string | null
+        }
+        Update: {
+          business_type?: string | null
+          created_at?: string
+          email?: string
+          full_name?: string
+          handled_at?: string | null
+          id?: string
+          internal_note?: string | null
+          ip?: unknown
+          marketing_ok?: boolean
+          message?: string | null
+          notice_version?: string
+          org_name?: string | null
+          phone?: string | null
+          source?: string | null
+          status?: Database["public"]["Enums"]["demo_request_status"]
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       departments: {
         Row: {
           created_at: string
@@ -1063,6 +1120,24 @@ export type Database = {
           label?: string
           scopes?: Database["public"]["Enums"]["permission_scope"][]
           sort_order?: number
+        }
+        Relationships: []
+      }
+      platform_admins: {
+        Row: {
+          created_at: string
+          label: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          label?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          label?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -1734,6 +1809,22 @@ export type Database = {
         Returns: number
       }
       is_slug_available: { Args: { _slug: string }; Returns: boolean }
+      submit_demo_request: {
+        Args: {
+          _business_type?: string
+          _email: string
+          _full_name: string
+          _ip?: unknown
+          _marketing_ok?: boolean
+          _message?: string
+          _notice_version: string
+          _org_name?: string
+          _phone?: string
+          _source?: string
+          _user_agent?: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       appointment_status:
@@ -1749,6 +1840,7 @@ export type Database = {
         | "acik_riza_saglik"
         | "ticari_ileti"
         | "cerez"
+      demo_request_status: "new" | "contacted" | "qualified" | "closed"
       field_entity: "customer" | "appointment"
       field_kind:
         | "text"
@@ -1919,6 +2011,7 @@ export const Constants = {
         "ticari_ileti",
         "cerez",
       ],
+      demo_request_status: ["new", "contacted", "qualified", "closed"],
       field_entity: ["customer", "appointment"],
       field_kind: [
         "text",

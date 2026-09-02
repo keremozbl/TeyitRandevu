@@ -4,7 +4,7 @@ Test ortamında sorun çıkarmayan ama canlıda çıkacak şeyler. Her madde bil
 bir borç — hangisi olduğunu ve nasıl kapatılacağını yazıyorum ki sonradan
 "neden böyle yapılmış" diye bakılmasın.
 
-Son güncelleme: 1 Eylül 2026 · Durum: Faz 4 (zamanlanmış işler, denetim kaydı, rıza yönetimi)
+Son güncelleme: 2 Eylül 2026 · Durum: Faz 4 + pazarlama sitesi
 
 ---
 
@@ -226,6 +226,42 @@ app.cron_secret = '...'` ile ayarlanır; Vault de bir seçenek. `pg_net` çağr�
 asenkron yapar, yanıtı `net._http_response` tablosunda tutar ve o tablonun da
 budanması gerekir.
 
+### B11. Pazarlama sitesi yayına çıkmadan doldurulacaklar
+
+Site kuruldu (`src/app/(pazarlama)`) ama **bu hâliyle yayına alınamaz**: içinde
+gerçek olmayan üç şey var ve üçü de kod değil, ticari karar.
+
+| Ne | Şu an | Nerede |
+|---|---|---|
+| Alan adı | yok; `NEXT_PUBLIC_SITE_URL` boşsa `localhost` | `src/lib/marketing/site-url.ts` — sitemap, robots ve paylaşım kartı buradan besleniyor |
+| Tüzel kişi ve iletişim | `iletisim@teyitrandevu.com` **uydurma**, adres ve telefon `null` | `SITE_CONTACT`, `src/lib/legal/site-texts.ts` |
+| Fiyatlar | **temsilî** — 890 / 1.890 / görüşelim | `PLANS` ve `PRICING_IS_DRAFT`, `src/lib/marketing/content.ts` |
+
+`PRICING_IS_DRAFT` true olduğu sürece fiyat sayfası "fiyatlar temsilidir"
+uyarısını çiziyor. Gerçek fiyat belirlenince bayrak kapatılır. **Paket
+özellikleri hiçbir yerde uygulanmıyor:** `PLANS[].includes` ve `limits` şu an
+yalnızca metin; kotayı zorlayan kod faturalama modülüyle gelecek (E tablosu,
+kontör defteri).
+
+Ayrıca yayın öncesi: aydınlatma metni (`SITE_NOTICE_VERSION`) avukat
+görmedi — hasta rıza metinleriyle aynı kalem (C tablosu).
+
+**Demo talepleri kiracı panelinde DEĞİL.** Satış verisi hiçbir kuruma ait
+olmadığı için ayrı bir platform katmanı kuruldu:
+
+- `demo_requests` — formun tek çıktısı; yazma yolu `public.submit_demo_request`
+  (`anon`a tablo yetkisi yok, Kural 8), günde aynı IP'den 5 talep sınırı.
+- `platform_admins` — kiracı rol sisteminden bağımsız, bilerek ilkel: satırı
+  olan yöneticidir. Satır yalnızca servis rolüyle eklenir:
+  `npm run platform:admin ekle <e-posta>`.
+- Ekran `/yonetim/talepler`, yetkisi olmayana 404.
+
+Ticari ileti onayı talebin kendi satırında (`marketing_ok`): "demo istiyorum"
+demek kampanya maili almayı kabul etmek değildir. Bu talepte veri sorumlusu
+**TeyitRandevu'dur** — hasta verisindeki rolün tersi (Plan 11.1), rıza kaydı da
+o yüzden kiracıya bağlı `consents` tablosuna yazılmıyor.
+
+
 ---
 
 ## C. KVKK — planda söz verilip henüz yapılmayanlar
@@ -342,6 +378,7 @@ Bilinmesi yeterli.
 ## Sıra önerisi
 
 1. ~~**A1 + A4** `pg_cron` kurulumu~~ — ✅ 1 Eylül 2026
+1b. **B11** alan adı, tüzel kişi ve gerçek fiyat — site yayına çıkacaksa bunlar önce
 2. **B9 + B10** bildirim sağlayıcısı ve kuyruk zamanlayıcısı — hatırlatma ürünün asıl satış argümanı
 3. **B3 + B4** SMTP ve auth ayarları — pilot öncesi
 4. **B2** demo hesabın ve demo kurumun silinmesi — gerçek hasta verisi girmeden önce

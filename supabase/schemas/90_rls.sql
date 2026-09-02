@@ -597,3 +597,41 @@ create policy notifications_update on public.notifications
   for update to authenticated
   using      ( private.allows('notification.template.manage', tenant_id) )
   with check ( private.allows('notification.template.manage', tenant_id) );
+
+-- -----------------------------------------------------------------------------
+-- platform_admins — kim platform yöneticisi
+--
+-- Kendi satırını okuyabilir, kimse yazamaz. Yönetici eklemek servis rolüyle
+-- yapılır (scripts/platform-admin.mjs): kendini yönetici yapabilen bir
+-- politika, yetkiyi anlamsız kılardı.
+-- -----------------------------------------------------------------------------
+alter table public.platform_admins enable row level security;
+alter table public.platform_admins force row level security;
+grant select on public.platform_admins to authenticated;
+
+create policy platform_admins_read on public.platform_admins
+  for select to authenticated
+  using ( (select auth.uid()) = user_id );
+
+-- -----------------------------------------------------------------------------
+-- demo_requests — platformun satış kuyruğu, hiçbir kuruma ait değil
+--
+-- INSERT politikası YOK: yazma yolu `public.submit_demo_request`. Formu
+-- dolduran kişi `anon`dur ve anon'un bu tabloda yetkisi yoktur (Kural 8).
+--
+-- Okuma ve durum güncelleme yalnız platform yöneticisinde. `private.allows()`
+-- burada kullanılamaz: o fonksiyon "hangi kurumda" sorusunu sorar, bu satırın
+-- kurumu yoktur.
+-- -----------------------------------------------------------------------------
+alter table public.demo_requests enable row level security;
+alter table public.demo_requests force row level security;
+grant select, update on public.demo_requests to authenticated;
+
+create policy demo_requests_read on public.demo_requests
+  for select to authenticated
+  using ( (select private.is_platform_admin()) );
+
+create policy demo_requests_update on public.demo_requests
+  for update to authenticated
+  using      ( (select private.is_platform_admin()) )
+  with check ( (select private.is_platform_admin()) );

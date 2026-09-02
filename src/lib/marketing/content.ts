@@ -13,14 +13,19 @@
  *      bağlanıyor" diyor.
  *   2. **Uydurma kanıt yok.** Müşteri logosu, kullanıcı sayısı, yıldız
  *      puanı, referans yorumu yok — çünkü henüz yok.
+ *
+ * BİR ŞEY BİLEREK YOK: **veri merkezinin nerede olduğu**. Kayıtların hangi
+ * bölgede tutulduğu satış sayfasında değil, aydınlatma metninde ve birebir
+ * görüşmede anlatılıyor (`lib/legal/site-texts.ts` — orada KVKK m.9 gereği
+ * yazmak zorunda). Siteye geri eklemeyin.
  */
 
 export const PRODUCT = {
   name: "TeyitRandevu",
   /** Tek cümlede ne olduğu; meta description ve paylaşım kartı da bunu kullanır */
   summary:
-    "Diş klinikleri için randevu, hasta takibi ve hatırlatma sistemi. Günün programı her sabah hazır.",
-  stage: "Ürün pilot aşamasında: ilk kliniklerle birlikte kuruluyor.",
+    "Klinikler, salonlar ve danışmanlık ofisleri için randevu, müşteri takibi ve hatırlatma sistemi. Günün programı her sabah hazır.",
+  stage: "Ürün pilot aşamasında: ilk işletmelerle birlikte kuruluyor.",
 } as const;
 
 /**
@@ -28,11 +33,11 @@ export const PRODUCT = {
  *
  * Rakiplerin yerinde "16.000 işletme", "4.8 yıldız" yazıyor; bizde henüz
  * öyle bir sayı yok ve uydurulmuyor (yukarıdaki iki dürüstlük kuralı). Yerine
- * doğrulanabilir olgular: nerede durduğu, neyin garanti edildiği.
+ * doğrulanabilir olgular: neyin garanti edildiği ve kurulumun nasıl işlediği.
  */
 export const TRUST = [
   { label: "Çift rezervasyon", value: "Veritabanı kısıtı" },
-  { label: "Veri konumu", value: "AB · Frankfurt" },
+  { label: "Sektör şablonu", value: "Hazır kurulum" },
   { label: "KVKK", value: "Rıza + denetim kaydı" },
   { label: "Kurulum", value: "Pilotta birlikte, ücretsiz" },
 ] as const;
@@ -64,16 +69,16 @@ export const CAPABILITIES: Capability[] = [
   },
   {
     key: "yetki",
-    title: "Resepsiyon tedavi notunu görmez",
+    title: "Resepsiyon her şeyi görmez",
     claim: "Yetki satır seviyesinde, düğme gizleyerek değil.",
-    body: "Hekim, asistan, resepsiyon ve muhasebe ayrı yetkilerle çalışır. Tıbbi not ayrı bir tabloda ve ayrı politikayla duruyor — yetkisi olmayan kullanıcı için sorgu boş döner, arayüzde gizlenmiş bir veri yok.",
+    body: "Uygulayıcı, asistan, resepsiyon ve muhasebe ayrı yetkilerle çalışır. Sağlık bilgisi taşıyan alanlar — tedavi notu, alerji, seans notu — ayrı bir tabloda ve ayrı politikayla durur; yetkisi olmayan kullanıcı için sorgu boş döner, arayüzde gizlenmiş bir veri yok.",
     mock: "card",
   },
   {
     key: "online",
-    title: "Hastanın kendi aldığı randevu",
-    claim: "Kliniğin adresinde, KVKK rızasıyla birlikte.",
-    body: "Hasta boş saatleri görür, seçer, formu doldururken slot ona ayrılır. Aydınlatma ve açık rıza ayrı kutularda alınır; metnin sürümü, tarih ve kanal kayda geçer. Online gelen randevu onaylı sayılmaz, panelde onay bekler.",
+    title: "Müşterinin kendi aldığı randevu",
+    claim: "İşletmenin adresinde, KVKK rızasıyla birlikte.",
+    body: "Müşteri boş saatleri görür, seçer, formu doldururken slot ona ayrılır. Aydınlatma ve açık rıza ayrı kutularda alınır; metnin sürümü, tarih ve kanal kayda geçer. Online gelen randevu onaylı sayılmaz, panelde onay bekler.",
     mock: "booking",
   },
 ];
@@ -82,19 +87,19 @@ export const CAPABILITIES: Capability[] = [
 export const COMPLIANCE = [
   {
     title: "Aydınlatma ve açık rıza ayrı ayrı",
-    body: "Tek bir onay kutusu değil: bilgilendirme, sağlık verisi açık rızası ve ticari ileti izni ayrı kayıtlar. Metnin sürümü saklanır, hasta rızasını geri aldığında yeni satır yazılır ve kampanya mesajı o anda durur.",
+    body: "Tek bir onay kutusu değil: bilgilendirme, sağlık verisi açık rızası ve ticari ileti izni ayrı kayıtlar. Metnin sürümü saklanır, kişi rızasını geri aldığında yeni satır yazılır ve kampanya mesajı o anda durur.",
   },
   {
     title: "Denetim kaydı",
-    body: "Hasta kartını kimin ne zaman açtığı, tıbbi notu kimin okuduğu, programı kimin dışa aktardığı kayda geçer. Kaydı yazan kişi onu değiştiremez ve silemez.",
+    body: "Müşteri kartını kimin ne zaman açtığı, tıbbi notu kimin okuduğu, programı kimin dışa aktardığı kayda geçer. Kaydı yazan kişi onu değiştiremez ve silemez.",
   },
   {
-    title: "Tıbbi veri ayrı tabloda",
-    body: "Tedavi notu, randevu kaydından ayrı bir tabloda ve ayrı politikayla tutulur. Randevuyu gören her rol tedavi notunu görmez.",
+    title: "Sağlık verisi ayrı tabloda",
+    body: "Tedavi ya da seans notu, randevu kaydından ayrı bir tabloda ve ayrı politikayla tutulur. Randevuyu gören her rol o notu görmez.",
   },
   {
-    title: "Veri Frankfurt'ta",
-    body: "Kayıtlar Avrupa Birliği bölgesindeki sunucularda tutulur. Bu bir yurt dışı aktarımdır ve KVKK m.9 kapsamında yürütülür; sözleşme seti pilot öncesi tamamlanır.",
+    title: "Kurumlar birbirini görmez",
+    body: "Her işletmenin verisi kendi sınırında: ayrım uygulamada değil veritabanı politikalarında ve her sürümde canlı veritabanına karşı otomatik sınanıyor.",
   },
 ] as const;
 
@@ -139,48 +144,48 @@ export type Plan = {
 
 export const PLANS: Plan[] = [
   {
-    key: "tek_hekim",
-    name: "Tek Hekim",
-    fit: "Tek hekimin çalıştığı muayenehane.",
+    key: "tek_uzman",
+    name: "Tek Uzman",
+    fit: "Tek kişinin çalıştığı muayenehane, salon ya da ofis.",
     monthly: 890,
     includes: [
-      "Takvim, randevu ve hasta kartı",
+      "Takvim, randevu ve müşteri kartı",
       "Günün programı: ekran, A4 çıktı, Excel",
       "Online randevu sayfası",
       "KVKK rıza kaydı ve denetim kaydı",
     ],
     limits: [
       { label: "Kullanıcı", value: "2" },
-      { label: "Hekim / ünit", value: "1" },
+      { label: "Uzman / kaynak", value: "1" },
       { label: "Aylık hatırlatma", value: "500" },
     ],
   },
   {
-    key: "klinik",
-    name: "Klinik",
-    fit: "Birden çok hekim ve resepsiyonun birlikte çalıştığı klinik.",
+    key: "ekip",
+    name: "Ekip",
+    fit: "Birden çok uzmanın ve resepsiyonun birlikte çalıştığı klinik ya da salon.",
     monthly: 1890,
     highlight: true,
     includes: [
-      "Tek Hekim paketindeki her şey",
-      "Rol ve yetki düzenleme, hekim bazlı kapsam",
-      "Tıbbi not ayrımı ve esnek hasta alanları",
+      "Tek Uzman paketindeki her şey",
+      "Rol ve yetki düzenleme, uzman bazlı kapsam",
+      "Sağlık verisi ayrımı ve esnek müşteri alanları",
       "Bildirim akışları ve şablon düzenleme",
       "Bekleme listesi",
     ],
     limits: [
       { label: "Kullanıcı", value: "10" },
-      { label: "Hekim / ünit", value: "6" },
+      { label: "Uzman / kaynak", value: "6" },
       { label: "Aylık hatırlatma", value: "3.000" },
     ],
   },
   {
     key: "zincir",
     name: "Zincir",
-    fit: "Birden çok şubesi olan kurumlar.",
+    fit: "Birden çok şubesi olan işletmeler.",
     monthly: null,
     includes: [
-      "Klinik paketindeki her şey",
+      "Ekip paketindeki her şey",
       "Çok şube, şube bazlı yetki ve raporlar",
       "Kendi SMS sözleşmenizi bağlama",
       "Öncelikli destek ve kurulum",
@@ -195,23 +200,23 @@ export const PLANS: Plan[] = [
 
 export const FAQ = [
   {
+    q: "Bizim sektörümüz listede yok, kullanabilir miyiz?",
+    a: "Büyük ihtimalle evet. Motor sektöre bağlı değil: hizmet süreleri, tamponlar, roller, müşteri alanları ve mesaj şablonları kurulumda tanımlanıyor. Hazır şablon işi hızlandırır, şart değildir — sektörünüzü kurulumda birlikte kuruyoruz ve bir sonraki işletme için şablona dönüşüyor.",
+  },
+  {
     q: "Hatırlatma mesajları gerçekten gidiyor mu?",
     a: "Henüz hayır. Mesajı üreten, zamanlayan ve kuyruğa yazan altyapı çalışıyor; gönderen operatör sözleşmesi pilot kurumla birlikte yapılıyor. Panelde her satır gönderilip gönderilmediğini açıkça söylüyor — göndermediğimiz mesaja 'gönderildi' demiyoruz.",
   },
   {
-    q: "Verilerimiz nerede tutuluyor?",
-    a: "Avrupa Birliği bölgesindeki (Frankfurt) sunucularda. Bu KVKK anlamında yurt dışına aktarımdır; gerekli sözleşme ve bildirim süreci pilot öncesinde tamamlanır.",
-  },
-  {
-    q: "Mevcut hasta kayıtlarımızı taşıyabilir miyiz?",
+    q: "Mevcut müşteri kayıtlarımızı taşıyabilir miyiz?",
     a: "Pilot kurulumunda birlikte yapıyoruz. Excel ya da mevcut programınızdan çıkardığınız listeyi aktarıyoruz; randevu geçmişi de taşınabilir.",
   },
   {
     q: "İnternetten randevu almak zorunda mıyız?",
-    a: "Hayır. Online randevu sayfası kapatılabilir; klinik yalnızca panelden randevu vermeye devam eder. Açtığınızda gelen randevular onay bekleyen olarak düşer, otomatik onaylanmaz.",
+    a: "Hayır. Online randevu sayfası kapatılabilir; işletme yalnızca panelden randevu vermeye devam eder. Açtığınızda gelen randevular onay bekleyen olarak düşer, otomatik onaylanmaz.",
   },
   {
     q: "Kaç kullanıcı ekleyebiliriz?",
-    a: "Pakete göre değişiyor. Hekim, asistan, resepsiyon ve muhasebe için hazır roller var; her rolün yetkisi kurum içinde düzenlenebiliyor.",
+    a: "Pakete göre değişiyor. Uygulayıcı, asistan, resepsiyon ve muhasebe için hazır roller var; her rolün yetkisi işletme içinde düzenlenebiliyor.",
   },
 ] as const;

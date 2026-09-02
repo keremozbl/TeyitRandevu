@@ -1,0 +1,112 @@
+{
+  "key": "guzellik_salonu",
+  "family": "kisisel_bakim",
+  "label": "Güzellik & Bakım Salonu",
+  "description": "Uzman ve kabin bazlı takvim, paket takibi, tekrar eden bakım randevuları.",
+
+  "terminology": {
+    "customer_singular": "Müşteri",
+    "customer_plural": "Müşteriler",
+    "service_singular": "Hizmet",
+    "service_plural": "Hizmetler",
+    "resource_singular": "Uzman",
+    "resource_plural": "Uzmanlar",
+    "appointment_singular": "Randevu",
+    "appointment_plural": "Randevular"
+  },
+
+  "modules": ["packages", "loyalty"],
+  "roles": ["owner", "admin", "uygulayici", "resepsiyon", "muhasebe"],
+
+  "booking_rules": {
+    "min_lead_minutes": 60,
+    "max_advance_days": 45,
+    "cancel_window_minutes": 120,
+    "hold_minutes": 10
+  },
+
+  "resources": [
+    { "kind": "staff", "name": "Uzman 1", "color": "#0E5F6E" },
+    { "kind": "staff", "name": "Uzman 2", "color": "#9A6412" },
+    { "kind": "room", "name": "1 No'lu Kabin", "color": "#6B7472" }
+  ],
+
+  "working_hours": {
+    "weekdays": [1, 2, 3, 4, 5, 6],
+    "starts_at": "10:00",
+    "ends_at": "20:00",
+    "break": null
+  },
+
+  "services": [
+    { "name": "Cilt Bakımı", "duration_min": 60, "buffer_after_min": 10, "category": "Cilt" },
+    { "name": "Leke / Yaşlanma Karşıtı Bakım", "duration_min": 75, "buffer_after_min": 10, "category": "Cilt" },
+    { "name": "Kaş Tasarımı", "duration_min": 20, "category": "Kaş & Kirpik" },
+    { "name": "Kirpik Lifting", "duration_min": 75, "buffer_after_min": 10, "category": "Kaş & Kirpik" },
+    { "name": "Ağda (Tüm Vücut)", "duration_min": 60, "buffer_after_min": 10, "category": "Epilasyon" },
+    { "name": "Lazer Epilasyon (Bölgesel)", "duration_min": 30, "buffer_after_min": 10, "category": "Epilasyon" },
+    { "name": "Manikür", "duration_min": 40, "category": "El & Ayak" },
+    { "name": "Pedikür", "duration_min": 50, "category": "El & Ayak" },
+    { "name": "Kalıcı Oje", "duration_min": 60, "category": "El & Ayak" },
+    { "name": "Makyaj", "duration_min": 45, "category": "Makyaj" }
+  ],
+
+  "customer_fields": [
+    { "key": "dogum_gunu", "label": "Doğum Günü", "kind": "date", "is_medical": false },
+    { "key": "cilt_tipi", "label": "Cilt Tipi", "kind": "select", "is_medical": false,
+      "options": ["Normal", "Kuru", "Yağlı", "Karma", "Hassas"] },
+    { "key": "alerji", "label": "Alerji / Hassasiyet", "kind": "textarea", "is_medical": true },
+    { "key": "kullandigi_ilaclar", "label": "Kullandığı İlaçlar", "kind": "textarea", "is_medical": true },
+    { "key": "tercih_notu", "label": "Tercih Notu", "kind": "textarea", "is_medical": false }
+  ],
+
+  "appointment_fields": [
+    { "key": "uygulanan_urun", "label": "Uygulanan Ürün", "kind": "text", "is_medical": false },
+    { "key": "cihaz_ayari", "label": "Cihaz Ayarı / Doz", "kind": "text", "is_medical": false }
+  ],
+
+  "notification_defaults": [
+    {
+      "key": "randevu_olusturuldu",
+      "name": "Randevu teyidi",
+      "trigger": "appointment_created",
+      "offset_minutes": 0,
+      "channel": "sms",
+      "is_commercial": false,
+      "body": "Merhaba {{musteri_adi}}, {{kurum_adi}} randevunuz oluşturuldu: {{tarih}} {{saat}} · {{hekim_adi}}. Değişiklik için: {{randevu_baglantisi}}"
+    },
+    {
+      "key": "hatirlatma_bir_gun",
+      "name": "Bir gün önce hatırlatma",
+      "trigger": "before_start",
+      "offset_minutes": -1440,
+      "channel": "whatsapp",
+      "is_commercial": false,
+      "body": "Merhaba {{musteri_adi}}, yarın {{saat}} randevunuz var ({{hekim_adi}}). Gelemeyecekseniz haber verin: {{randevu_baglantisi}}"
+    },
+    {
+      "key": "hatirlatma_iki_saat",
+      "name": "İki saat önce hatırlatma",
+      "trigger": "before_start",
+      "offset_minutes": -120,
+      "channel": "sms",
+      "is_commercial": false,
+      "body": "Merhaba {{musteri_adi}}, bugün {{saat}} randevunuzu hatırlatırız. {{kurum_adi}} · {{sube_telefon}}"
+    },
+    {
+      "key": "dogum_gunu_indirimi",
+      "name": "Doğum günü indirimi",
+      "trigger": "birthday",
+      "offset_minutes": 0,
+      "channel": "sms",
+      "is_commercial": true,
+      "body": "Merhaba {{musteri_adi}}, doğum gününüz kutlu olsun! Bu ay {{kurum_adi}} bakım hizmetlerinde size özel indirim var. Bilgi: {{sube_telefon}} · İleti istemiyorsanız RET yazın."
+    }
+  ],
+
+  "notes": [
+    "Doğum günü ve kampanya mesajları TİCARİ İLETİ'dir: İYS onayı, ret hakkı ve kayıt zorunludur (Plan Bölüm 12.3).",
+    "Alerji ve ilaç alanları sağlık verisidir; tıbbi işaretli olduğu için resepsiyon rolü göremez.",
+    "Lazer ve benzeri işlemlerde sağlık beyanı veriliyorsa tanıtım mevzuatı kısıtları uygulanır; kampanya metni bu hizmetlere referans vermemelidir."
+  ]
+}

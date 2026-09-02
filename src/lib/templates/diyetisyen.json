@@ -1,0 +1,100 @@
+{
+  "key": "diyetisyen",
+  "family": "saglik",
+  "label": "Diyetisyen & Beslenme",
+  "description": "Görüşme ve kontrol düzeni, ölçüm takibi, online görüşme desteği.",
+
+  "terminology": {
+    "customer_singular": "Danışan",
+    "customer_plural": "Danışanlar",
+    "service_singular": "Görüşme",
+    "service_plural": "Görüşmeler",
+    "resource_singular": "Diyetisyen",
+    "resource_plural": "Diyetisyenler",
+    "appointment_singular": "Randevu",
+    "appointment_plural": "Randevular"
+  },
+
+  "modules": ["measurements", "installments"],
+  "roles": ["owner", "admin", "hekim", "asistan", "resepsiyon", "muhasebe"],
+
+  "booking_rules": {
+    "min_lead_minutes": 120,
+    "max_advance_days": 60,
+    "cancel_window_minutes": 240,
+    "hold_minutes": 10
+  },
+
+  "resources": [
+    { "kind": "staff", "name": "Diyetisyen 1", "title": "Dyt.", "color": "#0E5F6E" }
+  ],
+
+  "working_hours": {
+    "weekdays": [1, 2, 3, 4, 5],
+    "starts_at": "09:00",
+    "ends_at": "18:00",
+    "break": { "starts_at": "13:00", "ends_at": "14:00" }
+  },
+
+  "services": [
+    { "name": "İlk Görüşme", "duration_min": 60, "buffer_after_min": 10, "category": "Görüşme" },
+    { "name": "Kontrol Görüşmesi", "duration_min": 30, "buffer_after_min": 5, "category": "Görüşme" },
+    { "name": "Online Görüşme", "duration_min": 40, "category": "Görüşme" },
+    { "name": "Ölçüm & Vücut Analizi", "duration_min": 20, "category": "Ölçüm" },
+    { "name": "Sporcu Beslenmesi", "duration_min": 45, "category": "Özel Program" },
+    { "name": "Çocuk Beslenmesi", "duration_min": 45, "category": "Özel Program" }
+  ],
+
+  "customer_fields": [
+    { "key": "dogum_gunu", "label": "Doğum Günü", "kind": "date", "is_medical": false },
+    { "key": "boy", "label": "Boy (cm)", "kind": "number", "is_medical": true },
+    { "key": "baslangic_kilo", "label": "Başlangıç Kilosu (kg)", "kind": "number", "is_medical": true },
+    { "key": "hedef_kilo", "label": "Hedef Kilo (kg)", "kind": "number", "is_medical": true },
+    { "key": "kronik_hastalik", "label": "Kronik Hastalık", "kind": "textarea", "is_medical": true },
+    { "key": "alerji_intolerans", "label": "Alerji / İntolerans", "kind": "textarea", "is_medical": true },
+    { "key": "kullandigi_ilaclar", "label": "Kullandığı İlaçlar / Takviyeler", "kind": "textarea", "is_medical": true },
+    { "key": "beslenme_tercihi", "label": "Beslenme Tercihi", "kind": "select", "is_medical": false,
+      "options": ["Fark etmez", "Vejetaryen", "Vegan", "Glutensiz", "Laktozsuz"] }
+  ],
+
+  "appointment_fields": [
+    { "key": "olcum_kilo", "label": "Ölçülen Kilo (kg)", "kind": "number", "is_medical": true },
+    { "key": "yag_orani", "label": "Yağ Oranı (%)", "kind": "number", "is_medical": true },
+    { "key": "gorusme_notu", "label": "Görüşme Notu", "kind": "textarea", "is_medical": true }
+  ],
+
+  "notification_defaults": [
+    {
+      "key": "randevu_olusturuldu",
+      "name": "Randevu teyidi",
+      "trigger": "appointment_created",
+      "offset_minutes": 0,
+      "channel": "sms",
+      "is_commercial": false,
+      "body": "Sayın {{musteri_adi}}, {{kurum_adi}} randevunuz oluşturuldu: {{tarih}} {{saat}} · {{hekim_adi}}. Randevunuzu görüntülemek ya da iptal etmek için: {{randevu_baglantisi}}"
+    },
+    {
+      "key": "hatirlatma_bir_gun",
+      "name": "Bir gün önce hatırlatma",
+      "trigger": "before_start",
+      "offset_minutes": -1440,
+      "channel": "whatsapp",
+      "is_commercial": false,
+      "body": "Sayın {{musteri_adi}}, yarın {{saat}} görüşmenizi hatırlatırız ({{hekim_adi}}). Gelemeyecekseniz lütfen bildirin: {{randevu_baglantisi}}"
+    },
+    {
+      "key": "hatirlatma_iki_saat",
+      "name": "İki saat önce hatırlatma",
+      "trigger": "before_start",
+      "offset_minutes": -120,
+      "channel": "sms",
+      "is_commercial": false,
+      "body": "Sayın {{musteri_adi}}, bugün {{saat}} görüşmenizi hatırlatırız. Ölçüm için tok karnına gelmemenizi öneririz. {{kurum_adi}}"
+    }
+  ],
+
+  "notes": [
+    "Sağlık Bakanlığı tanıtım mevzuatı gereği kampanya ve indirim şablonları bu sektörde sunulmaz (Plan Bölüm 12.3).",
+    "Kilo, ölçüm ve hastalık alanları sağlık verisidir: tıbbi işaretlidir, resepsiyon rolü göremez."
+  ]
+}

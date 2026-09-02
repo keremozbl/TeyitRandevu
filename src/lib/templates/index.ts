@@ -1,5 +1,9 @@
 import disKlinigi from "./dis-klinigi.json";
+import fizyoterapi from "./fizyoterapi.json";
+import diyetisyen from "./diyetisyen.json";
+import psikolog from "./psikolog.json";
 import berber from "./berber.json";
+import guzellikSalonu from "./guzellik-salonu.json";
 
 /**
  * Sektör şablonları.
@@ -97,9 +101,18 @@ export interface SectorTemplate {
   notes?: string[];
 }
 
+/**
+ * Sıra kurulum sihirbazındaki sıradır: önce sağlık, sonra kişisel bakım.
+ * Listede olmayan bir sektör kurulumda elle tanımlanır — şablon bir başlangıç
+ * noktası, kilit değil.
+ */
 export const TEMPLATES = {
   dis_klinigi: disKlinigi as SectorTemplate,
+  fizyoterapi: fizyoterapi as SectorTemplate,
+  diyetisyen: diyetisyen as SectorTemplate,
+  psikolog: psikolog as SectorTemplate,
   berber: berber as SectorTemplate,
+  guzellik_salonu: guzellikSalonu as SectorTemplate,
 } satisfies Record<string, SectorTemplate>;
 
 export type TemplateKey = keyof typeof TEMPLATES;

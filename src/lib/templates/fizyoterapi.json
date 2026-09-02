@@ -1,0 +1,101 @@
+{
+  "key": "fizyoterapi",
+  "family": "saglik",
+  "label": "Fizyoterapi & Rehabilitasyon",
+  "description": "Seans serisi, terapist ve salon bazlı takvim, seans notu ve ağrı takibi.",
+
+  "terminology": {
+    "customer_singular": "Hasta",
+    "customer_plural": "Hastalar",
+    "service_singular": "Seans",
+    "service_plural": "Seanslar",
+    "resource_singular": "Fizyoterapist",
+    "resource_plural": "Fizyoterapistler",
+    "appointment_singular": "Randevu",
+    "appointment_plural": "Randevular"
+  },
+
+  "modules": ["treatment_plan", "installments"],
+  "roles": ["owner", "admin", "hekim", "asistan", "resepsiyon", "muhasebe"],
+
+  "booking_rules": {
+    "min_lead_minutes": 120,
+    "max_advance_days": 60,
+    "cancel_window_minutes": 240,
+    "hold_minutes": 10
+  },
+
+  "resources": [
+    { "kind": "staff", "name": "Fizyoterapist 1", "title": "Fzt.", "color": "#0E5F6E" },
+    { "kind": "room", "name": "Egzersiz Salonu", "color": "#6B7472" }
+  ],
+
+  "working_hours": {
+    "weekdays": [1, 2, 3, 4, 5],
+    "starts_at": "09:00",
+    "ends_at": "19:00",
+    "break": { "starts_at": "13:00", "ends_at": "14:00" }
+  },
+
+  "services": [
+    { "name": "İlk Değerlendirme", "duration_min": 45, "buffer_after_min": 10, "category": "Değerlendirme" },
+    { "name": "Manuel Terapi Seansı", "duration_min": 45, "buffer_after_min": 10, "category": "Terapi" },
+    { "name": "Egzersiz Seansı", "duration_min": 60, "buffer_after_min": 10, "category": "Terapi" },
+    { "name": "Elektroterapi", "duration_min": 30, "category": "Fizik Tedavi" },
+    { "name": "Kuru İğneleme", "duration_min": 30, "buffer_after_min": 10, "category": "Fizik Tedavi" },
+    { "name": "Klinik Pilates", "duration_min": 55, "category": "Egzersiz" },
+    { "name": "Kontrol Görüşmesi", "duration_min": 20, "category": "Değerlendirme" }
+  ],
+
+  "customer_fields": [
+    { "key": "tckn", "label": "T.C. Kimlik No", "kind": "text", "is_medical": false },
+    { "key": "tani", "label": "Tanı", "kind": "textarea", "is_medical": true },
+    { "key": "sevk_eden_hekim", "label": "Sevk Eden Hekim", "kind": "text", "is_medical": true },
+    { "key": "ameliyat_gecmisi", "label": "Ameliyat Geçmişi", "kind": "textarea", "is_medical": true },
+    { "key": "kronik_hastalik", "label": "Kronik Hastalık", "kind": "textarea", "is_medical": true },
+    { "key": "kullandigi_ilaclar", "label": "Kullandığı İlaçlar", "kind": "textarea", "is_medical": true },
+    { "key": "toplam_seans", "label": "Planlanan Seans Sayısı", "kind": "number", "is_medical": false }
+  ],
+
+  "appointment_fields": [
+    { "key": "seans_no", "label": "Kaçıncı Seans", "kind": "number", "is_medical": false },
+    { "key": "bolge", "label": "Çalışılan Bölge", "kind": "text", "is_medical": true },
+    { "key": "agri_skoru", "label": "Ağrı Skoru (0-10)", "kind": "number", "is_medical": true },
+    { "key": "seans_notu", "label": "Seans Notu", "kind": "textarea", "is_medical": true }
+  ],
+
+  "notification_defaults": [
+    {
+      "key": "randevu_olusturuldu",
+      "name": "Randevu teyidi",
+      "trigger": "appointment_created",
+      "offset_minutes": 0,
+      "channel": "sms",
+      "is_commercial": false,
+      "body": "Sayın {{musteri_adi}}, {{kurum_adi}} randevunuz oluşturuldu: {{tarih}} {{saat}} · {{hekim_adi}}. Randevunuzu görüntülemek ya da iptal etmek için: {{randevu_baglantisi}}"
+    },
+    {
+      "key": "hatirlatma_bir_gun",
+      "name": "Bir gün önce hatırlatma",
+      "trigger": "before_start",
+      "offset_minutes": -1440,
+      "channel": "whatsapp",
+      "is_commercial": false,
+      "body": "Sayın {{musteri_adi}}, yarın {{saat}} seansınızı hatırlatırız ({{hekim_adi}} · {{sube_adi}}). Gelemeyecekseniz lütfen bildirin: {{randevu_baglantisi}}"
+    },
+    {
+      "key": "hatirlatma_iki_saat",
+      "name": "İki saat önce hatırlatma",
+      "trigger": "before_start",
+      "offset_minutes": -120,
+      "channel": "sms",
+      "is_commercial": false,
+      "body": "Sayın {{musteri_adi}}, bugün {{saat}} seansınızı hatırlatırız. Rahat kıyafetle gelmenizi öneririz. {{kurum_adi}} · {{sube_telefon}}"
+    }
+  ],
+
+  "notes": [
+    "Sağlık Bakanlığı tanıtım mevzuatı gereği kampanya ve indirim şablonları bu sektörde sunulmaz (Plan Bölüm 12.3).",
+    "Seans notu ve ağrı skoru tıbbi işaretlidir: randevuyu gören resepsiyon rolü bu alanları görmez."
+  ]
+}

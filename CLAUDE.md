@@ -1,8 +1,13 @@
 # TeyitRandevu
 
-Çok kiracılı randevu ve müşteri takip SaaS'ı. İlk dikey diş klinikleri; motor
-sektörden bağımsız. Tam plan: `docs/PLAN.md` — mimari kararların gerekçeleri
-orada, burada yalnızca uygulama kuralları var.
+Çok kiracılı randevu ve müşteri takip SaaS'ı. Motor sektörden bağımsız: sektör
+şablonları `src/lib/templates/*.json` içinde ve yeni sektör eklemek kod
+değiştirmeden bir JSON dosyası koymaktır — bugün diş kliniği, fizyoterapi,
+diyetisyen, psikolog, berber ve güzellik salonu var. İlk pilot dikey diş
+klinikleri.
+
+Tam plan: `docs/PLAN.md` — mimari kararların gerekçeleri orada, burada yalnızca
+uygulama kuralları var.
 
 **Bilinçli borçlar `docs/CANLIYA-GECIS.md` içinde.** Test ortamında çalışan ama
 canlıda değiştirilmesi gereken bir şey fark edersen oraya ekle; sessizce
@@ -45,7 +50,8 @@ etiketlenir. Ticari olanlar İYS onayı olmadan gönderilemez ve bu kısıt
 **veritabanında** uygulanır: kuyruğa yazan `queue_appointment_notifications`
 onaysız ticari iletiyi `skipped` olarak yazar, `claim_notifications` da
 gönderim anında onayı yeniden kontrol eder (rıza arada geri alınmış olabilir).
-Diş kliniklerine kampanya şablonu sunulmaz.
+`saglik` ailesindeki hiçbir sektöre kampanya şablonu sunulmaz; bunu
+`src/lib/templates/templates.test.ts` sınıyor.
 
 **8. Public sayfa `anon`a tablo yetkisi vermez.** Randevu sayfası veriye
 `booking_*` `security definer` fonksiyonları üzerinden erişir

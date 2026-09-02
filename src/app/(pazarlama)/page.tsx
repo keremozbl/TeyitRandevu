@@ -14,6 +14,7 @@ import {
   H3,
   LEAD,
 } from "@/components/marketing/ui";
+import { FAMILY_LABELS, listTemplates } from "@/lib/templates";
 import {
   CAPABILITIES,
   COMPLIANCE,
@@ -28,7 +29,9 @@ import {
 export const metadata: Metadata = {
   // `absolute`: ana sayfa kök layout'taki "%s · TeyitRandevu" şablonunu
   // kullanmaz, yoksa başlık "TeyitRandevu … · TeyitRandevu" olurdu.
-  title: { absolute: "TeyitRandevu · Diş klinikleri için randevu ve hasta takibi" },
+  title: {
+    absolute: "TeyitRandevu · Klinik, salon ve danışmanlık için randevu sistemi",
+  },
   description: PRODUCT.summary,
 };
 
@@ -41,16 +44,16 @@ export default function AnaSayfa() {
         <Container className="relative grid gap-12 pb-16 pt-14 sm:pt-20 lg:grid-cols-[minmax(0,1fr)_minmax(0,30rem)] lg:items-center lg:gap-16">
           <div className="flex max-w-xl flex-col gap-6">
             <p className="border-l-2 border-brand pl-3 font-mono text-[12px] uppercase tracking-[0.16em] text-ink-2">
-              Diş klinikleri için · pilot aşaması
+              Klinik · Salon · Danışmanlık · pilot aşaması
             </p>
 
             <h1 className={H1}>
-              Randevular <span className="text-brand">çakışmasın</span>, hasta gelmeyi unutmasın.
+              Randevular <span className="text-brand">çakışmasın</span>, kimse gelmeyi unutmasın.
             </h1>
 
             <p className={LEAD}>
-              Takvim, hasta kartı ve hatırlatma tek yerde. Günün programı her sabah hazır çıkar;
-              aynı saate iki hasta yazılması uygulamada değil, veritabanında engellenir.
+              Takvim, müşteri kartı ve hatırlatma tek yerde. Günün programı her sabah hazır
+              çıkar; aynı saate iki kişi yazılması uygulamada değil, veritabanında engellenir.
             </p>
 
             <div className="flex flex-wrap items-center gap-3">
@@ -63,7 +66,7 @@ export default function AnaSayfa() {
             </div>
 
             <ul className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px] text-ink-3">
-              {["Kayıt istemez", "Kurulum ve eğitim pilotta ücretsiz", "Veriler AB’de"].map(
+              {["Kayıt istemez", "Sektörünüze göre hazır kurulum", "Eğitim pilotta ücretsiz"].map(
                 (item, index) => (
                   <li key={item} className="flex items-center gap-4">
                     {index > 0 && <span aria-hidden="true" className="h-3 w-px bg-border-strong" />}
@@ -109,9 +112,9 @@ export default function AnaSayfa() {
             <Eyebrow index="01">Sabah 08.40</Eyebrow>
             <h2 className={H2}>Günün programını elle hazırlamak</h2>
             <p className={LEAD}>
-              Çoğu klinikte gün, defterden Excel’e satır taşıyarak başlıyor: hekim hekim kimin
-              geleceği, hangi tedavi, kim gelmedi. Yirmi dakika sürüyor, bir randevu atlandığında
-              kimse fark etmiyor ve öğlen değişen bir saat listeye hiç yansımıyor.
+              Çoğu işletmede gün, defterden Excel’e satır taşıyarak başlıyor: kim kime bakacak,
+              hangi işlem, kim gelmedi. Yirmi dakika sürüyor, bir randevu atlandığında kimse fark
+              etmiyor ve öğlen değişen bir saat listeye hiç yansımıyor.
             </p>
             <p className={BODY}>
               TeyitRandevu’da o liste bir çıktı: ekranda görünür, A4 olarak yazdırılır, Excel olarak
@@ -119,7 +122,7 @@ export default function AnaSayfa() {
             </p>
             <ul className="flex flex-col gap-2.5 pt-1">
               {[
-                "Hekim hekim ayrılmış, saat sırasına dizilmiş",
+                "Uzman uzman ayrılmış, saat sırasına dizilmiş",
                 "İptal ve gelmeyen ayrı sayılır, listeyi kirletmez",
                 "Ücret sütunu yalnızca yetkisi olana görünür",
               ].map((item) => (
@@ -176,13 +179,58 @@ export default function AnaSayfa() {
         </Container>
       </section>
 
+      {/* ----------------------------------------------------------- sektörler */}
+      <section id="sektorler" className="scroll-mt-24 border-b border-border">
+        <Container className="py-16">
+          <div className="flex max-w-2xl flex-col gap-4 pb-10">
+            <Eyebrow index="03">Sektörler</Eyebrow>
+            <h2 className={H2}>Sektörünüz kurulu geliyor</h2>
+            <p className={LEAD}>
+              Şablon yalnızca hizmet listesi değil: işletmenin dilini de getiriyor. Kimine
+              “hasta”, kimine “danışan”, kimine “müşteri” denir; kimi “hekim”, kimi “usta”
+              çalıştırır. Kurulumda sektörü seçtiğinizde hizmet süreleri, tamponlar, roller,
+              müşteri alanları ve mesaj şablonları birlikte geliyor — hepsi sonradan
+              değiştirilebilir.
+            </p>
+          </div>
+
+          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {listTemplates().map((template) => (
+              <li
+                key={template.key}
+                className="flex min-w-0 flex-col gap-2 rounded-lg border border-border bg-surface p-5"
+              >
+                <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+                  {FAMILY_LABELS[template.family]}
+                </p>
+                <h3 className="text-[17px] font-semibold tracking-tight text-ink">
+                  {template.label}
+                </h3>
+                <p className="text-[14px] leading-relaxed text-ink-2">{template.description}</p>
+                <p className="mt-auto pt-2 text-[13px] text-ink-3">
+                  {template.terminology.customer_plural} · {template.terminology.resource_plural} ·{" "}
+                  <span data-numeric>{template.services.length}</span> hazır hizmet
+                </p>
+              </li>
+            ))}
+          </ul>
+
+          <p className="max-w-2xl pt-8 text-[15px] leading-[1.7] text-ink-2">
+            <strong className="font-medium text-ink">Listede yoksa da olur.</strong> Motor sektöre
+            bağlı değil: kurulumda işinizi konuşup hizmetleri, süreleri, alanları ve mesajları
+            birlikte tanımlıyoruz. Kurduğumuz her yeni sektör bir sonraki işletme için hazır
+            şablona dönüşüyor.
+          </p>
+        </Container>
+      </section>
+
       {/* -------------------------------------------------------------- fiyat */}
       <section className="border-b border-border bg-surface-2">
         <Container className="py-16">
           <div className="flex flex-wrap items-end justify-between gap-6 pb-10">
             <div className="flex max-w-xl flex-col gap-4">
-              <Eyebrow index="03">Paketler</Eyebrow>
-              <h2 className={H2}>Klinik büyüdükçe artan tek şey yetki derinliği</h2>
+              <Eyebrow index="04">Paketler</Eyebrow>
+              <h2 className={H2}>İşletme büyüdükçe artan tek şey yetki derinliği</h2>
             </div>
             <Link href="/fiyat" className={`${BTN_SECONDARY} shrink-0`}>
               Paketleri karşılaştırın
@@ -239,11 +287,11 @@ export default function AnaSayfa() {
       <section id="kvkk" className="scroll-mt-24 border-b border-border">
         <Container className="py-16">
           <div className="flex max-w-xl flex-col gap-4 pb-10">
-            <Eyebrow index="04">KVKK</Eyebrow>
+            <Eyebrow index="05">KVKK</Eyebrow>
             <h2 className={H2}>KVKK, sonradan eklenen bir bölüm değil</h2>
             <p className={LEAD}>
-              Sağlık verisi özel nitelikli kişisel veridir ve kuralları sonradan uygulanamaz.
-              Sistemin tuttuğu kayıtlar:
+              Randevu tutan her işletme kişisel veri işler; sağlık bilgisi tutan biri özel
+              nitelikli veri işler ve o kuralları sonradan uygulayamaz. Sistemin tuttuğu kayıtlar:
             </p>
           </div>
 
@@ -258,7 +306,7 @@ export default function AnaSayfa() {
 
           <p className="max-w-2xl pt-10 text-[14px] leading-relaxed text-ink-3">
             Bunlar sistemin tuttuğu kayıtlardır, bir uygunluk belgesi değildir. Veri sorumlusu
-            kurumun kendisidir; TeyitRandevu veri işleyen sıfatıyla altyapıyı sağlar ve gerekli
+            işletmenin kendisidir; TeyitRandevu veri işleyen sıfatıyla altyapıyı sağlar ve gerekli
             kayıtları tutar.
           </p>
         </Container>
@@ -268,7 +316,7 @@ export default function AnaSayfa() {
       <section className="border-b border-border">
         <Container className="grid gap-10 py-16 lg:grid-cols-[minmax(0,18rem)_minmax(0,1fr)] lg:gap-16">
           <div className="flex flex-col gap-4">
-            <Eyebrow index="05">Sık sorulanlar</Eyebrow>
+            <Eyebrow index="06">Sık sorulanlar</Eyebrow>
             <h2 className={H2}>Önce sorulan beş şey</h2>
           </div>
 
@@ -286,9 +334,9 @@ export default function AnaSayfa() {
       {/* ----------------------------------------------------------------- cta */}
       <section className="border-b border-brand-line bg-brand-tint">
         <Container className="flex flex-col gap-5 py-16">
-          <h2 className={`${H2} max-w-2xl`}>Pilot kliniklerle birlikte kuruyoruz</h2>
+          <h2 className={`${H2} max-w-2xl`}>Pilot işletmelerle birlikte kuruyoruz</h2>
           <p className={`${LEAD} max-w-2xl`}>
-            İlk kurumlarla çalışıp eksikleri onların günlük işine göre kapatıyoruz. Kliniğinizi
+            İlk kurumlarla çalışıp eksikleri onların günlük işine göre kapatıyoruz. İşinizi
             anlatın, size sistemi gösterelim ve neyin işinize yaramadığını söyleyin.
           </p>
           <div className="flex flex-wrap gap-3 pt-1">

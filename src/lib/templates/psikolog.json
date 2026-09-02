@@ -1,0 +1,98 @@
+{
+  "key": "psikolog",
+  "family": "saglik",
+  "label": "Psikolog & Danışmanlık",
+  "description": "Seans düzeni, gizlilik önceliğiyle hatırlatma, seans notu ayrı yetkide.",
+
+  "terminology": {
+    "customer_singular": "Danışan",
+    "customer_plural": "Danışanlar",
+    "service_singular": "Seans",
+    "service_plural": "Seanslar",
+    "resource_singular": "Uzman",
+    "resource_plural": "Uzmanlar",
+    "appointment_singular": "Randevu",
+    "appointment_plural": "Randevular"
+  },
+
+  "modules": ["session_notes"],
+  "roles": ["owner", "admin", "hekim", "asistan", "resepsiyon", "muhasebe"],
+
+  "booking_rules": {
+    "min_lead_minutes": 240,
+    "max_advance_days": 60,
+    "cancel_window_minutes": 1440,
+    "hold_minutes": 10
+  },
+
+  "resources": [
+    { "kind": "staff", "name": "Uzman 1", "title": "Uzm. Psk.", "color": "#0E5F6E" },
+    { "kind": "room", "name": "Görüşme Odası", "color": "#6B7472" }
+  ],
+
+  "working_hours": {
+    "weekdays": [1, 2, 3, 4, 5],
+    "starts_at": "10:00",
+    "ends_at": "20:00",
+    "break": null
+  },
+
+  "services": [
+    { "name": "İlk Görüşme", "duration_min": 50, "buffer_after_min": 10, "category": "Görüşme" },
+    { "name": "Bireysel Terapi", "duration_min": 50, "buffer_after_min": 10, "category": "Terapi" },
+    { "name": "Çift Terapisi", "duration_min": 80, "buffer_after_min": 10, "category": "Terapi" },
+    { "name": "Çocuk & Ergen Görüşmesi", "duration_min": 50, "buffer_after_min": 10, "category": "Terapi" },
+    { "name": "Online Seans", "duration_min": 50, "buffer_after_min": 10, "category": "Terapi" },
+    { "name": "Test / Değerlendirme", "duration_min": 90, "buffer_after_min": 15, "category": "Değerlendirme" }
+  ],
+
+  "customer_fields": [
+    { "key": "dogum_gunu", "label": "Doğum Günü", "kind": "date", "is_medical": false },
+    { "key": "acil_durum_kisisi", "label": "Acil Durumda Aranacak Kişi", "kind": "text", "is_medical": false },
+    { "key": "acil_durum_telefon", "label": "Acil Durum Telefonu", "kind": "phone", "is_medical": false },
+    { "key": "basvuru_nedeni", "label": "Başvuru Nedeni", "kind": "textarea", "is_medical": true },
+    { "key": "onceki_terapi", "label": "Daha Önce Terapi Aldı", "kind": "boolean", "is_medical": true },
+    { "key": "ilac_kullanimi", "label": "Psikiyatrik İlaç Kullanımı", "kind": "textarea", "is_medical": true }
+  ],
+
+  "appointment_fields": [
+    { "key": "seans_no", "label": "Kaçıncı Seans", "kind": "number", "is_medical": false },
+    { "key": "seans_notu", "label": "Seans Notu", "kind": "textarea", "is_medical": true }
+  ],
+
+  "notification_defaults": [
+    {
+      "key": "randevu_olusturuldu",
+      "name": "Randevu teyidi",
+      "trigger": "appointment_created",
+      "offset_minutes": 0,
+      "channel": "sms",
+      "is_commercial": false,
+      "body": "Sayın {{musteri_adi}}, randevunuz oluşturuldu: {{tarih}} {{saat}}. Görüntülemek ya da iptal etmek için: {{randevu_baglantisi}}"
+    },
+    {
+      "key": "hatirlatma_bir_gun",
+      "name": "Bir gün önce hatırlatma",
+      "trigger": "before_start",
+      "offset_minutes": -1440,
+      "channel": "sms",
+      "is_commercial": false,
+      "body": "Sayın {{musteri_adi}}, yarın {{saat}} randevunuzu hatırlatırız. Gelemeyecekseniz lütfen bildirin: {{randevu_baglantisi}}"
+    },
+    {
+      "key": "hatirlatma_iki_saat",
+      "name": "İki saat önce hatırlatma",
+      "trigger": "before_start",
+      "offset_minutes": -120,
+      "channel": "sms",
+      "is_commercial": false,
+      "body": "Sayın {{musteri_adi}}, bugün {{saat}} randevunuzu hatırlatırız."
+    }
+  ],
+
+  "notes": [
+    "Mesaj metinlerinde kurum adı, hizmet adı ve uzman adı BİLEREK geçmiyor: telefonu başkasının eline geçen danışan için bu bilgi ifşadır. Kurum isterse şablonu düzenleyebilir.",
+    "Sağlık Bakanlığı tanıtım mevzuatı gereği kampanya ve indirim şablonları bu sektörde sunulmaz (Plan Bölüm 12.3).",
+    "Seans notu tıbbi işaretlidir; resepsiyon randevuyu görür, notu göremez."
+  ]
+}

@@ -116,7 +116,7 @@ export function OnboardingWizard({ templates }: { templates: SectorTemplate[] })
                 name="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Özel Diş Kliniği"
+                placeholder="Örnek Klinik / Salon"
                 autoComplete="organization"
                 required
               />
@@ -125,7 +125,7 @@ export function OnboardingWizard({ templates }: { templates: SectorTemplate[] })
             <Field
               id="slug"
               label="Randevu sayfası adresi"
-              hint="Hastalarınız bu adresten randevu alacak."
+              hint="Müşterileriniz bu adresten randevu alacak."
             >
               <div className="flex items-center gap-0">
                 <span className="flex h-9 items-center rounded-l border border-r-0 border-border bg-surface-2 px-2.5 font-mono text-[13px] text-ink-3">
@@ -277,7 +277,10 @@ export function OnboardingWizard({ templates }: { templates: SectorTemplate[] })
               </p>
               <ul className="flex flex-col gap-1 text-[13px] text-ink-2">
                 <li>{template.services.length} hizmet ve varsayılan süreleri</li>
-                <li>{template.resources.length} kaynak (hekim / ünit)</li>
+                <li>
+                  {template.resources.length} kaynak ({template.terminology.resource_plural.toLocaleLowerCase("tr-TR")},
+                  oda, cihaz)
+                </li>
                 <li>
                   {template.customer_fields.length + template.appointment_fields.length}{" "}
                   sektöre özel alan

@@ -3,18 +3,19 @@ import type { Metadata } from "next";
 import { Container, Eyebrow, H1, LEAD } from "@/components/marketing/ui";
 import { SITE_CONTACT } from "@/lib/legal/site-texts";
 import { PRODUCT } from "@/lib/marketing/content";
+import { listTemplates } from "@/lib/templates";
 
 import { DemoForm } from "./demo-form";
 
 export const metadata: Metadata = {
   title: "İletişim",
   description:
-    "TeyitRandevu demo talebi: kliniğinizi anlatın, sistemi birlikte gezelim. Pilot kurumlarla çalışıyoruz.",
+    "TeyitRandevu demo talebi: işletmenizi anlatın, sistemi birlikte gezelim. Pilot kurumlarla çalışıyoruz.",
 };
 
 const STEPS = [
-  "Kliniğinizin gününü dinliyoruz: kaç hekim, randevuyu kim yazıyor, program nasıl hazırlanıyor.",
-  "Sistemi sizin verinizle kuruyoruz — hizmetler, hekimler, çalışma saatleri.",
+  "İşletmenizin gününü dinliyoruz: kaç kişi çalışıyor, randevuyu kim yazıyor, program nasıl hazırlanıyor.",
+  "Sistemi sizin verinizle kuruyoruz — hizmetler, uzmanlar, çalışma saatleri.",
   "Bir haftalık gerçek kullanım sonrası eksikleri konuşuyoruz.",
 ];
 
@@ -25,14 +26,20 @@ export default function IletisimSayfasi() {
         <div className="flex max-w-xl flex-col gap-8">
           <div className="flex flex-col gap-4">
             <Eyebrow>Demo talebi</Eyebrow>
-            <h1 className={H1}>Kliniğinizi anlatın</h1>
+            <h1 className={H1}>İşletmenizi anlatın</h1>
             <p className={LEAD}>
               Sistemi birlikte gezelim. Görüşme yaklaşık yarım saat sürüyor ve satış sunumu değil:
               kendi gününüzü sistemde kurup neyin işinize yaramadığını söylüyorsunuz.
             </p>
           </div>
 
-          <DemoForm source="iletisim" />
+          <DemoForm
+            source="iletisim"
+            sectors={listTemplates().map((template) => ({
+              key: template.key,
+              label: template.label,
+            }))}
+          />
         </div>
 
         <aside className="flex flex-col gap-7 lg:pt-2">

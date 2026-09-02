@@ -31,12 +31,12 @@ export type NotificationPayload = {
  * kullanıcı hangi değişkenin var olduğunu tahmin etmek zorunda kalmasın.
  */
 export const TEMPLATE_VARIABLES: { key: string; label: string; example: string }[] = [
-  { key: "musteri_adi", label: "Hastanın adı", example: "Ayşe Yılmaz" },
+  { key: "musteri_adi", label: "Müşteri / hasta adı", example: "Ayşe Yılmaz" },
   { key: "kurum_adi", label: "Kurum adı", example: "Demo Diş Kliniği" },
   { key: "sube_adi", label: "Şube adı", example: "Merkez" },
   { key: "sube_adresi", label: "Şube adresi", example: "Bağdat Cad. No 1" },
   { key: "sube_telefon", label: "Şube telefonu", example: "0216 111 22 33" },
-  { key: "hekim_adi", label: "Hekim / personel", example: "Dt. Ayla Demir" },
+  { key: "hekim_adi", label: "Uzman / personel", example: "Dt. Ayla Demir" },
   { key: "hizmet_adi", label: "İşlem", example: "Dolgu" },
   { key: "tarih", label: "Randevu tarihi", example: "31 Ağustos 2026" },
   { key: "gun", label: "Randevu günü", example: "Pazartesi" },

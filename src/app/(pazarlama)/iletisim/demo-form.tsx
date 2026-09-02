@@ -15,6 +15,9 @@ import { submitDemoRequestAction, type DemoFormState } from "@/lib/marketing/act
 
 const EMPTY: DemoFormState = {};
 
+/** Sektör listesi sunucudan geliyor: şablon JSON'ları istemci paketine girmesin. */
+export type Sector = { key: string; label: string };
+
 /**
  * Demo talebi formu.
  *
@@ -23,7 +26,7 @@ const EMPTY: DemoFormState = {};
  * istiyorum" demek kampanya maili almayı kabul etmek değildir; talebe dönüş
  * bu onaya bağlı olmadığı için kutunun altında bu da yazıyor.
  */
-export function DemoForm({ source }: { source: string }) {
+export function DemoForm({ source, sectors }: { source: string; sectors: Sector[] }) {
   const [state, formAction, pending] = useActionState(submitDemoRequestAction, EMPTY);
 
   useEffect(() => {
@@ -70,7 +73,7 @@ export function DemoForm({ source }: { source: string }) {
             id="kurum"
             name="kurum"
             autoComplete="organization"
-            placeholder="Örnek Diş Kliniği"
+            placeholder="Örnek Klinik / Salon"
           />
         </Field>
 
@@ -82,7 +85,7 @@ export function DemoForm({ source }: { source: string }) {
             inputMode="email"
             autoComplete="email"
             spellCheck={false}
-            placeholder="ad@klinik.com"
+            placeholder="ad@isletme.com"
             required
             error={Boolean(state.fieldErrors?.eposta)}
           />
@@ -100,19 +103,23 @@ export function DemoForm({ source }: { source: string }) {
         </Field>
       </div>
 
-      <Field id="sektor" label="İş kolu">
-        <Select id="sektor" name="sektor" defaultValue="dis_klinigi">
-          <option value="dis_klinigi">Diş kliniği</option>
-          <option value="saglik_diger">Diğer sağlık kuruluşu</option>
-          <option value="kisisel_bakim">Kuaför, güzellik, kişisel bakım</option>
+      {/* Liste sektör şablonlarından üretiliyor (sayfa besliyor): yeni bir
+          şablon eklendiğinde form kendiliğinden güncellenir. */}
+      <Field id="sektor" label="İş kolu" hint="Listede yoksa “Diğer”i seçip aşağıda anlatın.">
+        <Select id="sektor" name="sektor" defaultValue={sectors[0]?.key ?? "diger"}>
+          {sectors.map((sector) => (
+            <option key={sector.key} value={sector.key}>
+              {sector.label}
+            </option>
+          ))}
           <option value="diger">Diğer</option>
         </Select>
       </Field>
 
       <Field
         id="mesaj"
-        label="Kliniğinizden kısaca bahsedin"
-        hint="Kaç hekim çalışıyor, randevuları şu an nasıl tutuyorsunuz — görüşmeyi buna göre hazırlıyoruz."
+        label="İşletmenizden kısaca bahsedin"
+        hint="Kaç kişi çalışıyor, randevuları şu an nasıl tutuyorsunuz — görüşmeyi buna göre hazırlıyoruz."
       >
         <Textarea id="mesaj" name="mesaj" rows={4} maxLength={4000} />
       </Field>

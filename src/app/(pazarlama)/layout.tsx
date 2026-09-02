@@ -2,7 +2,6 @@ import Link from "next/link";
 
 import { ThemeToggle } from "@/components/theme-toggle";
 import { BTN_SMALL, Container, Wordmark } from "@/components/marketing/ui";
-import { SITE_CONTACT } from "@/lib/legal/site-texts";
 import { PRODUCT } from "@/lib/marketing/content";
 
 /**
@@ -12,11 +11,12 @@ import { PRODUCT } from "@/lib/marketing/content";
  * okunacak bir sayfa. Token'lar aynı, ölçek ve marka rengi farklı.
  *
  * Bu grupta Supabase'e hiç gidilmiyor — sayfalar statik üretiliyor ve
- * Frankfurt'a tur atmıyor. Tek istisna demo formu; o da bir server action.
+ * veritabanına tur atmıyor. Tek istisna demo formu; o da bir server action.
  */
 
 const NAV = [
   { href: "/#urun", label: "Ürün" },
+  { href: "/#sektorler", label: "Sektörler" },
   { href: "/fiyat", label: "Fiyat" },
   { href: "/demo", label: "Canlı demo" },
   { href: "/#kvkk", label: "KVKK" },
@@ -132,8 +132,7 @@ export default function PazarlamaLayout({ children }: { children: React.ReactNod
           </div>
 
           <p className="border-t border-border pt-6 text-[13px] text-ink-3">
-            Kayıtlar {SITE_CONTACT.dataRegion} bölgesindeki sunucularda tutulur. Bu site pazarlama
-            ya da izleme çerezi kullanmaz.
+            Bu site pazarlama ya da izleme çerezi kullanmaz.
           </p>
         </Container>
       </footer>

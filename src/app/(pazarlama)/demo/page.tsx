@@ -136,6 +136,7 @@ export default async function DemoSayfasi({
               "Gerçek hasta bilgisi girmeyin. Kayıtlar düzenli olarak silinip örnek veriyle yeniden kurulur.",
               "Hiçbir mesaj gerçekten gönderilmez: SMS sağlayıcısı bağlı değil, kuyruk yalnızca kaydı yazar.",
               "Kendi kurumunuz kurulduğunda verinizi hiçbir demo kullanıcısı göremez — kurum sınırı veritabanında.",
+              "Vitrin kurumu diş kliniği şablonuyla kuruldu: sizde “hasta” yerine “danışan” ya da “müşteri”, “hekim” yerine “usta” yazacak. Terimler sektör şablonundan geliyor.",
             ].map((line) => (
               <li key={line} className="flex gap-3">
                 <span aria-hidden="true" className="mt-[10px] h-px w-3 shrink-0 bg-brand" />

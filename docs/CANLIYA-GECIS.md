@@ -247,6 +247,12 @@ uyarısını çiziyor. Gerçek fiyat belirlenince bayrak kapatılır. **Paket
 yalnızca metin; kotayı zorlayan kod faturalama modülüyle gelecek (E tablosu,
 kontör defteri).
 
+**Veri merkezinin nerede olduğu pazarlama sitesinde bilerek YAZMIYOR** (2 Eylül,
+Kerem'in kararı: bu konu birebir görüşmede anlatılıyor). Aydınlatma metninde
+KALIYOR ve kalmalı — yurt dışına aktarım KVKK m.9 gereği orada yazılmak
+zorunda (`lib/legal/site-texts.ts`, `consent-texts.ts`). Siteye geri
+eklenmesin; `lib/marketing/content.ts` başındaki not bunu söylüyor.
+
 Ayrıca yayın öncesi: aydınlatma metni (`SITE_NOTICE_VERSION`) avukat
 görmedi — hasta rıza metinleriyle aynı kalem (C tablosu).
 

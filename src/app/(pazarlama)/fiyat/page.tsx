@@ -16,7 +16,7 @@ import { formatMonthly, PLANS, PRICING_IS_DRAFT } from "@/lib/marketing/content"
 export const metadata: Metadata = {
   title: "Fiyat",
   description:
-    "TeyitRandevu paketleri: tek hekimden zincir kliniğe. Pilot dönemde fiyatlar kurumla birlikte belirleniyor.",
+    "TeyitRandevu paketleri: tek uzmandan zincir işletmeye. Pilot dönemde fiyatlar kurumla birlikte belirleniyor.",
 };
 
 export default function FiyatSayfasi() {
@@ -26,9 +26,9 @@ export default function FiyatSayfasi() {
         <Eyebrow>Paketler</Eyebrow>
         <h1 className={H1}>Üç paket, tek fark: derinlik</h1>
         <p className={LEAD}>
-          Tek hekimin muayenehanesi, birden çok hekimin çalıştığı klinik ve şubeli kurumlar.
-          Hepsinde takvim, hasta kartı ve günün programı var; fark yetki derinliği, kullanıcı
-          sayısı ve hatırlatma hacminde.
+          Tek kişinin çalıştığı muayenehane ya da salon, birden çok uzmanın çalıştığı işletme ve
+          şubeli kurumlar. Hepsinde takvim, müşteri kartı ve günün programı var; fark yetki
+          derinliği, kullanıcı sayısı ve hatırlatma hacminde.
         </p>
       </div>
 

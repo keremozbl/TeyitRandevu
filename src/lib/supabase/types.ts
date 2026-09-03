@@ -738,6 +738,72 @@ export type Database = {
           },
         ]
       }
+      erasure_requests: {
+        Row: {
+          channel: string
+          created_at: string
+          customer_id: string | null
+          due_at: string
+          email: string | null
+          full_name: string
+          id: string
+          note: string | null
+          phone: string | null
+          resolution: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: Database["public"]["Enums"]["erasure_status"]
+          tenant_id: string
+        }
+        Insert: {
+          channel: string
+          created_at?: string
+          customer_id?: string | null
+          due_at?: string
+          email?: string | null
+          full_name: string
+          id?: string
+          note?: string | null
+          phone?: string | null
+          resolution?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: Database["public"]["Enums"]["erasure_status"]
+          tenant_id: string
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          customer_id?: string | null
+          due_at?: string
+          email?: string | null
+          full_name?: string
+          id?: string
+          note?: string | null
+          phone?: string | null
+          resolution?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: Database["public"]["Enums"]["erasure_status"]
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "erasure_requests_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "erasure_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       field_definitions: {
         Row: {
           created_at: string
@@ -1748,6 +1814,10 @@ export type Database = {
       }
       booking_lookup: { Args: { _token: string }; Returns: Json }
       booking_page: { Args: { _slug: string }; Returns: Json }
+      booking_request_erasure: {
+        Args: { _note?: string; _token: string }
+        Returns: Json
+      }
       claim_notifications: {
         Args: { _limit?: number }
         Returns: {
@@ -1848,6 +1918,7 @@ export type Database = {
         | "ticari_ileti"
         | "cerez"
       demo_request_status: "new" | "contacted" | "qualified" | "closed"
+      erasure_status: "yeni" | "islendi" | "reddedildi"
       field_entity: "customer" | "appointment"
       field_kind:
         | "text"
@@ -2019,6 +2090,7 @@ export const Constants = {
         "cerez",
       ],
       demo_request_status: ["new", "contacted", "qualified", "closed"],
+      erasure_status: ["yeni", "islendi", "reddedildi"],
       field_entity: ["customer", "appointment"],
       field_kind: [
         "text",

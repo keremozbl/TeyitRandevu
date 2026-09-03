@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { Alert } from "@/components/ui/alert";
-import { loadPermissions } from "@/lib/auth/permissions";
+import { CUSTOMER_ERASE, loadPermissions } from "@/lib/auth/permissions";
 import { requireTenant } from "@/lib/auth/session";
 import { logoUrl, parseBookingRules, parseBranding } from "@/lib/domain";
 import { siteUrl } from "@/lib/marketing/site-url";
+import { countOpenErasureRequests } from "@/lib/legal/erasure";
 import { timeZoneOptions } from "@/lib/settings/timezone";
 import { createClient } from "@/lib/supabase/server";
 
@@ -24,6 +25,8 @@ export default async function AyarlarPage({
 
   const permissions = await loadPermissions();
   const canReadAudit = permissions.can("audit.read");
+  const canErase = permissions.can(CUSTOMER_ERASE);
+  const openRequests = canErase ? await countOpenErasureRequests(active.tenant.id) : 0;
 
   const supabase = await createClient();
   const { data: settings } = await supabase
@@ -65,6 +68,32 @@ export default async function AyarlarPage({
         logoUrl={logoUrl(branding.logo_path)}
         publicHref={`${siteUrl()}/r/${active.tenant.slug}`}
       />
+
+      {canErase && (
+        <section className="flex max-w-2xl flex-col gap-2 border-t border-border pt-4">
+          <h2 className="flex flex-wrap items-center gap-2 text-[15px] font-semibold text-ink">
+            Silme talepleri
+            {openRequests > 0 && (
+              <span
+                data-numeric
+                className="rounded-sm bg-st-pending-soft px-1.5 py-0.5 text-[12px] font-normal text-st-pending"
+              >
+                {openRequests} bekliyor
+              </span>
+            )}
+          </h2>
+          <p className="text-[13px] text-ink-2">
+            &ldquo;Kaydımı silin&rdquo; başvuruları ve verilen cevaplar. KVKK cevap süresi otuz
+            gün; sayaç talebin geldiği günden işliyor.
+          </p>
+          <Link
+            href="/app/ayarlar/silme-talepleri"
+            className="inline-flex h-8 w-fit items-center rounded border border-border bg-surface px-2.5 text-[13px] font-medium text-ink no-underline transition-colors duration-150 hover:bg-surface-2"
+          >
+            Talepleri aç
+          </Link>
+        </section>
+      )}
 
       {canReadAudit && (
         <section className="flex max-w-2xl flex-col gap-2 border-t border-border pt-4">

@@ -5,7 +5,7 @@ import { notFound, redirect } from "next/navigation";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
-import { cancelBookingAction } from "@/lib/booking/actions";
+import { cancelBookingAction, requestErasureAction } from "@/lib/booking/actions";
 import { bookingErrorMessage, formatDuration, formatLongDateTime } from "@/lib/booking/messages";
 import { lookupBooking } from "@/lib/booking/queries";
 import { cancelState } from "@/lib/booking/state";
@@ -63,10 +63,10 @@ export default async function RandevuPage({
   searchParams,
 }: {
   params: Promise<{ slug: string; token: string }>;
-  searchParams: Promise<{ iptal?: string; hata?: string }>;
+  searchParams: Promise<{ iptal?: string; hata?: string; imha?: string }>;
 }) {
   const { slug, token } = await params;
-  const { iptal, hata } = await searchParams;
+  const { iptal, hata, imha } = await searchParams;
   const booking = await lookupBooking(token);
 
   if (!booking || booking.tenantSlug !== slug) notFound();
@@ -228,6 +228,58 @@ export default async function RandevuPage({
       >
         Yeni randevu al <span aria-hidden="true">›</span>
       </Link>
+
+      {/* KVKK m.11 başvurusu. Sessiz duruyor — hastanın aradığı şey randevusu,
+          bu bağlantı ihtiyacı olduğunda bulunacak kadar görünür olmalı. */}
+      <section className="flex flex-col gap-2 border-t border-border pt-4 text-[13px]">
+        {imha === "created" && (
+          <Alert tone="success">
+            Talebiniz kliniğe iletildi. En geç otuz gün içinde size dönüş yapılır; kayıtların
+            silinip silinemeyeceğini yasal saklama süreleri belirler.
+          </Alert>
+        )}
+        {imha === "already_open" && (
+          <Alert tone="info">Bu konuda bekleyen bir talebiniz zaten var.</Alert>
+        )}
+        {imha === "already_anonymized" && (
+          <Alert tone="info">Kayıtlarınız daha önce anonim hale getirilmiş.</Alert>
+        )}
+        {imha === "hata" && (
+          <Alert tone="error">Talep iletilemedi. Kliniği arayarak da başvurabilirsiniz.</Alert>
+        )}
+
+        {imha === "form" ? (
+          <form action={requestErasureAction} className="flex flex-col gap-2">
+            <input type="hidden" name="slug" value={slug} />
+            <input type="hidden" name="token" value={token} />
+            <Field
+              id="aciklama"
+              label="Kayıtlarımın silinmesini istiyorum"
+              hint="İsteğe bağlı bir açıklama ekleyebilirsiniz. Talebiniz kliniğe iletilir."
+            >
+              <Input size="lg" id="aciklama" name="aciklama" maxLength={500} autoComplete="off" />
+            </Field>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button type="submit" variant="primary" size="lg">
+                Talebi Gönder
+              </Button>
+              <Link
+                href={`/r/${slug}/randevu/${token}`}
+                className="text-ink-2 underline underline-offset-2"
+              >
+                Vazgeç
+              </Link>
+            </div>
+          </form>
+        ) : (
+          <Link
+            href={`/r/${slug}/randevu/${token}?imha=form`}
+            className="self-start text-ink-3 underline underline-offset-2 hover:text-ink-2"
+          >
+            Kayıtlarımın silinmesini istiyorum
+          </Link>
+        )}
+      </section>
     </div>
   );
 }

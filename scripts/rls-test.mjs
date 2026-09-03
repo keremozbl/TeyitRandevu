@@ -816,6 +816,59 @@ try {
     `${afterConsents?.length} satır, ip: ${afterConsents?.[0]?.ip}`,
   );
 
+  // ---------------------------------------------------------------------------
+  console.log("\n[16] Silme talepleri");
+
+  const { data: requester } = await a.client
+    .from("customers")
+    .insert({ tenant_id: tenantId, full_name: "Talep Testi", phone: "+905557776655" })
+    .select("id")
+    .single();
+
+  const talepStart = new Date(Date.now() + 120 * 24 * 3600_000);
+  talepStart.setUTCHours(11, 0, 0, 0);
+  await a.client.rpc("create_appointment", {
+    ...rpcArgs, _starts_at: talepStart.toISOString(), _customer_id: requester.id,
+  });
+  const { data: talepAppointment } = await a.client
+    .from("appointments").select("public_token").eq("customer_id", requester.id).limit(1).single();
+
+  // Randevu sayfasındaki token ile: oturumsuz (anon) çağrı.
+  const anonClient = createClient(URL, ANON, { auth: { persistSession: false } });
+  const { data: created } = await anonClient.rpc("booking_request_erasure", {
+    _token: talepAppointment.public_token, _note: "test talebi",
+  });
+  check(created?.ok === true && created?.reason === "created",
+    "randevu sayfasından talep bırakılabiliyor", `sonuç: ${JSON.stringify(created)}`);
+
+  // İkinci kez basmak ikinci satır açmamalı.
+  const { data: again } = await anonClient.rpc("booking_request_erasure", {
+    _token: talepAppointment.public_token,
+  });
+  check(again?.reason === "already_open", "açık talep varken ikinci satır açılmıyor",
+    `sonuç: ${JSON.stringify(again)}`);
+
+  // Geçersiz token hiçbir şey sızdırmamalı.
+  const { data: bogus } = await anonClient.rpc("booking_request_erasure", {
+    _token: "11111111-1111-1111-1111-111111111111",
+  });
+  check(bogus?.ok === false && bogus?.reason === "not_found",
+    "geçersiz token talep açamıyor", `sonuç: ${JSON.stringify(bogus)}`);
+
+  // Tabloya anon erişimi olmamalı: tek kapı fonksiyon.
+  const { data: anonRows, error: anonErr } = await anonClient.from("erasure_requests").select("id");
+  check(anonErr !== null || (anonRows?.length ?? 0) === 0,
+    "anon rolü talep tablosunu okuyamıyor", `${anonRows?.length} satır SIZDI`);
+
+  // Sahip görüyor, yetkisiz rol (resepsiyon) görmüyor.
+  const { data: ownerRows } = await a.client.from("erasure_requests").select("id, status");
+  check(ownerRows?.length === 1, "sahip talebi görüyor", `${ownerRows?.length} satır`);
+
+  if (c) {
+    const { data: recRows } = await c.client.from("erasure_requests").select("id");
+    check((recRows?.length ?? 0) === 0, "resepsiyon talebi göremiyor", `SIZDI: ${recRows?.length}`);
+  }
+
 } catch (e) {
   no("BEKLENMEYEN HATA", e.message);
 } finally {

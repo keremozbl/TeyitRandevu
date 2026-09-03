@@ -270,3 +270,39 @@ export async function cancelBookingAction(formData: FormData): Promise<void> {
 
   redirect(target);
 }
+
+/**
+ * KVKK m.11 başvurusu: "kayıtlarımın silinmesini istiyorum".
+ *
+ * Kimlik doğrulaması token'ın kendisi — bağlantı kişiye SMS ile gitti ve
+ * randevusunu görüntülemesini de o sağlıyor. Talep kliniğin panelindeki
+ * kutuya düşüyor; imhayı klinik uyguluyor, çünkü veri sorumlusu o.
+ *
+ * Talep ANINDA imha uygulanmıyor: kimlik doğrulaması, yasal saklama süresi ve
+ * varsa devam eden tedavi kliniğin değerlendireceği şeyler. Otomatik imha,
+ * bağlantısı başkasının eline geçen bir telefonda geri alınamaz bir silme
+ * demekti.
+ */
+export async function requestErasureAction(formData: FormData): Promise<void> {
+  const parsed = cancelSchema.safeParse({
+    slug: formData.get("slug"),
+    token: formData.get("token"),
+    sebep: formData.get("aciklama") ?? "",
+  });
+
+  if (!parsed.success) redirect("/");
+  const input = parsed.data;
+
+  const supabase = createPublicClient();
+  const { data, error } = await supabase.rpc("booking_request_erasure", {
+    _token: input.token,
+    _note: input.sebep || undefined,
+  });
+
+  const target = `/r/${input.slug}/randevu/${input.token}`;
+  if (error) redirect(`${target}?imha=hata`);
+
+  const result = resultSchema.safeParse(data);
+  const reason = result.success ? (result.data.reason ?? "created") : "hata";
+  redirect(`${target}?imha=${reason}`);
+}

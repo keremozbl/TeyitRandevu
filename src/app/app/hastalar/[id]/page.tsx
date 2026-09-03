@@ -158,13 +158,17 @@ export default async function HastaPage({
         </Alert>
       )}
 
+      {/* İmha edilmiş kayda yeni veri yazmak teklif edilmiyor: randevu, rıza
+          ve tıbbi not düğmeleri kapalı. Kayıt duruyor ama artık salt okunur. */}
       <div className="flex flex-wrap items-center gap-2">
+        {!customer.anonymizedAt && (
         <Link
           href={`/app/randevu/yeni?hasta=${customer.id}`}
           className="inline-flex h-8 items-center rounded border border-accent bg-accent px-2.5 text-[13px] font-medium text-accent-ink no-underline transition-colors duration-150 hover:bg-accent-hover"
         >
           Randevu Ver
         </Link>
+        )}
         {customer.phone && (
           <a
             href={`tel:${customer.phone}`}
@@ -199,7 +203,7 @@ export default async function HastaPage({
       <ConsentList
         customerId={customer.id}
         consents={consents}
-        canWrite={canWriteCustomer}
+        canWrite={canWriteCustomer && !customer.anonymizedAt}
         formatter={dayTime}
       />
 
@@ -250,11 +254,14 @@ export default async function HastaPage({
                 ))}
               </ul>
             )}
-            {canWriteMedical && <MedicalNoteForm customerId={customer.id} />}
+            {canWriteMedical && !customer.anonymizedAt && (
+              <MedicalNoteForm customerId={customer.id} />
+            )}
           </div>
         )}
       </section>
 
+      {!customer.anonymizedAt && (
       <section className="flex flex-col gap-3 border-t border-border pt-5">
         <details>
           <summary className="cursor-pointer text-[13px] font-medium text-ink">
@@ -283,6 +290,7 @@ export default async function HastaPage({
           </div>
         </details>
       </section>
+      )}
 
       {canErase && !customer.anonymizedAt && (
         <section className="flex flex-col gap-3 border-t border-border pt-5">

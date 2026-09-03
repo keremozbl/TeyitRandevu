@@ -27,6 +27,12 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
+/** Dokunma hedefi 44px: bu sayfa telefonda açılıyor. */
+const ACTION =
+  "inline-flex h-11 flex-1 items-center justify-center rounded border border-border bg-surface " +
+  "px-4 text-[14px] font-medium text-ink no-underline transition-colors duration-150 " +
+  "hover:border-accent hover:bg-accent-soft sm:flex-none";
+
 const PUBLIC_STATUS: Record<string, { title: string; body: string; tone: "info" | "success" }> = {
   pending: {
     title: "Randevu talebiniz alındı",
@@ -93,13 +99,13 @@ export default async function RandevuPage({
           booking.status === "cancelled" ? "border-l-st-cancelled" : "border-l-accent",
         ].join(" ")}
       >
+        {/* Tarih listenin bir satırı değil, kartın kendisi: hasta bu ekranı
+            saatini görmek için açıyor. */}
+        <p data-numeric className="text-[20px] font-semibold leading-tight text-ink">
+          {formatLongDateTime(booking.startsAt, booking.timeZone)}
+        </p>
+
         <dl className="flex flex-col gap-1.5 text-[13px]">
-          <div className="flex gap-3">
-            <dt className="w-20 shrink-0 text-ink-3">Tarih</dt>
-            <dd className="min-w-0 font-medium text-ink" data-numeric>
-              {formatLongDateTime(booking.startsAt, booking.timeZone)}
-            </dd>
-          </div>
           {booking.serviceName && (
             <div className="flex gap-3">
               <dt className="w-20 shrink-0 text-ink-3">İşlem</dt>
@@ -145,6 +151,33 @@ export default async function RandevuPage({
           </a>
         )}
       </section>
+
+      {/* Eylemler: takvime ekle, yol tarifi, ara. Üçü de hastanın randevudan
+          önce yapmak isteyeceği şeyler; iptal aşağıda ve daha sessiz. */}
+      {booking.status !== "cancelled" && (
+        <div className="flex flex-wrap gap-2">
+          <a href={`/r/${slug}/randevu/${token}/takvim`} className={ACTION} download>
+            Takvime ekle
+          </a>
+          {booking.branchAddress && (
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                [booking.branchName, booking.branchAddress].filter(Boolean).join(", "),
+              )}`}
+              target="_blank"
+              rel="noreferrer noopener"
+              className={ACTION}
+            >
+              Yol tarifi
+            </a>
+          )}
+          {booking.branchPhone && (
+            <a href={`tel:${booking.branchPhone}`} className={ACTION}>
+              Kliniği ara
+            </a>
+          )}
+        </div>
+      )}
 
       {tooLateToCancel && (
         <Alert tone="info">

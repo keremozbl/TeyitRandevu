@@ -90,6 +90,16 @@ for (const user of users) {
     }
 
     if (!DRY) {
+      // Storage nesneleri kurum silinince CASCADE ile gitmiyor: kova ayrı bir
+      // şemada ve yolu yalnızca isimle biliyoruz. Yüklenen logo burada
+      // siliniyor, yoksa her demo bir dosya bırakırdı.
+      const { data: files } = await admin.storage.from("kurum-gorsel").list(tenantId);
+      if (files?.length) {
+        await admin.storage
+          .from("kurum-gorsel")
+          .remove(files.map((file) => `${tenantId}/${file.name}`));
+      }
+
       const { error: tenantError } = await admin.from("tenants").delete().eq("id", tenantId);
       if (tenantError) {
         console.log(`  ! kurum silinemedi (${tenantId}): ${tenantError.message}`);

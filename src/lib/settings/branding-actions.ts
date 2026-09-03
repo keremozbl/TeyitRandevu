@@ -17,6 +17,12 @@ import { createClient } from "@/lib/supabase/server";
  * Dosya adına zaman damgası konuyor: aynı ada yazmak CDN'de eski logonun
  * takılı kalmasına yol açıyor. Yeni dosya yazıldıktan SONRA eskisi siliniyor —
  * ters sırada bir hata, kurumu logosuz bırakırdı.
+ *
+ * Silinen dosya CDN'de bir süre daha yanıt vermeye devam eder (bir yıllık
+ * `cacheControl` ile yüklüyoruz ve public kova CDN'in arkasında). Sayfadaki
+ * referans gittiği için bu bir sorun değil; logo gizli bir veri değil. Gizli
+ * bir dosya türü eklenecekse (belge, rapor) o AYRI ve public OLMAYAN bir
+ * kovaya gitmeli.
  */
 
 export type BrandingFormState = { error?: string; ok?: boolean };

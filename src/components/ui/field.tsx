@@ -68,6 +68,7 @@ export function Input({
 }: Omit<ComponentProps<"input">, "size"> & { error?: boolean; size?: ControlSize }) {
   return (
     <input
+      data-control={size}
       className={[
         CONTROL,
         SIZES[size],
@@ -90,6 +91,7 @@ export function Select({
     // Windows koyu modunda native select'in kendi arka planını almaması için
     // renkler açıkça veriliyor.
     <select
+      data-control={size}
       className={[CONTROL, SIZES[size], "appearance-none pr-8", className].join(" ")}
       style={{ backgroundColor: "var(--surface)", color: "var(--ink)" }}
       {...props}
@@ -104,6 +106,7 @@ export function Textarea({
 }: ComponentProps<"textarea"> & { size?: ControlSize }) {
   return (
     <textarea
+      data-control={size}
       className={[CONTROL, size === "lg" ? "text-[16px]" : "", "py-2", className].join(" ")}
       {...props}
     />

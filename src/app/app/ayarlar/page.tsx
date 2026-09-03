@@ -99,8 +99,8 @@ export default async function AyarlarPage({
         <section className="flex max-w-2xl flex-col gap-2 border-t border-border pt-4">
           <h2 className="text-[15px] font-semibold text-ink">Denetim kaydı</h2>
           <p className="text-[13px] text-ink-2">
-            Hasta kaydına kimin ne zaman eriştiği. KVKK gereği tutuluyor; silinemez ve
-            değiştirilemez.
+            {active.terms.customer_singular} kaydına kimin ne zaman eriştiği. KVKK gereği
+            tutuluyor; silinemez ve değiştirilemez.
           </p>
           <Link
             href="/app/ayarlar/denetim"

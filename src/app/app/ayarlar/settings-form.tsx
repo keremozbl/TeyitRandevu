@@ -140,7 +140,7 @@ export function SettingsForm({
             <Field
               id="cancel_window_minutes"
               label="İptal penceresi (dk)"
-              hint="Randevuya bu kadar kala hasta kendi iptal edemez; klinik yine edebilir."
+              hint="Randevuya bu kadar kala kişi kendi iptal edemez; işletme yine edebilir."
             >
               <Input
                 id="cancel_window_minutes"

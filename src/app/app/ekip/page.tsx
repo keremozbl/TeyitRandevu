@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { requireTenant } from "@/lib/auth/session";
+import { lower } from "@/lib/domain";
 import { RESOURCE_KIND_LABELS } from "@/lib/scheduling/status";
 import { toggleResourceAction } from "@/lib/team/actions";
 import { summarizeWeek } from "@/lib/team/hours";
@@ -44,7 +45,8 @@ export default async function EkipPage({
         <div className="flex flex-wrap items-baseline gap-x-3">
           <h2 className="text-[13px] font-medium text-ink-2">Kaynaklar</h2>
           <p className="text-[13px] text-ink-3">
-            Randevular hekim, ünit ya da odanın üzerine düşer. Takvimdeki sütunlar bunlar.
+            Randevular {lower(active.terms.resource_plural)}, oda ya da cihaz gibi kaynakların
+            üzerine düşer. Takvimdeki sütunlar bunlar.
           </p>
           <Link
             href="/app/ekip/kaynak/yeni"

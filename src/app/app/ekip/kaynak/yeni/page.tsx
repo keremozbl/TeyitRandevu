@@ -29,7 +29,8 @@ export default async function YeniKaynakPage() {
         </Link>
         <h1 className="text-lg tracking-tight">Yeni kaynak</h1>
         <p className="text-[13px] text-ink-2">
-          Hekim, ünit ya da oda. Takvimde bir sütun açar ve randevular bunun üzerine düşer.
+          {active.terms.resource_singular}, oda ya da cihaz. Takvimde bir sütun açar ve
+          randevular bunun üzerine düşer.
         </p>
       </div>
 

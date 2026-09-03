@@ -225,6 +225,29 @@ table, .tabular, time, [data-numeric] {
   p { text-wrap: pretty; margin: 0; }
 }
 
+/* --- dokunmatik ---------------------------------------------------------------
+   Panel masaüstünde yoğun: 14px yazı, 28-36px satır. Aynı ekran resepsiyonun
+   tabletinde ve telefonunda da açılıyor ve orada iki şey bozuluyor:
+
+     1. iOS, 16px'ten küçük yazılı bir alana odaklanınca sayfayı otomatik
+        yakınlaştırıyor ve kullanıcı formun geri kalanını göremiyor.
+     2. 28px'lik bir düğme parmakla güvenilir şekilde vurulamıyor.
+
+   `pointer: coarse` tam olarak "işaretçi hassas değil" demek — fareyle
+   kullanılan ekranı etkilemiyor. Yükseklikler bileşenlerin `data-control`
+   ölçeğinden okunuyor. */
+
+@media (pointer: coarse) {
+  input[data-control],
+  select[data-control],
+  textarea[data-control] {
+    font-size: 16px;
+  }
+
+  [data-control="sm"] { min-height: 2.25rem; }
+  [data-control="md"] { min-height: 2.75rem; }
+}
+
 /* --- hareket ------------------------------------------------------------------
    Kaydırdıkça beliren bölümler. Gizleme YALNIZCA JavaScript varken geçerli:
    `data-js` özniteliğini <head> içindeki senkron betik yazıyor, betik

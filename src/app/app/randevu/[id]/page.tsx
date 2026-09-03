@@ -170,7 +170,7 @@ export default async function RandevuPage({
                   name="reason"
                   autoComplete="off"
                   maxLength={500}
-                  placeholder="Hasta erteledi…"
+                  placeholder="Erteledi, tekrar arayacak…"
                 />
               </Field>
             </div>

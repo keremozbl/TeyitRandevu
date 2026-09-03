@@ -35,6 +35,10 @@ export function Button({
   return (
     <button
       type={type}
+      // Dokunmatik cihazda yükseklik CSS ile büyütülüyor (globals.css,
+      // `pointer: coarse`): panel masaüstünde yoğun kalsın, parmakla
+      // kullanılırken hedef 44px olsun.
+      data-control={size}
       className={[
         "inline-flex items-center justify-center rounded border font-medium",
         // transition: all yasak — özellikler tek tek sayılır

@@ -57,6 +57,7 @@ export default async function RolPage({ params }: { params: Promise<{ id: string
             permissions={permissions}
             granted={granted}
             cancelHref="/app/ekip/roller"
+            customerLabel={active.terms.customer_plural}
           />
         </>
       )}

@@ -93,7 +93,8 @@ export default async function BildirimlerPage({
       {!anyReal && rows.length > 0 && (
         <Alert tone="info">
           Gerçek bir SMS/WhatsApp sağlayıcısı henüz bağlı değil. Mesajlar hazırlanıp kaydediliyor
-          ama <strong>hastaya gitmiyor</strong>; aşağıdaki metinler tam olarak gönderilecek olanlar.
+          ama <strong>alıcıya gitmiyor</strong>; aşağıdaki metinler tam olarak gönderilecek
+          olanlar.
         </Alert>
       )}
 

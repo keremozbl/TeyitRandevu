@@ -18,7 +18,7 @@ import {
 const EMPTY: ResourceFormState = {};
 
 const KIND_LABELS = [
-  { value: "staff", label: "Personel (hekim, usta)" },
+  { value: "staff", label: "Personel (hekim, usta, uzman)" },
   { value: "room", label: "Oda" },
   { value: "device", label: "Cihaz / ünit" },
 ] as const;

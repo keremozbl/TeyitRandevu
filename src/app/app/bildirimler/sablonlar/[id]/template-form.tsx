@@ -131,7 +131,7 @@ export function TemplateForm({
       <Field
         id="kind"
         label="İleti türü"
-        hint="Ticari ileti, İYS onayı olmayan hastaya gönderilmez. Bu ayrım hukuki bir alandır."
+        hint="Ticari ileti, İYS onayı olmayan alıcıya gönderilmez. Bu ayrım hukuki bir alandır."
       >
         <Select
           id="kind"

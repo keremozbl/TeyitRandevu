@@ -17,11 +17,17 @@ const SCOPE_LABELS: Record<PermissionScope, string> = {
   tenant: "Kurum",
 };
 
+/**
+ * İzin kategorilerinin başlıkları.
+ *
+ * `hasta` anahtarı veritabanındaki kategori adı ve değişmiyor; ekranda
+ * görünen etiket kurumun kendi dilinden geliyor — berberin rol ekranında
+ * "Hasta" yazması, ürünün onun için düşünülmediğini söyler.
+ */
 const CATEGORY_LABELS: Record<string, string> = {
   kurum: "Kurum",
   kaynak: "Kaynak",
   randevu: "Randevu",
-  hasta: "Hasta",
   rapor: "Rapor",
   bildirim: "Bildirim",
   entegrasyon: "Entegrasyon",
@@ -40,13 +46,17 @@ export function RoleForm({
   permissions,
   granted,
   cancelHref,
+  customerLabel,
 }: {
   roleId: string;
   label: string;
   permissions: PermissionRow[];
   granted: Record<string, PermissionScope>;
   cancelHref: string;
+  /** Kurumun "hasta" kategorisine verdiği ad: Hastalar / Danışanlar / Müşteriler */
+  customerLabel: string;
 }) {
+  const categoryLabel = (key: string) => (key === "hasta" ? customerLabel : CATEGORY_LABELS[key] ?? key);
   const [state, formAction, pending] = useActionState(updateRoleAction, EMPTY);
 
   const categories = permissions.reduce<Record<string, PermissionRow[]>>((groups, permission) => {
@@ -68,7 +78,7 @@ export function RoleForm({
         {Object.entries(categories).map(([category, rows]) => (
           <fieldset key={category} className="flex flex-col gap-2 border-t border-border pt-4">
             <legend className="text-[13px] font-medium text-ink">
-              {CATEGORY_LABELS[category] ?? category}
+              {categoryLabel(category)}
             </legend>
             <div className="flex flex-col gap-2">
               {rows.map((permission) => (

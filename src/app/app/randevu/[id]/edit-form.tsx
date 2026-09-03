@@ -134,7 +134,7 @@ export function AppointmentEditForm({
         </Select>
       </Field>
 
-      <Field id="notes" label="Not" hint="İdari not. Tedavi notu hasta kartında ayrı tutulur.">
+      <Field id="notes" label="Not" hint="İdari not. Tıbbi not kayıt kartında ayrı tutulur.">
         <Textarea id="notes" name="notes" rows={2} defaultValue={appointment.notes ?? ""} />
       </Field>
 

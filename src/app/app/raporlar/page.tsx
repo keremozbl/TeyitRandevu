@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { requireTenant } from "@/lib/auth/session";
-import { addDays, utcToPlainDate } from "@/lib/domain";
+import { addDays, lower, utcToPlainDate } from "@/lib/domain";
 
 export const metadata: Metadata = { title: "Raporlar" };
 
@@ -16,7 +16,8 @@ export default async function RaporlarPage() {
       <div className="flex flex-col gap-1">
         <h1 className="text-lg tracking-tight">Raporlar</h1>
         <p className="max-w-2xl text-[13px] text-ink-2">
-          Rapor içeriği alanın yetkisine göre kırpılır: hekim yalnızca kendi hastalarını görür,
+          Rapor içeriği alanın yetkisine göre kırpılır: {lower(active.terms.resource_singular)}
+          yalnızca kendi kayıtlarını görür,
           ücret sütunu yalnızca ciro yetkisi olana çıkar. Bunu rapor değil, izinler belirliyor.
         </p>
       </div>
@@ -24,7 +25,7 @@ export default async function RaporlarPage() {
       <ul className="flex max-w-2xl flex-col divide-y divide-border overflow-hidden rounded border border-border bg-surface">
         <ReportRow
           title="Yarının programı"
-          detail="Gün sonunda hekime gidecek olan liste. Şimdilik ekrandan açılıp yazdırılıyor ya da Excel olarak indiriliyor."
+          detail="Gün sonunda ekibe verilecek liste. Şimdilik ekrandan açılıp yazdırılıyor ya da Excel olarak indiriliyor."
           href={`/app/raporlar/program?tarih=${tomorrow}`}
           action="Yarını aç"
         />
@@ -40,7 +41,7 @@ export default async function RaporlarPage() {
         <h2 className="text-[13px] font-medium text-ink-2">Henüz yok</h2>
         <p className="text-[13px] text-ink-3">
           Zamanlanmış gönderim (gün sonu WhatsApp/e-posta), gün sonu ciro özeti, haftalık doluluk
-          ve hekim performansı. Zamanlama için bildirim kanalı altyapısı gerekiyor; rapor tanımı
+          ve kaynak performansı. Zamanlama için bildirim kanalı altyapısı gerekiyor; rapor tanımı
           ile gönderim aynı satırlardan beslenecek, ayrı bir kod yolu yazılmayacak.
         </p>
       </section>

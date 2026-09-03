@@ -69,6 +69,7 @@ export type CustomerDetail = {
   customData: Record<string, unknown>;
   noShowCount: number;
   isActive: boolean;
+  anonymizedAt: Date | null;
   source: string | null;
   createdAt: Date;
 };
@@ -203,7 +204,7 @@ export async function loadCustomerCard({
   const { data: customer } = await supabase
     .from("customers")
     .select(
-      "id, branch_id, full_name, phone, email, birth_date, notes, tags, custom_data, no_show_count, is_active, source, created_at",
+      "id, branch_id, full_name, phone, email, birth_date, notes, tags, custom_data, no_show_count, is_active, anonymized_at, source, created_at",
     )
     .eq("tenant_id", tenantId)
     .eq("id", customerId)
@@ -288,6 +289,8 @@ export async function loadCustomerCard({
       customData: (customer.custom_data ?? {}) as Record<string, unknown>,
       noShowCount: customer.no_show_count,
       isActive: customer.is_active,
+      /** KVKK imhası uygulandıysa dolu — kart salt okunur gösterilir */
+      anonymizedAt: customer.anonymized_at ? toDate(customer.anonymized_at) : null,
       source: customer.source,
       createdAt: toDate(customer.created_at),
     },

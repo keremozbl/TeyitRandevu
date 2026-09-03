@@ -352,3 +352,50 @@ export async function addMedicalNoteAction(
   revalidatePath(`/app/hastalar/${input.customer_id}`);
   redirect(`/app/hastalar/${input.customer_id}?not=1`);
 }
+
+/**
+ * KVKK m.7 imhası: kaydı anonimleştirir.
+ *
+ * Silme değil anonimleştirme, çünkü randevu geçmişi aynı zamanda ticari bir
+ * kayıt (Plan 11.4): satırı yok etmek kliniğin ciro ve vergi kaydını da yok
+ * eder. Kişiyi tanımlayan ne varsa kaydın içinden çıkarılıyor, kayıt kalıyor.
+ *
+ * İşi veritabanındaki `anonymize_customer` yapıyor. Sebebi yetki değil
+ * ERİŞİM: temizlenecek tabloların bir kısmında bilerek UPDATE politikası yok
+ * (rıza kaydı düzeltilemez, bildirim satırı kullanıcı tarafından
+ * değiştirilemez). Uygulama katmanından yazılmaya çalışılsaydı sessizce sıfır
+ * satır güncellenir ve imha yapıldı sanılırdı.
+ *
+ * Geri alınamaz; arayüz iki adımda soruyor ve işlem denetim kaydına düşüyor.
+ */
+export async function anonymizeCustomerAction(formData: FormData): Promise<void> {
+  const { active, user } = await requireTenant();
+
+  const id = String(formData.get("id") ?? "");
+  if (!z.uuid().safeParse(id).success) redirect("/app/hastalar");
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("anonymize_customer", {
+    _tenant_id: active.tenant.id,
+    _customer_id: id,
+  });
+
+  if (error) {
+    const reason = error.code === "42501" ? "yetki" : "hata";
+    redirect(`/app/hastalar/${id}?imha=${reason}`);
+  }
+
+  // Kaydın kendisi artık kimseyi göstermiyor; denetim kaydı işlemin
+  // yapıldığını gösteriyor. İkisi birlikte "imha edildi" demenin kanıtı.
+  await recordAudit({
+    tenantId: active.tenant.id,
+    actorId: user.id,
+    action: "anonymize",
+    entity: "customer",
+    entityId: id,
+  });
+
+  revalidatePath(`/app/hastalar/${id}`);
+  revalidatePath("/app/hastalar");
+  redirect(`/app/hastalar/${id}?imha=tamam`);
+}

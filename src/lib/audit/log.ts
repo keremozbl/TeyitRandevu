@@ -34,7 +34,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
  * bir hasta veritabanına dönerdi.
  */
 
-export type AuditAction = "read" | "create" | "update" | "delete" | "export";
+export type AuditAction = "read" | "create" | "update" | "delete" | "export" | "anonymize";
 
 /** Kaydın hangi varlığa ait olduğu; tablo adlarıyla aynı tutuluyor. */
 export type AuditEntity = "customer" | "customer_medical_note" | "consent" | "report";

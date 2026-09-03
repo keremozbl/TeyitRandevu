@@ -49,3 +49,5 @@ export const loadPermissions = cache(async function loadPermissions(): Promise<P
 export const MEDICAL_READ = "customer.medical_notes.read";
 export const MEDICAL_WRITE = "customer.medical_notes.write";
 export const CUSTOMER_WRITE = "customer.write";
+/** KVKK imhası: kaydı anonimleştirme. Varsayılan olarak yalnızca sahip ve yönetici. */
+export const CUSTOMER_ERASE = "customer.erase";

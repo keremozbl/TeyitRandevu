@@ -15,6 +15,7 @@ const SUMMARIES: Record<Key, string> = {
   "create:customer": "hasta kaydı açtı",
   "update:customer": "hasta kaydını değiştirdi",
   "delete:customer": "hasta kaydını sildi",
+  "anonymize:customer": "kaydı anonimleştirdi (KVKK imhası)",
   "create:consent": "rıza kaydı düştü",
   "delete:consent": "rızayı geri aldı",
   "create:customer_medical_note": "tıbbi not yazdı",

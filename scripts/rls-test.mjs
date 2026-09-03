@@ -57,7 +57,7 @@ try {
 
   console.log("\n[3] Global kataloglar okunabilmeli");
   const { data: perms } = await a.client.from("permissions").select("key");
-  check(perms?.length === 22, `permissions: ${perms?.length} satır`, `permissions: ${perms?.length} (beklenen 22)`);
+  check(perms?.length === 23, `permissions: ${perms?.length} satır`, `permissions: ${perms?.length} (beklenen 23)`);
 
   console.log("\n[4] tenants tablosuna doğrudan INSERT engellenmeli");
   const { error: insErr } = await a.client.from("tenants")
@@ -741,6 +741,80 @@ try {
   check(revokedService.length > 0 && revokedService.every((row) => row.status !== "skipped"),
     "hatırlatma rıza geri alınsa da gönderilecek",
     `hizmet satırları: ${revokedService.map((row) => row.status).join(", ")}`);
+
+  // ---------------------------------------------------------------------------
+  console.log("\n[15] KVKK imhası — anonimleştirme");
+
+  // İmha edilecek kişi: randevusu, tıbbi notu ve rıza kaydı olsun ki her
+  // tablonun ne olduğu görülebilsin.
+  const { data: erased } = await a.client
+    .from("customers")
+    .insert({ tenant_id: tenantId, full_name: "İmha Testi", phone: "+905559998877", notes: "idari not" })
+    .select("id")
+    .single();
+
+  const erasedStart = new Date(Date.now() + 90 * 24 * 3600_000);
+  erasedStart.setUTCHours(9, 0, 0, 0);
+  const { data: erasedAppointment } = await a.client.rpc("create_appointment", {
+    ...rpcArgs, _starts_at: erasedStart.toISOString(), _customer_id: erased.id, _notes: "randevu notu",
+  });
+
+  await a.client.from("customer_medical_notes").insert({
+    tenant_id: tenantId, customer_id: erased.id, resource_id: r.id,
+    branch_id: r.branch_id, body: "tıbbi not",
+  });
+  const { error: consentError } = await a.client.from("consents").insert({
+    tenant_id: tenantId, customer_id: erased.id, kind: "kvkk_aydinlatma",
+    text_version: "test", granted: true, channel: "panel", ip: "1.2.3.4", user_agent: "test",
+  });
+  check(!consentError, "imha testi için rıza kaydı yazıldı", consentError?.message);
+
+  // Yetkisiz rol (c: resepsiyon) çağıramamalı — izin yalnızca sahip ve yöneticide.
+  if (c) {
+    const { error: forbidden } = await c.client.rpc("anonymize_customer", {
+      _tenant_id: tenantId, _customer_id: erased.id,
+    });
+    check(Boolean(forbidden), "yetkisiz rol anonimleştiremiyor", `hata gelmedi`);
+  }
+
+  const { error: eraseError } = await a.client.rpc("anonymize_customer", {
+    _tenant_id: tenantId, _customer_id: erased.id,
+  });
+  check(!eraseError, "sahip anonimleştirebiliyor", eraseError?.message);
+
+  const { data: afterCustomer } = await a.client
+    .from("customers")
+    .select("full_name, phone, notes, custom_data, anonymized_at")
+    .eq("id", erased.id)
+    .single();
+  check(
+    afterCustomer?.full_name === "Silinen kayıt" &&
+      afterCustomer?.phone === null &&
+      afterCustomer?.notes === null &&
+      afterCustomer?.anonymized_at !== null,
+    "kişiyi tanımlayan alanlar temizlendi",
+    `ad: ${afterCustomer?.full_name}, telefon: ${afterCustomer?.phone}`,
+  );
+
+  const { data: afterNotes } = await a.client
+    .from("customer_medical_notes").select("id").eq("customer_id", erased.id);
+  check(afterNotes?.length === 0, "tıbbi notlar silindi", `${afterNotes?.length} not kaldı`);
+
+  const { data: afterAppointment } = await a.client
+    .from("appointments").select("id, notes, customer_id").eq("id", erasedAppointment).single();
+  check(
+    Boolean(afterAppointment) && afterAppointment.notes === null,
+    "randevu satırı duruyor, notu temizlendi",
+    `randevu: ${afterAppointment?.id}, not: ${afterAppointment?.notes}`,
+  );
+
+  const { data: afterConsents } = await a.client
+    .from("consents").select("id, ip, user_agent").eq("customer_id", erased.id);
+  check(
+    afterConsents?.length === 1 && afterConsents[0].ip === null && afterConsents[0].user_agent === null,
+    "rıza kaydı duruyor, IP ve tarayıcı imzası silindi",
+    `${afterConsents?.length} satır, ip: ${afterConsents?.[0]?.ip}`,
+  );
 
 } catch (e) {
   no("BEKLENMEYEN HATA", e.message);

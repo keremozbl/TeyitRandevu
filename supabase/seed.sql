@@ -29,6 +29,7 @@ insert into public.permissions (key, category, label, scopes, sort_order) values
   ('customer.write',               'hasta',    'Hasta kaydı oluştur ve düzenle',   array['tenant','branch']::public.permission_scope[],       420),
   ('customer.medical_notes.read',  'hasta',    'Tıbbi notları görüntüle',          array['tenant','branch','own']::public.permission_scope[], 430),
   ('customer.medical_notes.write', 'hasta',    'Tıbbi not yaz',                    array['tenant','branch','own']::public.permission_scope[], 440),
+  ('customer.erase',               'hasta',    'Kaydı anonimleştir (KVKK imha)',   array['tenant']::public.permission_scope[],                450),
 
   ('report.operational.read',      'rapor',    'Program ve doluluk raporları',     array['tenant','branch','own']::public.permission_scope[], 510),
   ('report.revenue.read',          'rapor',    'Ciro ve ödeme raporları',          array['tenant','branch']::public.permission_scope[],       520),

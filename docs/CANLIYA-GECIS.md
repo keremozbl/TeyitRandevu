@@ -331,14 +331,15 @@ gerekçeleriyle duruyor.
 | Aydınlatma ve açık rıza akışı | ✅ **Yapıldı** — public randevu sayfasında ayrı kutu, ayrı kayıt; metin sürümü, IP, tarayıcı ve kanal `consents` tablosuna yazılıyor. Panelde de: hasta kartındaki "Rıza kayıtları" bölümünden üç rıza ayrı ayrı `channel = 'panel'` olarak düşülüyor. O kayıt, rızanın klinikte sözlü ya da imzayla alındığını belgeler — hasta metni ekranda okumadı ve arayüz bunu açıkça söylüyor. Kaydı kimin düştüğü denetim kaydında |
 | Rıza metinlerinin hukukçu onayı | Metinler `src/lib/legal/consent-texts.ts` içinde ve sürümlü (`2026-08-28.1`), ama **avukat görmedi**. Özellikle iki nokta: sağlık verisinin hukuki sebebi (açık rıza mı, KVKK m.6/3 sağlık hizmeti istisnası mı) ve yurt dışı aktarım paragrafının A3 ile tutarlılığı. Metin değişince `CONSENT_VERSION` de değişmeli |
 | Rıza geri alma (`revoked_at`) akışı | ✅ **Yapıldı** — hasta kartındaki "Geri al" düğmesi. Geri alma satırı DEĞİŞTİRMEZ, yeni satır yazar (`granted = false`, `revoked_at` dolu): `consents` üzerinde UPDATE politikası yok ve verilmiş bir rızanın düzeltilebilmesi kaydın kanıt değerini sıfırlardı. Ticari ileti kapısı en son satıra baktığı için geri alma anında etki eder — `rls:test` bunu doğruluyor: geri almadan sonraki randevunun ticari iletisi `skipped`, hatırlatması etkilenmiyor |
-| Saklama ve imha politikası, silme talebi akışı | Yapılmadı — **sıradaki kalem.** İki karar bekliyor: (1) saklama süreleri (hasta dosyası sağlık mevzuatından, randevu ve ticari kayıt zamanaşımından, denetim kaydı ayrı) — bunlar avukata sorulacak, koda sabit yazılmadan önce; (2) silme = **anonimleştirme**, hard delete değil: randevu geçmişi ticari kayıt (Plan 11.4). Politika yazılmadan `audit_logs` bölümlerini silen bir iş de yazılamaz (A1) |
+| İmha (anonimleştirme) | ✅ **Yapıldı** — `public.anonymize_customer` (97_kvkk.sql): ad, telefon, e-posta, doğum tarihi, not, etiket ve esnek alanlar temizlenir; tıbbi notlar ve bekleme listesi kaydı SİLİNİR; randevu satırı KALIR (ticari kayıt, Plan 11.4) ama notu ve sektöre özel alanları temizlenir; gönderilmiş bildirimin metni ve alıcı adresi silinir; rıza kaydı kalır, IP ve tarayıcı imzası silinir. Fonksiyon `security definer` — temizlenecek tabloların bir kısmında bilerek UPDATE politikası yok, invoker olarak çalışsaydı sessizce sıfır satır güncellerdi. Yetki yeni `customer.erase` izninde (sahip + yönetici). Panelde hasta kartının altında, iki adımlı onayla; işlem denetim kaydına `anonymize` olarak düşer. `rls:test` altı iddiayla doğruluyor |
+| Saklama süreleri ve otomatik imha | Yapılmadı — **karar bekliyor:** hasta dosyası (sağlık mevzuatı), randevu ve ticari kayıt (zamanaşımı), denetim kaydı (ayrı süre). Avukata sorulacak; koda sabit yazılmadan önce. Süreler belli olmadan `audit_logs` bölümlerini düşüren iş de yazılamaz (A1) |
+| Hastanın kendi silme talebi | Yapılmadı — bugün talep telefonla/e-postayla geliyor ve klinik paneldeki düğmeyi kullanıyor. Talebin randevu sayfasından bırakılabilmesi ve panelde bir kutuya düşmesi ayrı bir iş |
 | Veri ihlali bildirim prosedürü (72 saat) | Yazılmadı |
 | VERBİS kaydı | Yapılmadı |
 
-Denetim kaydı yazıldı; sıradaki en acil kalem **saklama ve imha politikası**.
-İki sebeple: `audit_logs` artık gerçekten büyüyor ve bölüm silen bir iş
-politikasız yazılamaz (A1), ayrıca hasta "kaydımı silin" dediğinde işletilecek
-bir akış hâlâ yok.
+İmha yolu açıldı: hasta "kaydımı silin" dediğinde uygulanacak işlem artık var
+ve kanıtlanabiliyor. Sıradaki iki kalem **saklama süreleri** (avukat sorusu) ve
+**talebin kendi kanalı** (bugün telefonla geliyor).
 
 **Denetim kaydında bilinçli olarak OLMAYANLAR** — hepsi ayrı birer karar:
 
@@ -386,6 +387,21 @@ kurulacaksa önce yer açılmalı.
 `20260822120000_ilk_sema.sql` declarative dosyaların sıralı birleşimi. Boş
 veritabanında doğru sonucu verdi ve doğrulandı, ama `db diff` çıktısı değil.
 Bilinmesi yeterli.
+
+---
+
+### D4. `db:seed` değişen kataloğu uygulamıyor
+
+`npm run db:seed` (`supabase db push --include-seed`) seed dosyası
+değiştiğinde SQL'i çalıştırmadan yalnızca özetini güncelleyebiliyor: çıktıda
+"Updating seed hash to supabase/seed.sql" yazıyor, katalog eski hâlinde
+kalıyor. 3 Eylül'de `customer.erase` izni tam olarak böyle kayboldu ve
+fonksiyon kurumun sahibine bile "yetkiniz yok" dedi.
+
+**Kural:** kataloğa kalıcı bir satır ekleniyorsa (izin, rol şablonu) seed
+dosyasının yanında MIGRATION'a da yazılacak. Migration ayrıca mevcut
+kurumlara geri dolgu yapmalı: rol izinleri kurum kurulurken kopyalanıyor,
+sonradan eklenen bir izni eski kurumlar kendiliğinden almıyor.
 
 ---
 

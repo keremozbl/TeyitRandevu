@@ -19,6 +19,9 @@ create table public.customers (
   -- gelmeme sayacı: kapora isteme / çift rezervasyon kararlarına girdi
   no_show_count int not null default 0 check (no_show_count >= 0),
   is_active   boolean not null default true,
+  -- KVKK m.7 imhası uygulandıysa dolu; arayüz kaydı salt okunur gösterir
+  -- ve ikinci kez anonimleştirmeyi teklif etmez (97_kvkk.sql)
+  anonymized_at timestamptz,
   created_by  uuid references auth.users (id) on delete set null,
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()

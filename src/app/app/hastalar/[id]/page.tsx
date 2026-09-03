@@ -3,9 +3,16 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { Alert } from "@/components/ui/alert";
-import { CUSTOMER_WRITE, loadPermissions, MEDICAL_READ, MEDICAL_WRITE } from "@/lib/auth/permissions";
+import { Button } from "@/components/ui/button";
+import {
+  CUSTOMER_ERASE,
+  CUSTOMER_WRITE,
+  loadPermissions,
+  MEDICAL_READ,
+  MEDICAL_WRITE,
+} from "@/lib/auth/permissions";
 import { requireTenant } from "@/lib/auth/session";
-import { updateCustomerAction } from "@/lib/customers/actions";
+import { anonymizeCustomerAction, updateCustomerAction } from "@/lib/customers/actions";
 import { ageFrom, formatFieldValue, visibleFields } from "@/lib/customers/fields";
 import {
   loadBranchOptions,
@@ -28,16 +35,23 @@ export default async function HastaPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ kaydedildi?: string; ikiz?: string; not?: string; riza?: string }>;
+  searchParams: Promise<{
+    kaydedildi?: string;
+    ikiz?: string;
+    not?: string;
+    riza?: string;
+    imha?: string;
+  }>;
 }) {
   const { active } = await requireTenant();
   const { id } = await params;
-  const { kaydedildi, ikiz, not, riza } = await searchParams;
+  const { kaydedildi, ikiz, not, riza, imha } = await searchParams;
 
   const permissions = await loadPermissions();
   const canReadMedical = permissions.can(MEDICAL_READ);
   const canWriteMedical = permissions.can(MEDICAL_WRITE);
   const canWriteCustomer = permissions.can(CUSTOMER_WRITE);
+  const canErase = permissions.can(CUSTOMER_ERASE);
 
   // Üçü paralel: rıza kayıtları ve şube listesi karta bir tur daha eklemesin.
   const [card, consents, branches] = await Promise.all([
@@ -108,6 +122,22 @@ export default async function HastaPage({
         )}
       </div>
 
+      {customer.anonymizedAt && (
+        <Alert tone="info">
+          Bu kayıt {dayOnly.format(customer.anonymizedAt)} tarihinde KVKK kapsamında
+          anonimleştirildi. Randevu geçmişi ticari kayıt olduğu için duruyor; kişiyi tanımlayan
+          bilgiler ve tıbbi notlar silindi.
+        </Alert>
+      )}
+      {imha === "tamam" && (
+        <Alert tone="success">Kayıt anonimleştirildi. İşlem denetim kaydına yazıldı.</Alert>
+      )}
+      {imha === "yetki" && (
+        <Alert tone="error">Bu işlem için yetkiniz yok. İmha izni rol bazında verilir.</Alert>
+      )}
+      {imha === "hata" && (
+        <Alert tone="error">Kayıt anonimleştirilemedi. Tekrar deneyin.</Alert>
+      )}
       {kaydedildi && <Alert tone="success">Hasta bilgileri kaydedildi.</Alert>}
       {not && <Alert tone="success">Tıbbi not eklendi.</Alert>}
       {riza === "riza" && <Alert tone="success">Rıza kaydı düşüldü.</Alert>}
@@ -253,6 +283,58 @@ export default async function HastaPage({
           </div>
         </details>
       </section>
+
+      {canErase && !customer.anonymizedAt && (
+        <section className="flex flex-col gap-3 border-t border-border pt-5">
+          <details>
+            <summary className="cursor-pointer text-[13px] font-medium text-st-noshow">
+              Kaydı anonimleştir (KVKK imha talebi)
+            </summary>
+
+            <div className="flex max-w-2xl flex-col gap-3 pt-4">
+              <p className="text-[13px] leading-relaxed text-ink-2">
+                Kişi &ldquo;kaydımı silin&rdquo; dediğinde uygulanacak işlem budur. Ad, telefon,
+                e-posta, doğum tarihi, notlar, esnek alanlar ve <strong>tıbbi notların tamamı</strong>{" "}
+                silinir; gönderilmiş mesajların metni temizlenir.
+              </p>
+              <p className="text-[13px] leading-relaxed text-ink-2">
+                Randevu satırları <strong>kalır</strong>: randevu geçmişi aynı zamanda kliniğin
+                ticari kaydıdır ve onu silmek ciro ile vergi kaydını da silmek olurdu. Kalan
+                satırlar artık kimseyi göstermiyor.
+              </p>
+              <p className="text-[13px] font-medium text-ink">Bu işlem geri alınamaz.</p>
+
+              {imha === "onay" ? (
+                <form
+                  action={anonymizeCustomerAction}
+                  className="flex flex-wrap items-center gap-3 rounded border border-st-noshow bg-st-noshow-soft px-3 py-2.5"
+                >
+                  <input type="hidden" name="id" value={customer.id} />
+                  <p className="text-[13px] text-ink">
+                    {customer.fullName} kaydını anonimleştirmek istediğinize emin misiniz?
+                  </p>
+                  <Button type="submit" variant="danger">
+                    Evet, Anonimleştir
+                  </Button>
+                  <Link
+                    href={`/app/hastalar/${customer.id}`}
+                    className="text-[13px] text-ink-2 underline underline-offset-2"
+                  >
+                    Vazgeç
+                  </Link>
+                </form>
+              ) : (
+                <Link
+                  href={`/app/hastalar/${customer.id}?imha=onay`}
+                  className="self-start text-[13px] text-st-noshow underline underline-offset-2"
+                >
+                  Anonimleştirmeyi başlat
+                </Link>
+              )}
+            </div>
+          </details>
+        </section>
+      )}
     </div>
   );
 }

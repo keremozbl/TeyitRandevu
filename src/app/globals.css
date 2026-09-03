@@ -216,8 +216,14 @@ table, .tabular, time, [data-numeric] {
 /* outline: none yazılacaksa yerine mutlaka bir focus stili gelir */
 :focus:not(:focus-visible) { outline: none; }
 
-h1, h2, h3, h4 { text-wrap: balance; margin: 0; font-weight: 600; }
-p { text-wrap: pretty; margin: 0; }
+/* `@layer base`: katmansız bir kural, Tailwind'in katmanlı yardımcılarını
+   EZER. Bu blok katmansızken `p { margin: 0 }` kuralı `mx-auto` gibi bir
+   yardımcıyı sessizce geçersiz kılıyordu — public randevu sayfasındaki
+   tanıtım metni bu yüzden ortalanmıyordu. */
+@layer base {
+  h1, h2, h3, h4 { text-wrap: balance; margin: 0; font-weight: 600; }
+  p { text-wrap: pretty; margin: 0; }
+}
 
 /* --- hareket ------------------------------------------------------------------
    Kaydırdıkça beliren bölümler. Gizleme YALNIZCA JavaScript varken geçerli:

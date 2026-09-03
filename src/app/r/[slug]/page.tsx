@@ -88,6 +88,61 @@ function Trail({
   );
 }
 
+/**
+ * Adım göstergesi.
+ *
+ * "Kaç adım kaldı" sorusunun cevabı görünmezse insan formu yarıda bırakıyor;
+ * rakiplerin tamamında da bu şerit var. Yalnızca bilgi taşıyor, tıklanmıyor —
+ * geri dönüş için üstteki `Trail` var, iki ayrı gezinme kafa karıştırırdı.
+ */
+function Steps({ current, withResource }: { current: number; withResource: boolean }) {
+  const labels = withResource
+    ? ["İşlem", "Kim", "Saat", "Bilgiler"]
+    : ["İşlem", "Saat", "Bilgiler"];
+
+  return (
+    <ol className="flex gap-1.5" aria-label={`Adım ${current} / ${labels.length}`}>
+      {labels.map((label, index) => {
+        const done = index + 1 <= current;
+        return (
+          <li key={label} className="flex flex-1 flex-col gap-1.5">
+            <span
+              aria-hidden="true"
+              className={`h-0.5 rounded-full ${done ? "bg-accent" : "bg-border"}`}
+            />
+            <span className={`font-mono text-[11px] ${done ? "text-ink-2" : "text-ink-3"}`}>
+              {index + 1}. {label}
+            </span>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+/**
+ * Saatleri günün bölümlerine ayırır.
+ *
+ * Otuz saatlik düz bir ızgarada insan aradığı vakti bulamıyor; "öğleden
+ * sonra" diye bakıyor. Sınırlar kurumun kendi saat diliminde okunuyor —
+ * `formatTime` zaten o dilimde biçimlendiriyor, saat oradan alınıyor.
+ */
+function groupByDaypart<T>(items: T[], hourOf: (item: T) => number) {
+  const groups: { label: string; items: T[] }[] = [
+    { label: "Sabah", items: [] },
+    { label: "Öğleden sonra", items: [] },
+    { label: "Akşam", items: [] },
+  ];
+
+  for (const item of items) {
+    const hour = hourOf(item);
+    const index = hour < 12 ? 0 : hour < 17 ? 1 : 2;
+    groups[index].items.push(item);
+  }
+
+  return groups.filter((group) => group.items.length > 0);
+}
+
 function EmptyState({ title, body }: { title: string; body: string }) {
   return (
     <div className={`${CARD} flex flex-col gap-1.5 px-4 py-8 text-center`}>
@@ -174,6 +229,7 @@ export default async function RandevuAlPage({
       <div className="flex flex-col gap-4">
         {error && <Alert tone="error">{error}</Alert>}
         <Trail slug={slug} items={trail} />
+        <Steps current={1} withResource={page.resources.length > 1} />
         <StepHeading hint={`${tenant.name} için internetten randevu alın.`}>
           Hangi işlem için geliyorsunuz?
         </StepHeading>
@@ -198,7 +254,9 @@ export default async function RandevuAlPage({
                         <span className="block truncate font-medium text-ink">{item.name}</span>
                         <span className="block text-[13px] text-ink-2">
                           {formatDuration(item.durationMin)}
-                          {item.price !== null && ` · ${formatPrice(item.price, tenant.currency)}`}
+                          {page.branding.show_prices &&
+                            item.price !== null &&
+                            ` · ${formatPrice(item.price, tenant.currency)}`}
                         </span>
                       </span>
                       <span aria-hidden="true" className="shrink-0 text-ink-3">
@@ -246,6 +304,7 @@ export default async function RandevuAlPage({
       <div className="flex flex-col gap-4">
         {error && <Alert tone="error">{error}</Alert>}
         <Trail slug={slug} items={trail} />
+        <Steps current={2} withResource />
         <StepHeading hint="Fark etmiyorsa en erken boşalan saat size verilir.">
           Kimden randevu almak istersiniz?
         </StepHeading>
@@ -330,6 +389,7 @@ export default async function RandevuAlPage({
     <div className="flex flex-col gap-4">
       {error && <Alert tone="error">{error}</Alert>}
       <Trail slug={slug} items={trail} />
+      <Steps current={onlyOne ? 2 : 3} withResource={!onlyOne} />
       <StepHeading
         hint={`${service.name} · ${formatDuration(service.durationMin)}${
           resource ? ` · ${resource.label}` : ""
@@ -443,24 +503,34 @@ export default async function RandevuAlPage({
           <input type="hidden" name="bas" value={window.days[0]} />
           <input type="hidden" name="tarih" value={selectedDay.date} />
 
-          <fieldset className="flex flex-col gap-2">
+          <fieldset className="flex flex-col gap-4">
             <legend className="pb-1 text-[13px] font-medium text-ink">
               {formatDayChip(selectedDay.date).day} · {selectedDay.slots.length} uygun saat
             </legend>
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-              {selectedDay.slots.map((slot) => (
-                <button
-                  key={slot.startsAt.toISOString()}
-                  type="submit"
-                  name="secim"
-                  value={encodeSlotChoice(slot.startsAt, slot.resourceIds)}
-                  data-numeric
-                  className="h-11 rounded border border-border bg-surface text-[15px] font-medium text-ink transition-[background-color,border-color,color] duration-150 hover:border-accent hover:bg-accent-soft"
-                >
-                  {formatTime(slot.startsAt, timeZone)}
-                </button>
-              ))}
-            </div>
+
+            {groupByDaypart(selectedDay.slots, (slot) =>
+              Number(formatTime(slot.startsAt, timeZone).slice(0, 2)),
+            ).map((group) => (
+              <div key={group.label} className="flex flex-col gap-2">
+                <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-3">
+                  {group.label}
+                </p>
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                  {group.items.map((slot) => (
+                    <button
+                      key={slot.startsAt.toISOString()}
+                      type="submit"
+                      name="secim"
+                      value={encodeSlotChoice(slot.startsAt, slot.resourceIds)}
+                      data-numeric
+                      className="h-11 rounded border border-border bg-surface text-[15px] font-medium text-ink transition-[background-color,border-color,color] duration-150 hover:border-accent hover:bg-accent-soft"
+                    >
+                      {formatTime(slot.startsAt, timeZone)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
           </fieldset>
 
           <p className="text-[13px] text-ink-3">

@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { getBookingPage } from "@/lib/booking/queries";
+import { logoUrl } from "@/lib/domain";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 
 /**
@@ -14,6 +16,15 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
  *
  * Yoğunluk da farklı: panel günde sekiz saat kullanılıyor ve sıkı; bu sayfa
  * telefondan bir kez açılıyor ve dokunma hedefleri geniş olmalı.
+ *
+ * KURUMUN RENGİ burada uygulanıyor: `--accent` ve türevleri kabuğun üzerinde
+ * ezildiği için sayfadaki her düğme, seçili saat ve odak halkası kurumun
+ * rengine dönüyor — bileşenlerin hiçbiri değişmiyor. Türevler `color-mix`
+ * ile üretiliyor, yani kurum tek bir renk seçiyor.
+ *
+ * `--accent-ink` beyaza sabitleniyor: paletteki altı ton da beyaz metinle
+ * okunur (bkz. lib/domain/branding.ts) ve koyu temada varsayılan mürekkep
+ * koyu olduğu için sabitlemezsek düğme yazısı kaybolurdu.
  */
 
 export async function generateMetadata({
@@ -48,16 +59,37 @@ export default async function BookingLayout({
   if (!page) notFound();
 
   const branch = page.branches[0] ?? null;
+  const logo = logoUrl(page.branding.logo_path);
+
+  const accent = {
+    "--accent": page.branding.accent,
+    "--accent-hover": `color-mix(in oklab, ${page.branding.accent} 82%, black)`,
+    "--accent-soft": `color-mix(in oklab, ${page.branding.accent} 14%, var(--surface))`,
+    "--accent-ink": "#FFFFFF",
+    "--focus": page.branding.accent,
+  } as React.CSSProperties;
 
   return (
-    <div className="flex min-h-full flex-col bg-bg">
+    <div className="flex min-h-full flex-col bg-bg" style={accent}>
       <header className="border-b border-border bg-surface">
         <div className="mx-auto flex w-full max-w-2xl items-center gap-3 px-4 py-3.5">
           <Link
             href={`/r/${slug}`}
-            className="min-w-0 flex-1 truncate text-[15px] font-semibold text-ink no-underline"
+            className="flex min-w-0 flex-1 items-center gap-2.5 no-underline"
           >
-            {page.tenant.name}
+            {logo && (
+              <Image
+                src={logo}
+                alt=""
+                width={36}
+                height={36}
+                className="size-9 shrink-0 rounded object-contain"
+                priority
+              />
+            )}
+            <span className="min-w-0 truncate text-[15px] font-semibold text-ink">
+              {page.tenant.name}
+            </span>
           </Link>
           {branch?.phone && (
             <a
@@ -69,6 +101,14 @@ export default async function BookingLayout({
           )}
         </div>
       </header>
+
+      {page.branding.about && (
+        <div className="border-b border-border bg-surface-2">
+          <p className="mx-auto w-full max-w-2xl px-4 py-3 text-[13px] leading-relaxed text-ink-2">
+            {page.branding.about}
+          </p>
+        </div>
+      )}
 
       <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-5">{children}</main>
 

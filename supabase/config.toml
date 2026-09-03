@@ -23,6 +23,7 @@ schema_paths = [
   "./schemas/85_platform.sql",
   "./schemas/90_rls.sql",
   "./schemas/95_cron.sql",
+  "./schemas/96_storage.sql",
 ]
 
 [api]

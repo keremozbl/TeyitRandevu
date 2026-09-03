@@ -25,6 +25,8 @@ import {
   zonedTimeToUtc,
   type BookingRules,
   type PlainDate,
+  parseBranding,
+  type Branding,
   type SharedSlot,
 } from "@/lib/domain";
 import { buildResourceSchedules, toDate, resolveTimeZone } from "@/lib/scheduling/mappers";
@@ -165,6 +167,8 @@ export type BookingPage = {
     timeZone: string;
     currency: string;
   };
+  /** Kurumun sayfaya verdiği yüz: logo, renk, fiyat görünürlüğü, tanıtım */
+  branding: Branding;
   rules: BookingRules;
   branches: PublicBranch[];
   resources: PublicResource[];
@@ -197,6 +201,7 @@ export async function loadBookingPage(slug: string): Promise<BookingPage | null>
       timeZone: tenantTimeZone,
       currency: page.tenant.currency,
     },
+    branding: parseBranding(page.branding),
     rules: parseBookingRules(page.rules),
     branches: page.branches.map((branch) => ({
       id: branch.id,

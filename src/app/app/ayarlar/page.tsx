@@ -4,10 +4,12 @@ import Link from "next/link";
 import { Alert } from "@/components/ui/alert";
 import { loadPermissions } from "@/lib/auth/permissions";
 import { requireTenant } from "@/lib/auth/session";
-import { parseBookingRules } from "@/lib/domain";
+import { logoUrl, parseBookingRules, parseBranding } from "@/lib/domain";
+import { siteUrl } from "@/lib/marketing/site-url";
 import { timeZoneOptions } from "@/lib/settings/timezone";
 import { createClient } from "@/lib/supabase/server";
 
+import { BrandingForm } from "./branding-form";
 import { SettingsForm } from "./settings-form";
 
 export const metadata: Metadata = { title: "Ayarlar" };
@@ -26,11 +28,12 @@ export default async function AyarlarPage({
   const supabase = await createClient();
   const { data: settings } = await supabase
     .from("tenant_settings")
-    .select("booking_rules")
+    .select("booking_rules, branding")
     .eq("tenant_id", active.tenant.id)
     .maybeSingle();
 
   const rules = parseBookingRules(settings?.booking_rules);
+  const branding = parseBranding(settings?.branding);
 
   return (
     <div className="flex flex-col gap-5 p-4">
@@ -55,6 +58,12 @@ export default async function AyarlarPage({
           slotStepMinutes: rules.slot_step_minutes,
         }}
         timeZones={timeZoneOptions(active.tenant.timezone)}
+      />
+
+      <BrandingForm
+        branding={branding}
+        logoUrl={logoUrl(branding.logo_path)}
+        publicHref={`${siteUrl()}/r/${active.tenant.slug}`}
       />
 
       {canReadAudit && (

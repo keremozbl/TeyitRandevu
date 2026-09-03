@@ -6,6 +6,21 @@ const CONTROL =
   "hover:border-border-strong disabled:opacity-50";
 
 /**
+ * İki ölçek. `md` panel içindir: yoğun ekranda 36px satır.
+ *
+ * `lg` public sayfa içindir ve yüksekliği kadar YAZI BOYUTU da önemli:
+ * iOS, 16px'ten küçük yazılı bir alana odaklanınca sayfayı otomatik
+ * yakınlaştırıyor ve hasta formun ortasında kaydırmak zorunda kalıyor.
+ * 16px bunu tamamen kapatıyor.
+ */
+const SIZES = {
+  md: "h-9",
+  lg: "h-11 text-[16px]",
+} as const;
+
+export type ControlSize = keyof typeof SIZES;
+
+/**
  * Etiket + kontrol + hata. Etiket her zaman gerçek bir <label> ve htmlFor ile
  * bağlı — placeholder etiket yerine geçmez.
  */
@@ -48,13 +63,14 @@ export function Field({
 export function Input({
   className = "",
   error,
+  size = "md",
   ...props
-}: ComponentProps<"input"> & { error?: boolean }) {
+}: Omit<ComponentProps<"input">, "size"> & { error?: boolean; size?: ControlSize }) {
   return (
     <input
       className={[
         CONTROL,
-        "h-9",
+        SIZES[size],
         error ? "border-st-noshow" : "",
         className,
       ].join(" ")}
@@ -67,13 +83,14 @@ export function Input({
 
 export function Select({
   className = "",
+  size = "md",
   ...props
-}: ComponentProps<"select">) {
+}: Omit<ComponentProps<"select">, "size"> & { size?: ControlSize }) {
   return (
     // Windows koyu modunda native select'in kendi arka planını almaması için
     // renkler açıkça veriliyor.
     <select
-      className={[CONTROL, "h-9 appearance-none pr-8", className].join(" ")}
+      className={[CONTROL, SIZES[size], "appearance-none pr-8", className].join(" ")}
       style={{ backgroundColor: "var(--surface)", color: "var(--ink)" }}
       {...props}
     />
@@ -82,7 +99,13 @@ export function Select({
 
 export function Textarea({
   className = "",
+  size = "md",
   ...props
-}: ComponentProps<"textarea">) {
-  return <textarea className={[CONTROL, "py-2", className].join(" ")} {...props} />;
+}: ComponentProps<"textarea"> & { size?: ControlSize }) {
+  return (
+    <textarea
+      className={[CONTROL, size === "lg" ? "text-[16px]" : "", "py-2", className].join(" ")}
+      {...props}
+    />
+  );
 }

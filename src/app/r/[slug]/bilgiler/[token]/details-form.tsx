@@ -50,6 +50,7 @@ export function DetailsForm({
 
       <Field id="ad" label="Ad Soyad" required>
         <Input
+          size="lg"
           id="ad"
           name="ad"
           autoComplete="name"
@@ -68,6 +69,7 @@ export function DetailsForm({
         error={state.fieldErrors?.telefon}
       >
         <Input
+          size="lg"
           id="telefon"
           name="telefon"
           type="tel"
@@ -87,6 +89,7 @@ export function DetailsForm({
         error={state.fieldErrors?.eposta}
       >
         <Input
+          size="lg"
           id="eposta"
           name="eposta"
           type="email"
@@ -99,7 +102,7 @@ export function DetailsForm({
       </Field>
 
       <Field id="not" label="Eklemek istediğiniz not" hint="İsteğe bağlı.">
-        <Textarea id="not" name="not" rows={2} maxLength={1000} />
+        <Textarea size="lg" id="not" name="not" rows={2} maxLength={1000} />
       </Field>
 
       <fieldset className="flex flex-col gap-3 border-t border-border pt-4">

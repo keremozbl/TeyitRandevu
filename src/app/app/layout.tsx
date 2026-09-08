@@ -3,26 +3,26 @@ import Link from "next/link";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { requireTenant } from "@/lib/auth/session";
 import { DEMO_TENANT_SLUG, isDemoUser } from "@/lib/demo/config";
+import { readRail } from "@/lib/panel/rail";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 
+import { CommandSearch } from "./command-search";
+import { navFlat } from "./nav-items";
 import { NavLink } from "./nav-link";
 import { SetupNotice } from "./setup-notice";
+import { SideNav } from "./side-nav";
 
 /**
- * Menü kurumun kendi diliyle: diş kliniğinde "Hastalar", berberde
- * "Müşteriler", diyetisyende "Danışanlar". Terim `tenant_settings` içinde ve
- * üyelik sorgusuyla birlikte geliyor (session.ts) — ek sorgu yok.
+ * Panel kabuğu.
+ *
+ * Yerleşim iki sütun: solda ray (yalnızca masaüstü), sağda içerik. İkisi de
+ * kendi içinde kayıyor ve başlık kaydırma kabının dışında — bu yüzden başlığın
+ * `sticky` olmasına gerek yok ve yüksekliğini kimsenin hesaplaması gerekmiyor.
+ * Takvimde kazandığımız şey bu: menü artık başlığın altında bir satır yemiyor.
+ *
+ * Yazdırmada kabuk tamamen çözülüyor: program çıktısı gerçekten kullanılıyor
+ * (Plan 8.3) ve sabit yükseklikli bir kap kâğıtta tek sayfaya sıkışırdı.
  */
-const nav = (customers: string, services: string) => [
-  { href: "/app", label: "Takvim" },
-  { href: "/app/hastalar", label: customers },
-  { href: "/app/hizmetler", label: services },
-  { href: "/app/ekip", label: "Ekip" },
-  { href: "/app/raporlar", label: "Raporlar" },
-  { href: "/app/bildirimler", label: "Bildirimler" },
-  { href: "/app/ayarlar", label: "Ayarlar" },
-];
-
 export default async function AppLayout({
   children,
 }: {
@@ -32,14 +32,19 @@ export default async function AppLayout({
 
   const { active, memberships, user } = await requireTenant();
   const isDemo = isDemoUser(user) || active.tenant.slug === DEMO_TENANT_SLUG;
+  const rail = await readRail();
+
+  const { customer_plural: customers, customer_singular: customer, service_plural: services } =
+    active.terms;
 
   return (
-    <div className="flex min-h-full flex-col">
-      <header className="sticky top-0 z-10 border-b border-border bg-bg print:hidden">
+    <div className="flex h-dvh flex-col print:block print:h-auto">
+      <header className="shrink-0 border-b border-border bg-bg print:hidden">
         <div className="flex h-12 items-center gap-4 px-4">
           <Link
             href="/app"
-            className="text-[15px] font-semibold tracking-tight text-ink no-underline"
+            className="shrink-0 text-[15px] font-semibold tracking-tight text-ink no-underline"
+            translate="no"
           >
             TeyitRandevu
           </Link>
@@ -58,6 +63,11 @@ export default async function AppLayout({
           </span>
 
           <div className="ml-auto flex items-center gap-3">
+            <CommandSearch
+              customers={customers}
+              services={services}
+              customersLabel={customer}
+            />
             <span className="hidden font-mono text-[11px] text-ink-3 sm:inline">
               {active.role_key}
             </span>
@@ -92,8 +102,10 @@ export default async function AppLayout({
           </p>
         )}
 
-        <nav aria-label="Ana menü" className="flex gap-0.5 overflow-x-auto px-3">
-          {nav(active.terms.customer_plural, active.terms.service_plural).map((item) => (
+        {/* Mobilde ray yok: kayan tek sıra kalıyor — JavaScript istemez,
+            çekmece açmak gerekmez, klavye ve ekran okuyucu için sorunsuz. */}
+        <nav aria-label="Ana menü" className="flex gap-0.5 overflow-x-auto px-3 lg:hidden">
+          {navFlat(customers, services).map((item) => (
             <NavLink key={item.href} href={item.href}>
               {item.label}
             </NavLink>
@@ -101,7 +113,10 @@ export default async function AppLayout({
         </nav>
       </header>
 
-      <main className="flex-1">{children}</main>
+      <div className="flex min-h-0 flex-1 print:block">
+        <SideNav rail={rail} customers={customers} services={services} />
+        <main className="min-w-0 flex-1 overflow-y-auto print:overflow-visible">{children}</main>
+      </div>
     </div>
   );
 }

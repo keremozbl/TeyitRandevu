@@ -591,7 +591,9 @@ export function GridSurface({
           tabIndex={0}
           role="region"
           aria-label={`${label} takvimi`}
-          className="max-h-[calc(100dvh-15rem)] min-h-80 overflow-auto overscroll-contain rounded border border-border bg-surface"
+          // Masaüstünde menü artık solda: başlığın altındaki sekme satırı
+          // gitti, ızgara o iki satırı geri alıyor.
+          className="max-h-[calc(100dvh-15rem)] min-h-80 overflow-auto overscroll-contain rounded border border-border bg-surface lg:max-h-[calc(100dvh-13rem)]"
         >
           {children}
         </div>

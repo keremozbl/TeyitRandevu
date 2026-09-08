@@ -108,6 +108,55 @@ function toDate(value: string): Date {
   return new Date(value);
 }
 
+export type CustomerHit = {
+  id: string;
+  fullName: string;
+  phone: string | null;
+};
+
+/**
+ * ⌘K aramasının sorgusu.
+ *
+ * `loadCustomerList` değil, çünkü o her çağrıda bir de "sonraki randevu" turu
+ * atıyor; burada her tuş vuruşunda çalışıyoruz ve tek tur bile fazladan.
+ * Sayım da yok: kaç sonuç olduğu değil ilk sekizi önemli.
+ */
+export async function searchCustomersQuick({
+  tenantId,
+  search,
+  limit = 8,
+}: {
+  tenantId: string;
+  search: string;
+  limit?: number;
+}): Promise<CustomerHit[]> {
+  const term = sanitizeSearch(search);
+  if (term.length < 2) return [];
+
+  const supabase = await createClient();
+  const digits = term.replace(/\D/g, "");
+  const filters = [`full_name.ilike.%${term}%`];
+  if (digits.length >= 3) filters.push(`phone.ilike.%${digits}%`);
+
+  const { data, error } = await supabase
+    .from("customers")
+    .select("id, full_name, phone")
+    .eq("tenant_id", tenantId)
+    .eq("is_active", true)
+    .or(filters.join(","))
+    .order("full_name")
+    .limit(limit);
+
+  // Arama kutusu hata ekranı açmaz; sonuç yoksa "sonuç yok" gösterilir.
+  if (error || !data) return [];
+
+  return data.map((row) => ({
+    id: row.id,
+    fullName: row.full_name,
+    phone: row.phone,
+  }));
+}
+
 /** Hasta listesi: ada ve telefona göre arama, sayfalı. */
 export async function loadCustomerList({
   tenantId,

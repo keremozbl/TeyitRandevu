@@ -39,6 +39,7 @@ export function CustomerForm({
   submitLabel,
   pendingLabel,
   cancelHref,
+  medicalNotes,
 }: {
   action: (state: CustomerFormState, formData: FormData) => Promise<CustomerFormState>;
   defaults: CustomerDefaults;
@@ -49,6 +50,8 @@ export function CustomerForm({
   submitLabel: string;
   pendingLabel: string;
   cancelHref: string;
+  /** Sektör tıbbi not tutuyor mu; ipucu buna göre değişir */
+  medicalNotes: boolean;
 }) {
   const [state, formAction, pending] = useActionState(action, EMPTY);
 
@@ -164,7 +167,11 @@ export function CustomerForm({
         <Field
           id="notes"
           label="İdari not"
-          hint="Tedavi notu değil. Tıbbi notlar kartta ayrı bölümde ve ayrı izinde."
+          hint={
+            medicalNotes
+              ? "Tedavi notu değil. Tıbbi notlar kartta ayrı bölümde ve ayrı izinde."
+              : "Ekibin göreceği kısa not. Hizmet geçmişi kartta ayrıca duruyor."
+          }
         >
           <Textarea id="notes" name="notes" rows={3} defaultValue={defaults.notes} maxLength={4000} />
         </Field>

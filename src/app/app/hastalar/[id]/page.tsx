@@ -12,6 +12,7 @@ import {
   MEDICAL_WRITE,
 } from "@/lib/auth/permissions";
 import { requireTenant } from "@/lib/auth/session";
+import { sectorCapabilities } from "@/lib/panel/sector";
 import { anonymizeCustomerAction, updateCustomerAction } from "@/lib/customers/actions";
 import { ageFrom, formatFieldValue, visibleFields } from "@/lib/customers/fields";
 import {
@@ -28,7 +29,11 @@ import { CustomerForm } from "../customer-form";
 import { ConsentList } from "./consent-list";
 import { MedicalNoteForm } from "./medical-note-form";
 
-export const metadata: Metadata = { title: "Hasta" };
+/** Sekme başlığı kurumun kendi dilinde: "Hasta" / "Danışan" / "Müşteri". */
+export async function generateMetadata(): Promise<Metadata> {
+  const { active } = await requireTenant();
+  return { title: active.terms.customer_singular };
+}
 
 export default async function HastaPage({
   params,
@@ -48,6 +53,10 @@ export default async function HastaPage({
   const { kaydedildi, ikiz, not, riza, imha } = await searchParams;
 
   const permissions = await loadPermissions();
+  // Sektör tıbbi not tutmuyorsa bölüm hiç çizilmiyor: berberin müşteri
+  // kartında "Tıbbi notlar" başlığı, toplaması için dayanağı olmayan bir veriyi
+  // davet eder. Yetkiyi bu değil `customer_medical_notes` politikası sağlıyor.
+  const { medicalNotes: sectorHasMedicalNotes } = sectorCapabilities(active.tenant.business_type);
   const canReadMedical = permissions.can(MEDICAL_READ);
   const canWriteMedical = permissions.can(MEDICAL_WRITE);
   const canWriteCustomer = permissions.can(CUSTOMER_WRITE);
@@ -92,7 +101,7 @@ export default async function HastaPage({
     <div className="flex flex-col gap-5 p-4">
       <div className="flex flex-col gap-1">
         <Link href="/app/hastalar" className="text-[13px] text-ink-2 no-underline hover:text-ink">
-          ‹ Hastalara dön
+          ‹ {active.terms.customer_plural}
         </Link>
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
           <h1 className="text-lg tracking-tight">{customer.fullName}</h1>
@@ -138,7 +147,9 @@ export default async function HastaPage({
       {imha === "hata" && (
         <Alert tone="error">Kayıt anonimleştirilemedi. Tekrar deneyin.</Alert>
       )}
-      {kaydedildi && <Alert tone="success">Hasta bilgileri kaydedildi.</Alert>}
+      {kaydedildi && (
+        <Alert tone="success">{active.terms.customer_singular} bilgileri kaydedildi.</Alert>
+      )}
       {not && <Alert tone="success">Tıbbi not eklendi.</Alert>}
       {riza === "riza" && <Alert tone="success">Rıza kaydı düşüldü.</Alert>}
       {riza === "riza_geri" && (
@@ -234,6 +245,7 @@ export default async function HastaPage({
         )}
       </section>
 
+      {sectorHasMedicalNotes && (
       <section className="flex flex-col gap-2">
         <h2 className="text-[13px] font-medium text-ink-2">Tıbbi notlar</h2>
         {!canReadMedical ? (
@@ -260,6 +272,7 @@ export default async function HastaPage({
           </div>
         )}
       </section>
+      )}
 
       {!customer.anonymizedAt && (
       <section className="flex flex-col gap-3 border-t border-border pt-5">
@@ -269,6 +282,7 @@ export default async function HastaPage({
           </summary>
           <div className="pt-4">
             <CustomerForm
+              medicalNotes={sectorHasMedicalNotes}
               action={updateCustomerAction}
               defaults={{
                 id: customer.id,

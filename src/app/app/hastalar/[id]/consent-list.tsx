@@ -16,7 +16,7 @@ import { statusOf, type CardConsentKind, type ConsentState } from "@/lib/legal/c
 const LABELS: Record<CardConsentKind, { title: string; hint: string }> = {
   kvkk_aydinlatma: {
     title: "Aydınlatma metni",
-    hint: "Bilgilendirmenin hastaya iletildiğinin kaydı. Onay değildir.",
+    hint: "Bilgilendirmenin kişiye iletildiğinin kaydı. Onay değildir.",
   },
   acik_riza_saglik: {
     title: "Sağlık verisi açık rızası",

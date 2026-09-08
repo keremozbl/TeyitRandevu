@@ -15,7 +15,7 @@
     "appointment_plural": "Randevular"
   },
 
-  "modules": ["treatment_plan", "installments"],
+  "modules": ["medical_notes", "treatment_plan", "installments"],
   "roles": ["owner", "admin", "hekim", "asistan", "resepsiyon", "muhasebe"],
 
   "booking_rules": {

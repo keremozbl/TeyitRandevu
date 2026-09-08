@@ -9,10 +9,20 @@ import type { SectorSlide } from "@/lib/marketing/sectors";
 /**
  * Sektör seçici.
  *
- * Sekme (tab) deseni: şerit yatay kayar, ok tuşları çalışır, seçili sekme
- * görünüme kaydırılır. Karusel otomatik dönmüyor — okuyan kişi metnin ortasında
- * kayan bir panelle yarışmak zorunda kalmasın (ve otomatik oynatma, Web
- * Interface Guidelines'ın durdurma denetimi istediği yerdir).
+ * Sekme (tab) deseni. Geniş ekranda sekmeler bir HALKA üzerinde duruyor:
+ * seçilen sektör tepedeki çapaya gelene kadar çember dönüyor, etiketler dik
+ * kalsın diye kendi eksenlerinde ters dönüyor. Dar ekranda aynı sekmeler yatay
+ * şerit olarak çiziliyor — çember orada dikey alanı yiyor ve etiketler
+ * çakışıyor.
+ *
+ * Halka `display` ile değiştiği için ekran okuyucuda her zaman TEK bir tablist
+ * var; iki ayrı `role="tab"` kümesi görünmüyor.
+ *
+ * Karusel otomatik DÖNMÜYOR — okuyan kişi metnin ortasında kendiliğinden dönen
+ * bir çemberle yarışmak zorunda kalmasın (ve otomatik oynatma, Web Interface
+ * Guidelines'ın durdurma denetimi istediği yerdir). Hareket kullanıcının
+ * tıklamasından doğuyor; dönüş yalnızca `transform`, `prefers-reduced-motion`
+ * globals.css'te süreyi zaten sıfırlıyor.
  *
  * Geçiş `key` ile tetiklenen bir animasyon: yalnızca `opacity` ve `transform`,
  * `prefers-reduced-motion` globals.css'te zaten kapatıyor.
@@ -46,8 +56,33 @@ const TONES = {
 
 const ROW_H = 2.5; // rem — önizleme ızgarasında yarım saat
 
+/** Halkanın yarıçapı (px) ve dönüş süresi. Çember 360° / sektör sayısı. */
+const RING_R = 122;
+const RING_MS = 600;
+
+/**
+ * Halkadaki kısa ad: "Güzellik & Bakım Salonu" çemberde komşusuna değiyor.
+ * Tam ad halkanın ortasında ve panelde zaten yazıyor.
+ */
+function shortLabel(label: string): string {
+  return label.split(/[&/]/)[0].trim();
+}
+
+/**
+ * İki sektör arasındaki EN KISA yön (işaretli adım sayısı).
+ *
+ * Halkanın açısı sürekli bir sayı olarak tutuluyor, 0-360 arasına
+ * sıkıştırılmıyor: sonuncudan ilkine geçerken açı sıfıra "sarsaydı" çember
+ * ters yöne neredeyse tam tur atardı.
+ */
+function shortestStep(from: number, to: number, count: number): number {
+  const forward = (((to - from) % count) + count) % count;
+  return forward > count / 2 ? forward - count : forward;
+}
+
 export function SectorCarousel({ slides }: { slides: SectorSlide[] }) {
-  const [picked, setPicked] = useState<number | null>(null);
+  const step = 360 / slides.length;
+  const [picked, setPicked] = useState<{ index: number; angle: number } | null>(null);
   const tabsRef = useRef<HTMLDivElement>(null);
 
   const urlKey = useSyncExternalStore(
@@ -57,21 +92,39 @@ export function SectorCarousel({ slides }: { slides: SectorSlide[] }) {
   );
 
   const fromUrl = slides.findIndex((slide) => slide.key === urlKey);
-  const index = picked ?? (fromUrl >= 0 ? fromUrl : 0);
+  const index = picked?.index ?? (fromUrl >= 0 ? fromUrl : 0);
+  // Adres çubuğundan gelen seçim (geri tuşu) dönmeden yerine oturur.
+  const angle = picked?.angle ?? -index * step;
   const chosen = slides[index];
 
   function select(next: number, focusTab = false) {
     const clamped = (next + slides.length) % slides.length;
-    setPicked(clamped);
+    setPicked({
+      index: clamped,
+      angle: angle - shortestStep(index, clamped, slides.length) * step,
+    });
 
     const url = new URL(window.location.href);
     url.searchParams.set("sektor", slides[clamped].key);
     url.hash = "sektorler";
     window.history.replaceState(null, "", url);
 
-    const tab = tabsRef.current?.querySelector<HTMLButtonElement>(`#sektor-tab-${clamped}`);
-    tab?.scrollIntoView({ block: "nearest", inline: "center" });
-    if (focusTab) tab?.focus();
+    // Şerit dar ekranda; halkada kaydırılacak bir şey yok. `getElementById`
+    // çünkü iki yerleşimden hangisinin çizildiğini CSS belirliyor.
+    tabsRef.current
+      ?.querySelector<HTMLButtonElement>(`#sektor-tab-${clamped}`)
+      ?.scrollIntoView({ block: "nearest", inline: "center" });
+
+    if (!focusTab) return;
+    // İki yerleşimden hangisinin çizildiğini CSS belirliyor; görünür olana
+    // odaklan. `offsetParent` null ise öğe `display: none` demektir.
+    for (const id of [`sektor-halka-${clamped}`, `sektor-tab-${clamped}`]) {
+      const tab = document.getElementById(id) as HTMLButtonElement | null;
+      if (tab && tab.offsetParent !== null) {
+        tab.focus();
+        return;
+      }
+    }
   }
 
   function onKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
@@ -85,7 +138,8 @@ export function SectorCarousel({ slides }: { slides: SectorSlide[] }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center gap-3">
+      {/* --- dar ekran: yatay şerit --- */}
+      <div className="flex items-center gap-3 sm:hidden">
         <div
           ref={tabsRef}
           role="tablist"
@@ -94,33 +148,99 @@ export function SectorCarousel({ slides }: { slides: SectorSlide[] }) {
           onKeyDown={onKeyDown}
           className="flex min-w-0 flex-1 gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
-          {slides.map((slide, position) => {
-            const active = position === index;
-            return (
-              <button
-                key={slide.key}
-                id={`sektor-tab-${position}`}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                aria-controls="sektor-panel"
-                tabIndex={active ? 0 : -1}
-                onClick={() => select(position)}
-                className={`shrink-0 rounded border px-3.5 py-2 text-[14px] font-medium transition-colors duration-150 ${
-                  active
-                    ? "border-brand bg-brand text-brand-ink"
-                    : "border-border bg-surface text-ink-2 hover:border-border-strong hover:text-ink"
-                }`}
-              >
-                {slide.label}
-              </button>
-            );
-          })}
+          {slides.map((slide, position) => (
+            <button
+              key={slide.key}
+              id={`sektor-tab-${position}`}
+              type="button"
+              role="tab"
+              aria-selected={position === index}
+              aria-controls="sektor-panel"
+              tabIndex={position === index ? 0 : -1}
+              onClick={() => select(position)}
+              className={`shrink-0 rounded border px-3.5 py-2 text-[14px] font-medium transition-colors duration-150 ${
+                position === index
+                  ? "border-brand bg-brand text-brand-ink"
+                  : "border-border bg-surface text-ink-2"
+              }`}
+            >
+              {slide.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* --- geniş ekran: dönen halka --- */}
+      <div className="hidden flex-col items-center gap-5 sm:flex">
+        <div
+          role="tablist"
+          aria-label="Sektörler"
+          onKeyDown={onKeyDown}
+          className="relative size-[19rem] shrink-0 lg:size-[21rem]"
+        >
+          {/* Yörünge çizgisi: çemberin nerede olduğu görünsün, dekor değil */}
+          <span
+            aria-hidden="true"
+            className="absolute inset-6 rounded-full border border-dashed border-border"
+          />
+
+          {/* Tepedeki çapa — seçilenin geleceği yer */}
+          <span
+            aria-hidden="true"
+            className="absolute left-1/2 top-3 size-1.5 -translate-x-1/2 rounded-full bg-brand"
+          />
+
+          {/* Ortada tam ad; sektör değişince çapraz sönümlenir */}
+          <div className="absolute inset-0 flex items-center justify-center px-16">
+            <div key={chosen.key} className="animate-[sektor-giris_220ms_ease-out] text-center">
+              <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-ink-3">
+                {chosen.familyLabel}
+              </p>
+              <p className="text-pretty pt-1 text-[15px] font-semibold leading-tight text-ink">
+                {chosen.label}
+              </p>
+            </div>
+          </div>
+
+          {/* Dönen kap. Sekmeler bunun içinde SABİT duruyor; dönen şey halka.
+              Her sekme kendi ekseninde `-(angle + kendi açısı)` kadar ters
+              dönerek dik kalıyor — yoksa etiketler yan yatardı. */}
+          <div
+            className="absolute inset-0 ease-[cubic-bezier(0.22,0.61,0.36,1)] motion-safe:transition-transform"
+            style={{ transform: `rotate(${angle}deg)`, transitionDuration: `${RING_MS}ms` }}
+          >
+            {slides.map((slide, position) => {
+              const active = position === index;
+              return (
+                <button
+                  key={slide.key}
+                  id={`sektor-halka-${position}`}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  aria-controls="sektor-panel"
+                  tabIndex={active ? 0 : -1}
+                  onClick={() => select(position)}
+                  style={{
+                    transform:
+                      `translate(-50%, -50%) rotate(${position * step}deg) ` +
+                      `translateY(-${RING_R}px) rotate(${-(angle + position * step)}deg)`,
+                    transitionDuration: `${RING_MS}ms`,
+                  }}
+                  className={`absolute left-1/2 top-1/2 w-[7.5rem] rounded border px-2 py-1.5 text-[13px] font-medium ease-[cubic-bezier(0.22,0.61,0.36,1)] motion-safe:transition-[transform,background-color,border-color,color] ${
+                    active
+                      ? "border-brand bg-brand text-brand-ink"
+                      : "border-border bg-surface text-ink-2 [@media(hover:hover)]:hover:border-border-strong [@media(hover:hover)]:hover:text-ink"
+                  }`}
+                >
+                  <span className="block truncate">{shortLabel(slide.label)}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Ok düğmeleri şeridin dışında: dokunmatikte parmakla kaydırma zaten
-            var, klavye ve fare için de bir yol olsun. */}
-        <div className="hidden shrink-0 gap-1 sm:flex">
+        <div className="flex shrink-0 gap-1">
           <button
             type="button"
             onClick={() => select(index - 1)}

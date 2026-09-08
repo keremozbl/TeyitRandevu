@@ -6,10 +6,30 @@ import { useActionState, useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Field, Textarea } from "@/components/ui/field";
-import { ACCENTS, type Branding } from "@/lib/domain";
+import { ACCENTS, LOGO_MAX_BYTES, LOGO_TYPES, type Branding } from "@/lib/domain";
 import { updateBrandingAction, type BrandingFormState } from "@/lib/settings/branding-actions";
 
 const EMPTY: BrandingFormState = {};
+
+/**
+ * Seçilen dosya kabul edilebilir mi?
+ *
+ * Bu kontrol sunucudakinin kopyası değil, ONDAN ÖNCE gelen bir kapı: server
+ * action'ların gövde sınırı 1 MB ve 2 MB'lık bir logo action'a hiç ulaşmıyor,
+ * Next isteği reddedip hatayı React ağacına atıyor — kullanıcı için bu
+ * uygulamanın çökmesi demek. Sunucudaki kontrol yetkiyi sağlıyor, buradaki
+ * kullanıcının anlaşılır bir cevap almasını.
+ */
+function logoHatasi(file: File): string | null {
+  if (!LOGO_TYPES[file.type]) {
+    return "Logo PNG, JPEG ya da WebP olmalı. Seçilen dosya eklenmedi.";
+  }
+  if (file.size > LOGO_MAX_BYTES) {
+    const mb = (file.size / 1024 / 1024).toFixed(1);
+    return `Logo en fazla 512 KB olabilir; seçtiğiniz dosya ${mb} MB. Görseli küçültüp yeniden deneyin — dosya eklenmedi.`;
+  }
+  return null;
+}
 
 /**
  * Randevu sayfasının görünüşü.
@@ -30,6 +50,7 @@ export function BrandingForm({
   const [state, formAction, pending] = useActionState(updateBrandingAction, EMPTY);
   const [accent, setAccent] = useState(branding.accent);
   const [removeLogo, setRemoveLogo] = useState(false);
+  const [logoError, setLogoError] = useState<string | null>(null);
 
   return (
     <form action={formAction} className="flex max-w-2xl flex-col gap-4">
@@ -74,11 +95,31 @@ export function BrandingForm({
               name="logo"
               type="file"
               accept="image/png,image/jpeg,image/webp"
+              aria-describedby={logoError ? "logo-hata" : "logo-ipucu"}
+              aria-invalid={logoError ? true : undefined}
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (!file) {
+                  setLogoError(null);
+                  return;
+                }
+                const hata = logoHatasi(file);
+                setLogoError(hata);
+                // Kabul edilmeyen dosya formda kalmıyor: kullanıcı rengi ya da
+                // tanıtımı değiştirdiyse onları kaydedebilsin, istek de baştan
+                // reddedilecek bir gövdeyle yola çıkmasın.
+                if (hata) event.target.value = "";
+              }}
               className="text-[13px] text-ink-2 file:mr-3 file:rounded file:border file:border-border file:bg-surface-2 file:px-2.5 file:py-1.5 file:text-[13px] file:text-ink hover:file:bg-surface"
             />
-            <p className="text-[12px] text-ink-3">
+            <p id="logo-ipucu" className="text-[12px] text-ink-3">
               PNG, JPEG ya da WebP · en fazla 512 KB. Kare ya da yatay bir logo en iyi durur.
             </p>
+            {logoError && (
+              <p id="logo-hata" role="alert" className="text-[12px] text-st-noshow">
+                {logoError}
+              </p>
+            )}
 
             {logoUrl && (
               <label className="flex cursor-pointer items-center gap-2 pt-1 text-[13px] text-ink-2">

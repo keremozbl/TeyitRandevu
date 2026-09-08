@@ -61,6 +61,26 @@ export function parseBranding(raw: unknown): Branding {
 }
 
 /**
+ * Logo sınırları — tarayıcı ve sunucu aynı sayıyı görsün diye burada.
+ *
+ * 512 KB, `kurum-gorsel` kovasının kendi `file_size_limit` değeriyle birebir
+ * aynı (`supabase/schemas/96_storage.sql`). İkisi ayrışırsa kullanıcı formda
+ * kabul edilen bir dosyanın Storage tarafından reddedildiğini görür.
+ *
+ * Bu kontrolün tarayıcıda DA yapılması şart, çünkü server action'ların gövde
+ * sınırı 1 MB: 2 MB'lık bir logo action'a hiç ulaşmıyor, Next isteği önce
+ * reddediyor ve sunucudaki "512 KB'tan küçük olmalı" mesajı hiç çalışmıyordu.
+ * Kullanıcının gördüğü şey uygulamanın çökmesiydi.
+ */
+export const LOGO_MAX_BYTES = 512 * 1024;
+
+export const LOGO_TYPES: Record<string, string> = {
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/webp": "webp",
+};
+
+/**
  * Logonun herkese açık adresi.
  *
  * Kova public olduğu için imzalı URL yok: sayfayı gören hasta oturum açmış

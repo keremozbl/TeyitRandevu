@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { requireTenant } from "@/lib/auth/session";
-import { ACCENTS, parseBranding } from "@/lib/domain";
+import { ACCENTS, LOGO_MAX_BYTES, LOGO_TYPES, parseBranding } from "@/lib/domain";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -26,13 +26,6 @@ import { createClient } from "@/lib/supabase/server";
  */
 
 export type BrandingFormState = { error?: string; ok?: boolean };
-
-const MAX_BYTES = 512 * 1024;
-const TYPES: Record<string, string> = {
-  "image/png": "png",
-  "image/jpeg": "jpg",
-  "image/webp": "webp",
-};
 
 const schema = z.object({
   accent: z.string().refine((value) => ACCENTS.some((accent) => accent.value === value), {
@@ -69,9 +62,9 @@ export async function updateBrandingAction(
 
   const file = formData.get("logo");
   if (file instanceof File && file.size > 0) {
-    const extension = TYPES[file.type];
+    const extension = LOGO_TYPES[file.type];
     if (!extension) return { error: "Logo PNG, JPEG ya da WebP olmalı." };
-    if (file.size > MAX_BYTES) return { error: "Logo 512 KB'tan küçük olmalı." };
+    if (file.size > LOGO_MAX_BYTES) return { error: "Logo 512 KB'tan küçük olmalı." };
 
     const path = `${active.tenant.id}/logo-${Date.now()}.${extension}`;
     const { error: uploadError } = await supabase.storage

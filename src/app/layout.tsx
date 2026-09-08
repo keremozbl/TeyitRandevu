@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     template: "%s · TeyitRandevu",
   },
   description:
-    "Klinik ve işletmeler için randevu, hasta takibi ve otomatik hatırlatma sistemi.",
+    "Randevuyla çalışan işletmeler için randevu, müşteri takibi ve otomatik hatırlatma sistemi.",
   openGraph: {
     type: "website",
     locale: "tr_TR",

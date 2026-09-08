@@ -36,7 +36,7 @@ export const metadata: Metadata = {
   // `absolute`: ana sayfa kök layout'taki "%s · TeyitRandevu" şablonunu
   // kullanmaz, yoksa başlık "TeyitRandevu … · TeyitRandevu" olurdu.
   title: {
-    absolute: "TeyitRandevu · Klinik, salon ve danışmanlık için randevu sistemi",
+    absolute: "TeyitRandevu · Randevuyla çalışan işletmeler için randevu sistemi",
   },
   description: PRODUCT.summary,
 };
@@ -57,7 +57,7 @@ export default function AnaSayfa() {
             {/* Hero bir kez oynayan kademeli bir giriş: döngü yok, durdurma
                 denetimi gerekmiyor; prefers-reduced-motion süreyi sıfırlıyor. */}
             <p className="animate-[giris-saga_620ms_cubic-bezier(0.22,0.61,0.36,1)_both] border-l-2 border-brand pl-3 font-mono text-[12px] uppercase tracking-[0.16em] text-ink-2">
-              Klinik · Salon · Danışmanlık · pilot aşaması
+              Randevuyla çalışan her işletme · pilot aşaması
             </p>
 
             <h1 className={`${H1} animate-[giris-yukari_620ms_cubic-bezier(0.22,0.61,0.36,1)_both]`} style={{ animationDelay: "80ms" }}>
@@ -206,7 +206,7 @@ export default function AnaSayfa() {
           {/* Kanallar: rakiplerin rozet dizdiği yer. Bizde durum da yazıyor. */}
           <Reveal className="mt-14 border-t border-border pt-8">
             <h3 className="pb-5 font-mono text-[12px] uppercase tracking-[0.16em] text-ink-3">
-              Hasta size hangi yoldan ulaşıyor, siz ona hangi yoldan
+              Müşteri size hangi yoldan ulaşıyor, siz ona hangi yoldan
             </h3>
             <ul className="grid gap-x-8 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
               {CHANNELS.map((channel) => (
@@ -241,7 +241,7 @@ export default function AnaSayfa() {
             <h2 className={H2}>Sektörünüz kurulu geliyor</h2>
             <p className={LEAD}>
               Şablon yalnızca hizmet listesi değil: işletmenin dilini de getiriyor. Kimine
-              “hasta”, kimine “danışan”, kimine “müşteri” denir; kimi “hekim”, kimi “usta”
+              “müşteri”, kimine “danışan”, kimine “hasta” denir; kimi “usta”, kimi “hekim”
               çalıştırır. Kurulumda sektörü seçtiğinizde hizmet süreleri, tamponlar, roller,
               müşteri alanları ve mesaj şablonları birlikte geliyor — hepsi sonradan
               değiştirilebilir.
@@ -500,10 +500,10 @@ export default function AnaSayfa() {
 /* Günün programı çıktısı — sayfaya özel, bu yüzden mock dosyasında değil. */
 function ProgramMock() {
   const rows = [
-    { time: "09:00", who: "A. Yılmaz", service: "İmplant", state: "Onaylandı" },
-    { time: "09:30", who: "M. Kaya", service: "Kontrol", state: "Geldi" },
-    { time: "10:30", who: "Z. Ateş", service: "Kanal tedavisi", state: "Onay bekliyor" },
-    { time: "11:00", who: "S. Demir", service: "Dolgu", state: "Onaylandı" },
+    { time: "09:00", who: "A. Yılmaz", service: "Saç boyası", state: "Onaylandı" },
+    { time: "09:30", who: "M. Kaya", service: "Kesim + fön", state: "Geldi" },
+    { time: "10:30", who: "Z. Ateş", service: "Cilt bakımı", state: "Onay bekliyor" },
+    { time: "11:00", who: "S. Demir", service: "Manikür", state: "Onaylandı" },
   ];
 
   return (

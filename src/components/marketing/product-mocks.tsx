@@ -2,12 +2,17 @@
  * Ürünün kendisi — sitede gösterilen parçalar.
  *
  * Neden ekran görüntüsü değil: PNG karanlık modda ikinci bir set ister,
- * mobilde okunmaz, arayüz değişince eskir ve demo hasta adlarını görselin
- * içine gömer. Bunlar aynı token'larla çizildiği için ürünle birlikte
+ * mobilde okunmaz, arayüz değişince eskir ve uydurma müşteri adlarını
+ * görselin içine gömer. Bunlar aynı token'larla çizildiği için ürünle birlikte
  * değişiyor ve her temada doğru görünüyor.
  *
  * Hepsi `aria-hidden`: taşıdıkları bilgi yanlarındaki metinde zaten yazıyor,
- * ekran okuyucuya uydurma hasta adı okutmanın anlamı yok.
+ * ekran okuyucuya uydurma müşteri adı okutmanın anlamı yok.
+ *
+ * Örnek gün bir GÜZELLİK SALONU: en büyük müşteri kitlesi orada. Sayfanın
+ * metni sektörden bağımsız kalıyor, örnek somut oluyor — "her sektöre uyar"
+ * diye çizilmiş nötr bir ekran hiçbir sektöre benzemez. Sektörlerin eşit
+ * geçtiği yer aşağıdaki sektör bölümü.
  */
 
 const frame =
@@ -28,30 +33,30 @@ const ROWS = ["09:00", "09:30", "10:00", "10:30", "11:00"];
 type Block = { col: 0 | 1 | 2; start: number; span: number; service: string; who: string; tone: string };
 
 const BLOCKS: Block[] = [
-  { col: 0, start: 0, span: 2, service: "İmplant", who: "A. Yılmaz", tone: "border-l-st-confirmed bg-st-confirmed-soft" },
-  { col: 0, start: 3, span: 1, service: "Kontrol", who: "M. Kaya", tone: "border-l-st-arrived bg-st-arrived-soft" },
-  { col: 1, start: 1, span: 2, service: "Kanal tedavisi", who: "Z. Ateş", tone: "border-l-st-pending bg-st-pending-soft" },
-  { col: 1, start: 4, span: 1, service: "Dolgu", who: "S. Demir", tone: "border-l-st-confirmed bg-st-confirmed-soft" },
-  { col: 2, start: 0, span: 1, service: "Diş taşı temizliği", who: "H. Aydın", tone: "border-l-st-confirmed bg-st-confirmed-soft" },
-  { col: 2, start: 2, span: 2, service: "Beyazlatma", who: "E. Şahin", tone: "border-l-st-arrived bg-st-arrived-soft" },
+  { col: 0, start: 0, span: 2, service: "Saç boyası", who: "A. Yılmaz", tone: "border-l-st-confirmed bg-st-confirmed-soft" },
+  { col: 0, start: 3, span: 1, service: "Kesim + fön", who: "M. Kaya", tone: "border-l-st-arrived bg-st-arrived-soft" },
+  { col: 1, start: 1, span: 2, service: "Cilt bakımı", who: "Z. Ateş", tone: "border-l-st-pending bg-st-pending-soft" },
+  { col: 1, start: 4, span: 1, service: "Manikür", who: "S. Demir", tone: "border-l-st-confirmed bg-st-confirmed-soft" },
+  { col: 2, start: 0, span: 1, service: "Ağda", who: "H. Aydın", tone: "border-l-st-confirmed bg-st-confirmed-soft" },
+  { col: 2, start: 2, span: 2, service: "Keratin bakımı", who: "E. Şahin", tone: "border-l-st-arrived bg-st-arrived-soft" },
 ];
 
 export function GridMock() {
   return (
     <div className={frame} aria-hidden="true">
       <Chrome label="1 Eylül · Merkez" />
-      {/* Üç sütun: ikisi hekim, biri ünit. Kaynağın yalnızca personel olmadığı
-          ilk bakışta görünsün — oda ve cihaz da takvimde yer kaplar. */}
+      {/* Üç sütun: ikisi uzman, biri kabin. Kaynağın yalnızca personel olmadığı
+          ilk bakışta görünsün — oda, kabin ve cihaz da takvimde yer kaplar. */}
       <div className="grid grid-cols-[3.25rem_1fr_1fr] text-[12px] sm:grid-cols-[3.25rem_1fr_1fr_1fr]">
         <div className="border-b border-border bg-surface px-2 py-1.5" />
         <div className="border-b border-l border-border px-2 py-1.5 font-medium text-ink">
-          Dr. Ayla Demir
+          Elif Demir
         </div>
         <div className="border-b border-l border-border px-2 py-1.5 font-medium text-ink">
-          Dr. Mert Kılıç
+          Merve Kaya
         </div>
         <div className="hidden border-b border-l border-border px-2 py-1.5 font-medium text-ink sm:block">
-          1 No’lu Ünit
+          2 No’lu Kabin
         </div>
 
         <div className="flex flex-col">
@@ -106,7 +111,7 @@ export function MessageMock() {
       <div className="flex flex-col gap-3 p-3">
         <div className="rounded border border-border bg-surface-2 p-2.5">
           <p className="text-[13px] leading-relaxed text-ink">
-            Sayın Ayşe Korkmaz, 2 Eylül Çarşamba 14:30 randevunuzu hatırlatırız. Demo Diş Kliniği
+            Sayın Ayşe Korkmaz, 2 Eylül Çarşamba 14:30 randevunuzu hatırlatırız. Ayna Güzellik Salonu
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px]">
@@ -134,12 +139,12 @@ export function MessageMock() {
   );
 }
 
-/* ------------------------------------------------------------------ hasta kartı */
+/* ---------------------------------------------------------------- müşteri kartı */
 
 export function CardMock() {
   return (
     <div className={frame} aria-hidden="true">
-      <Chrome label="Hasta kartı · resepsiyon görünümü" />
+      <Chrome label="Müşteri kartı · resepsiyon görünümü" />
       <div className="flex flex-col divide-y divide-border">
         <div className="px-3 py-2.5">
           <p className="text-[13px] font-medium text-ink">Ayşe Korkmaz</p>
@@ -152,7 +157,7 @@ export function CardMock() {
         <div className="flex items-start gap-2 bg-surface-2 px-3 py-2.5">
           <span className="mt-1 size-1.5 shrink-0 rounded-full bg-st-cancelled" />
           <div>
-            <p className="text-[12px] text-ink">Tıbbi notlar görünmüyor</p>
+            <p className="text-[12px] text-ink">Özel notlar görünmüyor</p>
             <p className="text-[12px] text-ink-2">
               Bu rolde yetki yok — veri arayüzde gizlenmiyor, sorgu boş dönüyor
             </p>
@@ -174,9 +179,9 @@ const SLOTS = ["09:00", "09:30", "10:30", "11:00", "13:00", "14:30"];
 export function BookingMock() {
   return (
     <div className={frame} aria-hidden="true">
-      <Chrome label="teyitrandevu.com/r/klinik" />
+      <Chrome label="teyitrandevu.com/r/ayna-salon" />
       <div className="flex flex-col gap-3 p-3">
-        <p className="text-[12px] text-ink-2">2 Eylül Çarşamba · İmplant · 45 dakika</p>
+        <p className="text-[12px] text-ink-2">2 Eylül Çarşamba · Saç boyası · 45 dakika</p>
         <div className="grid grid-cols-3 gap-1.5">
           {SLOTS.map((slot, index) => (
             <span

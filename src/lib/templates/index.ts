@@ -102,17 +102,21 @@ export interface SectorTemplate {
 }
 
 /**
- * Sıra kurulum sihirbazındaki sıradır: önce sağlık, sonra kişisel bakım.
+ * Sıra hem kurulum sihirbazının hem de sitedeki sektör bölümünün sırasıdır:
+ * önce kişisel bakım, sonra sağlık. Sebebi ürünün en geniş müşteri kitlesinin
+ * salonlar olması — liste diş kliniğiyle açıldığında ürün bir klinik yazılımı
+ * gibi okunuyordu.
+ *
  * Listede olmayan bir sektör kurulumda elle tanımlanır — şablon bir başlangıç
  * noktası, kilit değil.
  */
 export const TEMPLATES = {
+  guzellik_salonu: guzellikSalonu as SectorTemplate,
+  berber: berber as SectorTemplate,
   dis_klinigi: disKlinigi as SectorTemplate,
   fizyoterapi: fizyoterapi as SectorTemplate,
   diyetisyen: diyetisyen as SectorTemplate,
   psikolog: psikolog as SectorTemplate,
-  berber: berber as SectorTemplate,
-  guzellik_salonu: guzellikSalonu as SectorTemplate,
 } satisfies Record<string, SectorTemplate>;
 
 export type TemplateKey = keyof typeof TEMPLATES;

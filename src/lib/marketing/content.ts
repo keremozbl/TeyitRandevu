@@ -24,7 +24,7 @@ export const PRODUCT = {
   name: "TeyitRandevu",
   /** Tek cümlede ne olduğu; meta description ve paylaşım kartı da bunu kullanır */
   summary:
-    "Klinikler, salonlar ve danışmanlık ofisleri için randevu, müşteri takibi ve hatırlatma sistemi. Günün programı her sabah hazır.",
+    "Randevuyla çalışan işletmeler için randevu, müşteri takibi ve hatırlatma sistemi: salon, klinik, danışmanlık ofisi. Günün programı her sabah hazır.",
   stage: "Ürün pilot aşamasında: ilk işletmelerle birlikte kuruluyor.",
 } as const;
 
@@ -109,7 +109,7 @@ export const CHANNELS = [
 export const COMPARISON = [
   {
     topic: "Aynı saate iki kayıt",
-    before: "Fark edilirse düzeltilir; iki hasta kapıda karşılaşır",
+    before: "Fark edilirse düzeltilir; iki müşteri kapıda karşılaşır",
     after: "Veritabanı kabul etmiyor, ikinci kayıt hiç açılmıyor",
   },
   {
@@ -158,7 +158,7 @@ export const COMPLIANCE = [
   },
   {
     title: "Denetim kaydı",
-    body: "Müşteri kartını kimin ne zaman açtığı, tıbbi notu kimin okuduğu, programı kimin dışa aktardığı kayda geçer. Kaydı yazan kişi onu değiştiremez ve silemez.",
+    body: "Müşteri kartını kimin ne zaman açtığı, özel notu kimin okuduğu, programı kimin dışa aktardığı kayda geçer. Kaydı yazan kişi onu değiştiremez ve silemez.",
   },
   {
     title: "Sağlık verisi ayrı tabloda",
@@ -230,7 +230,7 @@ export const PLANS: Plan[] = [
   {
     key: "ekip",
     name: "Ekip",
-    fit: "Birden çok uzmanın ve resepsiyonun birlikte çalıştığı klinik ya da salon.",
+    fit: "Birden çok uzmanın ve resepsiyonun birlikte çalıştığı salon ya da klinik.",
     monthly: 1890,
     highlight: true,
     includes: [

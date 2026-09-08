@@ -25,26 +25,33 @@ function Chrome({ label }: { label: string }) {
 
 const ROWS = ["09:00", "09:30", "10:00", "10:30", "11:00"];
 
-type Block = { col: 0 | 1; start: number; span: number; service: string; who: string; tone: string };
+type Block = { col: 0 | 1 | 2; start: number; span: number; service: string; who: string; tone: string };
 
 const BLOCKS: Block[] = [
   { col: 0, start: 0, span: 2, service: "İmplant", who: "A. Yılmaz", tone: "border-l-st-confirmed bg-st-confirmed-soft" },
   { col: 0, start: 3, span: 1, service: "Kontrol", who: "M. Kaya", tone: "border-l-st-arrived bg-st-arrived-soft" },
   { col: 1, start: 1, span: 2, service: "Kanal tedavisi", who: "Z. Ateş", tone: "border-l-st-pending bg-st-pending-soft" },
   { col: 1, start: 4, span: 1, service: "Dolgu", who: "S. Demir", tone: "border-l-st-confirmed bg-st-confirmed-soft" },
+  { col: 2, start: 0, span: 1, service: "Diş taşı temizliği", who: "H. Aydın", tone: "border-l-st-confirmed bg-st-confirmed-soft" },
+  { col: 2, start: 2, span: 2, service: "Beyazlatma", who: "E. Şahin", tone: "border-l-st-arrived bg-st-arrived-soft" },
 ];
 
 export function GridMock() {
   return (
     <div className={frame} aria-hidden="true">
       <Chrome label="1 Eylül · Merkez" />
-      <div className="grid grid-cols-[3.25rem_1fr_1fr] text-[12px]">
+      {/* Üç sütun: ikisi hekim, biri ünit. Kaynağın yalnızca personel olmadığı
+          ilk bakışta görünsün — oda ve cihaz da takvimde yer kaplar. */}
+      <div className="grid grid-cols-[3.25rem_1fr_1fr] text-[12px] sm:grid-cols-[3.25rem_1fr_1fr_1fr]">
         <div className="border-b border-border bg-surface px-2 py-1.5" />
         <div className="border-b border-l border-border px-2 py-1.5 font-medium text-ink">
           Dr. Ayla Demir
         </div>
         <div className="border-b border-l border-border px-2 py-1.5 font-medium text-ink">
           Dr. Mert Kılıç
+        </div>
+        <div className="hidden border-b border-l border-border px-2 py-1.5 font-medium text-ink sm:block">
+          1 No’lu Ünit
         </div>
 
         <div className="flex flex-col">
@@ -58,8 +65,11 @@ export function GridMock() {
           ))}
         </div>
 
-        {[0, 1].map((col) => (
-          <div key={col} className="relative border-l border-border">
+        {[0, 1, 2].map((col) => (
+          <div
+            key={col}
+            className={`relative border-l border-border ${col === 2 ? "hidden sm:block" : ""}`}
+          >
             {ROWS.map((time) => (
               <div key={time} className="h-11 border-b border-border" />
             ))}

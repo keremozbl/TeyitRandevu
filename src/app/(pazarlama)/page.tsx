@@ -47,8 +47,13 @@ export default function AnaSayfa() {
       {/* ---------------------------------------------------------------- hero */}
       <section className="relative overflow-hidden border-b border-border">
         <GridTexture />
-        <Container className="relative grid gap-12 pb-16 pt-14 sm:pt-20 lg:grid-cols-[minmax(0,1fr)_minmax(0,30rem)] lg:items-center lg:gap-16">
-          <div className="flex max-w-xl flex-col gap-6">
+        {/* Metin solda, ürün ekranı ALTINDA ve tam genişlikte.
+            Önce yan yanaydılar ve takvim yarım sütuna sıkışıyordu: gün ızgarası
+            geniş bir arayüz, kaynak sütunları o darlıkta okunmuyordu. Metin
+            yine sola hizalı — Türkçe başlıklar uzun, ortalanmış bir hero
+            burada satır sonlarını bozuyor. */}
+        <Container className="relative flex flex-col gap-12 pb-16 pt-14 sm:pt-20">
+          <div className="flex max-w-3xl flex-col gap-6">
             {/* Hero bir kez oynayan kademeli bir giriş: döngü yok, durdurma
                 denetimi gerekmiyor; prefers-reduced-motion süreyi sıfırlıyor. */}
             <p className="animate-[giris-saga_620ms_cubic-bezier(0.22,0.61,0.36,1)_both] border-l-2 border-brand pl-3 font-mono text-[12px] uppercase tracking-[0.16em] text-ink-2">
@@ -59,7 +64,7 @@ export default function AnaSayfa() {
               Randevular <span className="text-brand">çakışmasın</span>, kimse gelmeyi unutmasın.
             </h1>
 
-            <p className={`${LEAD} animate-[giris-yukari_620ms_cubic-bezier(0.22,0.61,0.36,1)_both]`} style={{ animationDelay: "160ms" }}>
+            <p className={`${LEAD} max-w-2xl animate-[giris-yukari_620ms_cubic-bezier(0.22,0.61,0.36,1)_both]`} style={{ animationDelay: "160ms" }}>
               Takvim, müşteri kartı ve hatırlatma tek yerde. Günün programı her sabah hazır
               çıkar; aynı saate iki kişi yazılması uygulamada değil, veritabanında engellenir.
             </p>
@@ -91,12 +96,15 @@ export default function AnaSayfa() {
             </ul>
           </div>
 
-          {/* Eğik perspektif yok: ürün ekranı okunacak, dekor değil. */}
-          <div className="animate-[giris-yukari_620ms_cubic-bezier(0.22,0.61,0.36,1)_both] lg:pl-4" style={{ animationDelay: "200ms" }}>
+          {/* Eğik perspektif yok, kırpma yok: ürün ekranı okunacak, dekor değil. */}
+          <div
+            className="animate-[giris-yukari_620ms_cubic-bezier(0.22,0.61,0.36,1)_both]"
+            style={{ animationDelay: "200ms" }}
+          >
             <div className="rounded-lg border border-border bg-surface p-1.5 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_18px_40px_-24px_rgba(0,0,0,0.35)]">
               <MOCKS.grid />
             </div>
-            <p className="pt-3 text-center text-[12px] text-ink-3">
+            <p className="pt-3 text-[12px] text-ink-3">
               Ürünün kendi arayüzü — ekran görüntüsü değil, aynı token’larla çizildi
             </p>
           </div>
@@ -319,7 +327,7 @@ export default function AnaSayfa() {
                 key={plan.key}
                 as="li"
                 delay={index * 70}
-                className={`flex flex-col gap-3 rounded-lg border bg-surface p-5 transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_30px_-22px_rgba(0,0,0,0.45)] ${
+                className={`flex flex-col gap-3 rounded-lg border bg-surface p-5 transition-[transform,box-shadow] duration-200 [@media(hover:hover)]:hover:-translate-y-0.5 [@media(hover:hover)]:hover:shadow-[0_14px_30px_-22px_rgba(0,0,0,0.45)] ${
                   plan.highlight ? "border-brand" : "border-border"
                 }`}
               >

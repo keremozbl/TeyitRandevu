@@ -1,9 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import {
   useCallback,
   useEffect,
+  useRef,
+  useState,
   useSyncExternalStore,
   type CSSProperties,
   type KeyboardEvent as ReactKeyboardEvent,
@@ -13,6 +14,7 @@ import {
 import { blockBand } from "@/lib/scheduling/drag";
 import { STATUS_STYLES, type AppointmentStatus } from "@/lib/scheduling/status";
 
+import { AppointmentPopover } from "./appointment-popover";
 import { useGrid } from "./grid-surface";
 
 /**
@@ -46,11 +48,111 @@ export type AppointmentBlockProps = {
   href: string;
   /** Az önce oluşturulan ya da düzenlenen randevu */
   highlighted: boolean;
+  /** Hızlı işlem kutusundaki eylemlerin takvime dönebilmesi için */
+  date: string;
+  branchId: string | null;
+  /** Online formda tutulan slot: henüz bir randevu değil, durumu değiştirilmez */
+  isHold: boolean;
 };
 
 export function AppointmentBlock(props: AppointmentBlockProps) {
   const grid = useGrid();
   const { id, resourceId, startsAtMs, status, customerName, serviceName, href } = props;
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const popoverId = `randevu-kutu-${id}`;
+
+  /**
+   * Kutuyu bloğun altına yerleştirip açar.
+   *
+   * Konum açılışta ölçülüyor: blok sürüklenebiliyor, ızgara kayıyor ve sayfa
+   * yeniden boyutlanabiliyor — önceden hesaplanmış bir konum yanlış olurdu.
+   * Ölçüm render sırasında değil olay işleyicisinde.
+   */
+  const [acik, setAcik] = useState(false);
+  /** Kutunun yaslanacağı blok dikdörtgeni, açılış anında ölçülür. */
+  const ankrajRef = useRef<DOMRect | null>(null);
+
+  const ac = useCallback((anchor: DOMRect) => {
+    ankrajRef.current = anchor;
+    setAcik(true);
+  }, []);
+
+  /**
+   * Açma, konumlandırma ve kapatma — hepsi burada, tıklama olayının dışında.
+   *
+   * `showPopover()` tıklama işleyicisinin içinde çağrılmıyor; efekt olay
+   * tamamlandıktan sonra çalışıyor. Kapatma dinleyicileri de bir tur daha
+   * geç bağlanıyor, yoksa kutuyu AÇAN tıklama onu hemen kapatırdı.
+   */
+  useEffect(() => {
+    const pop = popoverRef.current;
+    if (!pop) return;
+
+    if (!acik) {
+      if (pop.matches(":popover-open")) pop.hidePopover();
+      return;
+    }
+
+    pop.style.left = "0px";
+    pop.style.top = "0px";
+    pop.showPopover();
+
+    const anchor = ankrajRef.current;
+    if (anchor) {
+      const kenar = 8;
+      const { offsetWidth: w, offsetHeight: h } = pop;
+
+      let left = anchor.left;
+      if (left + w > window.innerWidth - kenar) left = window.innerWidth - w - kenar;
+      if (left < kenar) left = kenar;
+
+      // Aşağı sığmıyorsa bloğun üstüne çevrilir
+      let top = anchor.bottom + 6;
+      if (top + h > window.innerHeight - kenar) top = anchor.top - h - 6;
+      if (top < kenar) top = kenar;
+
+      pop.style.left = `${left}px`;
+      pop.style.top = `${top}px`;
+    }
+
+    const kapat = () => setAcik(false);
+    const disari = (event: Event) => {
+      if (!pop.contains(event.target as Node)) kapat();
+    };
+    const esc = (event: KeyboardEvent) => {
+      if (event.key === "Escape") kapat();
+    };
+    // Izgara kaydırılınca kutu bloğundan kopmasın
+    const scroller = pop.ownerDocument.querySelector("[data-arrow-scroll]");
+
+    const timer = window.setTimeout(() => {
+      document.addEventListener("pointerdown", disari, true);
+      document.addEventListener("keydown", esc, true);
+      scroller?.addEventListener("scroll", kapat);
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener("pointerdown", disari, true);
+      document.removeEventListener("keydown", esc, true);
+      scroller?.removeEventListener("scroll", kapat);
+      if (pop.matches(":popover-open")) pop.hidePopover();
+    };
+  }, [acik]);
+
+  const blockRef = useRef<HTMLDivElement>(null);
+
+  const acAtBlock = useCallback(() => {
+    const el = blockRef.current;
+    if (el) ac(el.getBoundingClientRect());
+  }, [ac]);
+
+  /**
+   * Fare basılıyken birkaç piksel kayan bir tıklamada tarayıcının `click`
+   * olayı bloğa ulaşmıyor — sürükleme başlar başlamaz blok
+   * `pointer-events: none` oluyor. Izgara o durumu bize haber veriyor.
+   */
+  useEffect(() => grid.registerTap(id, acAtBlock), [grid, id, acAtBlock]);
 
   const subscribe = useCallback(
     (listener: () => void) => grid.subscribe(id, listener),
@@ -127,6 +229,7 @@ export function AppointmentBlock(props: AppointmentBlockProps) {
           konmaz ve sürükleme tutamağı gerçek bir buton olmak zorunda.
           Tıklanabilir yüzeyi bağlantının kendi `::after` katmanı sağlıyor. */}
       <div
+        ref={blockRef}
         data-appointment
         data-id={id}
         onPointerDown={onPointerDown}
@@ -138,7 +241,7 @@ export function AppointmentBlock(props: AppointmentBlockProps) {
           highlightRing(props.highlighted, dragging)
         }`}
         style={style}
-        title={`${range} · ${customerName}${serviceName ? ` · ${serviceName}` : ""} · ${statusStyle.label}`}
+        title={`${range} · ${customerName}${serviceName ? ` · ${serviceName}` : ""} · ${statusStyle.label}\nTıklayın: durum değiştirme ve iptal`}
       >
         <div className="flex min-w-0 items-baseline gap-1.5">
           <time
@@ -147,13 +250,27 @@ export function AppointmentBlock(props: AppointmentBlockProps) {
           >
             {grid.formatTime(startMinutes)}
           </time>
-          <Link
-            href={href}
-            draggable={false}
-            className="min-w-0 truncate text-[12px] font-medium text-ink no-underline after:absolute after:inset-0 hover:underline"
+          {/* Tıklama hedefi bir <button>, bağlantı değil.
+              Önce `<Link>` + `preventDefault` denendi ve güvenilir olmadı:
+              tıklama kimi zaman kutuyu açmadan randevu sayfasına gidiyordu.
+              Bir eylemi tetikleyen şey zaten `<button>` olmalı — gezinme
+              değil, durum değiştirme yapıyor. Randevu sayfasına giden gerçek
+              bağlantı kutunun içinde ("Randevuyu aç →") ve Cmd/Ctrl+tık orada
+              çalışıyor. Tıklanabilir yüzeyi `::after` katmanı bloğun tamamına
+              yayıyor. */}
+          <button
+            type="button"
+            aria-haspopup="dialog"
+            aria-expanded={acik}
+            aria-controls={popoverId}
+            onClick={() => {
+              const block = blockRef.current;
+              if (block) ac(block.getBoundingClientRect());
+            }}
+            className="min-w-0 truncate text-left text-[12px] font-medium text-ink after:absolute after:inset-0 hover:underline"
           >
             {customerName}
-          </Link>
+          </button>
           <span className="ml-auto shrink-0 font-mono text-[9px] uppercase tracking-wide text-ink-2">
             {statusStyle.short}
             <span className="sr-only"> — {statusStyle.label}</span>
@@ -171,6 +288,20 @@ export function AppointmentBlock(props: AppointmentBlockProps) {
           className="absolute inset-x-0 bottom-0 z-10 h-2 cursor-ns-resize rounded-b-sm bg-transparent transition-colors duration-150 hover:bg-accent/40 focus-visible:bg-accent/40 group-hover:bg-accent/20"
         />
       </div>
+
+      <AppointmentPopover
+        ref={popoverRef}
+        popoverId={popoverId}
+        id={id}
+        href={href}
+        date={props.date}
+        branchId={props.branchId}
+        status={status}
+        customerName={customerName}
+        serviceName={serviceName}
+        range={range}
+        isHold={props.isHold}
+      />
     </>
   );
 }

@@ -275,6 +275,9 @@ function ResourceColumn({
             serviceName={appointment.serviceName}
             href={`/app/randevu/${appointment.id}${branchId ? `?sube=${branchId}` : ""}`}
             highlighted={appointment.id === highlightId}
+            date={date}
+            branchId={branchId}
+            isHold={appointment.isHold}
           />
         ))}
 

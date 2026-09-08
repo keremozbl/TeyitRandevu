@@ -88,6 +88,16 @@ type GridApi = {
   clear: (id: string) => void;
   begin: (event: ReactPointerEvent<HTMLElement>, info: BlockInfo) => void;
   resizeByKey: (event: ReactKeyboardEvent<HTMLElement>, info: BlockInfo) => void;
+  /**
+   * "Sürüklendi ama yerinden oynamadı" — yani kullanıcı aslında tıkladı.
+   *
+   * Bu sinyale ihtiyaç var çünkü tarayıcının `click` olayı o durumda bloğa
+   * ulaşmıyor: sürükleme başlar başlamaz blok `pointer-events: none` oluyor
+   * (altındaki sütun bulunabilsin diye) ve fare kalktığında tıklamanın hedefi
+   * artık blok değil. Titrek bir tıklamayı kaybetmemek için ızgara, tıklamayı
+   * doğrudan bloğa haber veriyor.
+   */
+  registerTap: (id: string, handler: () => void) => () => void;
 };
 
 const GridContext = createContext<GridApi | null>(null);
@@ -141,6 +151,8 @@ export function GridSurface({
   const dragRef = useRef<Drag | null>(null);
   const keyRef = useRef<KeyResize | null>(null);
   const suppressClickRef = useRef(false);
+  /** Blokların "tıklandım" dinleyicileri — bkz. GridApi.registerTap */
+  const tapHandlersRef = useRef(new Map<string, () => void>());
   const scrollFrameRef = useRef<number | null>(null);
 
   const draftsRef = useRef(new Map<string, Draft>());
@@ -499,19 +511,47 @@ export function GridSurface({
     if (!drag || event.pointerId !== drag.pointerId) return;
 
     const { active, info, draft } = drag;
+
     releaseDrag();
 
-    // Eşik aşılmadıysa bu bir tıklamadır; bağlantı düzenleme formunu açsın
-    if (!active) return;
-    suppressNextClick();
-
-    if (!isMoved(info, draft)) {
-      publish(info.id, null);
+    /**
+     * Eşik aşılmadıysa bu bir tıklamadır ve kutuyu doğrudan buradan açıyoruz.
+     *
+     * Tarayıcının `click` olayına güvenilmiyor: basma ile bırakma farklı
+     * elemanlara düştüğünde `click` ikisinin ORTAK ATASINA gidiyor, yani
+     * bloğun içindeki butona değil çevresindeki `div`'e. Ekrandaki teşhis
+     * panelinde birebir bu görüldü ("bas: button … tik: div"), ve tıklamanın
+     * bazen çalışıp bazen çalışmamasının sebebi buydu. Basma-bırakma çiftini
+     * zaten burada takip ediyoruz; kararı da burada veriyoruz.
+     */
+    if (!active) {
+      if (drag.kind === "move") tapHandlersRef.current.get(info.id)?.();
       return;
     }
 
+    // Eşiği aştı ama randevu yerinden oynamadı: fare basılıyken birkaç piksel
+    // kaymış, kullanıcı yine de TIKLADI. Üç piksellik eşik küçük bir bloğa
+    // nişan alan bir el için çok dar ve burayı bastırmak, tıklamanın bazen
+    // çalışıp bazen çalışmaması demekti — takvimde en sık yapılan iş budur.
+    // Tıklamayı yalnızca gerçekten taşınmış bir randevudan sonra bastırıyoruz.
+    if (!isMoved(info, draft)) {
+      publish(info.id, null);
+      tapHandlersRef.current.get(info.id)?.();
+      return;
+    }
+
+    suppressNextClick();
     commit(info, draft);
   };
+
+  const registerTap = useCallback((id: string, handler: () => void) => {
+    const handlers = tapHandlersRef.current;
+    handlers.set(id, handler);
+    return () => {
+      // Aynı id'yi başka bir blok devraldıysa onun kaydını silme
+      if (handlers.get(id) === handler) handlers.delete(id);
+    };
+  }, []);
 
   /** Sürüklemeden sonraki tıklama bağlantıyı açmasın. */
   const onClickCapture = (event: ReactMouseEvent<HTMLDivElement>) => {
@@ -555,8 +595,20 @@ export function GridSurface({
       clear,
       begin,
       resizeByKey,
+      registerTap,
     }),
-    [bounds, pxPerMinute, dayStartsAtMs, formatTime, subscribe, read, clear, begin, resizeByKey],
+    [
+      bounds,
+      pxPerMinute,
+      dayStartsAtMs,
+      formatTime,
+      subscribe,
+      read,
+      clear,
+      begin,
+      resizeByKey,
+      registerTap,
+    ],
   );
 
   return (

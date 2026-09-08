@@ -232,8 +232,11 @@ function Legend() {
         <span aria-hidden="true" className="h-2.5 w-4 rounded-sm bg-ink-3/15" />
         Tampon süre
       </li>
+      {/* İmleç blok üzerinde "sürükle" şeklinde ve bu, tıklamanın da bir şey
+          yaptığını gizliyor. Sıralama keşfedilme sırasına göre: önce tıklama. */}
       <li className="ml-auto hidden text-ink-3 lg:block">
-        Randevuyu sürükleyerek taşıyın, alt kenarından süreyi değiştirin
+        Randevuya tıklayın: onaylayın, “geldi” işaretleyin. Sürükleyerek taşıyın, alt kenarından
+        süreyi değiştirin
       </li>
     </ul>
   );

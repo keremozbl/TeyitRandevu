@@ -53,6 +53,46 @@ npm run lint
 npm run build
 ```
 
+## Vercel'e dağıtım
+
+Depo GitHub'a bağlı; `main`'e gelen her commit dağıtımı tetikler.
+
+**Environment Variables** (Settings → Environment Variables):
+
+| Değişken | Not |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Settings → API |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | aynı yer |
+| `SUPABASE_SERVICE_ROLE_KEY` | aynı yer; `NEXT_PUBLIC_` ön eki ASLA eklenmez |
+| `CRON_SECRET` | kuyruk uç noktasının sırrı; yoksa uç nokta 503 döner |
+| `NEXT_PUBLIC_SITE_URL` | dağıtımın kendi adresi |
+
+`NEXT_PUBLIC_SITE_URL` iki aşamalı: ilk dağıtım adresi üretir, adres
+değişkene yazılır ve **yeniden dağıtılır**. `NEXT_PUBLIC_` değişkenleri
+derleme anında koda gömülüyor, ayarı kaydetmek tek başına yetmiyor.
+Eksik kalırsa kurumun paylaştığı randevu bağlantısı, karekodun içi ve
+hatırlatma mesajındaki link `localhost` gösterir.
+
+Supabase tarafında Authentication → URL Configuration → Site URL ve
+Redirect URLs aynı adrese ayarlanır; yoksa giriş yönlendirmeleri
+`localhost`a düşer.
+
+### Hobby planının iki kısıtı
+
+**Cron günde bir.** `vercel.json` `0 6 * * *` kullanıyor. Daha sık bir
+ifade (`*/5 * * * *`) Hobby'de dağıtımı **reddediyor**, yavaşlatmıyor.
+Gerçek beş dakikalık kuyruk boşaltma için Supabase'in `pg_cron`'u
+kullanılır — hazır SQL `docs/CANLIYA-GECIS.md` B10 içinde.
+
+**Commit yazarı hesapla eşleşmeli.** Vercel, sahibine eşleştiremediği bir
+commit'i "başka bir katkıcı" sayar ve derlemeyi hiç başlatmaz; günlük bile
+üretmez, sadece "Hobby teams do not support collaboration" der. `git config
+user.email` GitHub hesabına ekli ve doğrulanmış bir adres olmalı.
+
+```bash
+git config --global user.email   # GitHub'a ekli adresle aynı mı?
+```
+
 ## Yapı
 
 ```

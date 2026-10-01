@@ -41,11 +41,9 @@ function logoHatasi(file: File): string | null {
 export function BrandingForm({
   branding,
   logoUrl,
-  publicHref,
 }: {
   branding: Branding;
   logoUrl: string | null;
-  publicHref: string;
 }) {
   const [state, formAction, pending] = useActionState(updateBrandingAction, EMPTY);
   const [accent, setAccent] = useState(branding.accent);
@@ -59,12 +57,10 @@ export function BrandingForm({
 
       <div className="flex flex-col gap-4 rounded border border-border bg-surface p-4">
         <div className="flex flex-col gap-1">
-          <h2 className="text-[15px] font-semibold text-ink">Randevu sayfası</h2>
+          <h2 className="text-[15px] font-semibold text-ink">Sayfanın görünüşü</h2>
           <p className="text-[13px] text-ink-2">
-            Hastanızın gördüğü tek ekran burası:{" "}
-            <a href={publicHref} className="text-accent underline underline-offset-2">
-              {publicHref.replace(/^https?:\/\//, "")}
-            </a>
+            Logo ve renk, bağlantıyı açan herkesin gördüğü ilk şey. Adresin kendisi
+            yukarıda.
           </p>
         </div>
 

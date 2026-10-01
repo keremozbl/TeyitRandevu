@@ -237,7 +237,7 @@ gerçek olmayan üç şey var ve üçü de kod değil, ticari karar.
 
 | Ne | Şu an | Nerede |
 |---|---|---|
-| Alan adı | yok; `NEXT_PUBLIC_SITE_URL` boşsa `localhost` | `src/lib/marketing/site-url.ts` — sitemap, robots ve paylaşım kartı buradan besleniyor |
+| Alan adı | yok; `NEXT_PUBLIC_SITE_URL` boşsa `localhost` | `src/lib/marketing/site-url.ts` — sitemap, robots, paylaşım kartı **ve kurumun randevu bağlantısı** buradan besleniyor (bkz. B16) |
 | Tüzel kişi ve iletişim | `iletisim@teyitrandevu.com` **uydurma**, adres ve telefon `null` | `SITE_CONTACT`, `src/lib/legal/site-texts.ts` |
 | Fiyatlar | **temsilî** — 890 / 1.890 / görüşelim | `PLANS` ve `PRICING_IS_DRAFT`, `src/lib/marketing/content.ts` |
 
@@ -274,9 +274,32 @@ o yüzden kiracıya bağlı `consents` tablosuna yazılmıyor.
 
 ---
 
+### B16. Alan adı kesinleşmeden karekod bastırılmamalı
+
+Kurumun müşterisine verdiği randevu bağlantısı `NEXT_PUBLIC_SITE_URL`
+üzerinden üretiliyor: kurulum sihirbazındaki adres önizlemesi, ayarlardaki
+bağlantı, hazır paylaşım metinleri ve **karekodun içine gömülen URL** aynı
+fonksiyondan (`src/lib/booking/share.ts`) çıkıyor. Değişken yanlışsa dördü
+birden yanlış çıkıyor.
+
+Diğer maddelerden farkı geri alınamaz olması: ekrandaki bağlantı alan adı
+değişince kendiliğinden düzelir, **basılmış karekod düzelmez**. Resepsiyon
+masasına konmuş bir kartı, kapıya yapıştırılmış bir etiketi ya da
+bastırılmış kartvizitleri geri çağıramayız; kurum da bizi değil "karekod
+çalışmıyor" diye kendi müşterisini kaybeder.
+
+**Yapılacak:** `NEXT_PUBLIC_SITE_URL` üretim alan adına sabitlenmeden hiçbir
+pilot kuruma "karekodu bastırın" denmeyecek. Alan adı sonradan değişirse
+karekod bastırmış kurumlar tek tek aranacak; bu yüzden alan adı B11'deki
+ticari kararın değil, **ilk pilot başlamadan önce** kapanması gereken bir
+maddenin parçası.
+
+İlgili kod: `src/lib/booking/share.ts`, `src/lib/booking/qr.ts`,
+`src/app/app/ayarlar/randevu-sayfasi/karekod/route.ts`.
+
 ### B12. Canlı demo — yayın öncesi üç iş
 
-`/demo` sayfasında ziyaretçi sektörünü seçip düğmeye bastığında **ona özel bir
+Ana sayfanın `#demo` bölümünde ziyaretçi sektörünü seçip düğmeye bastığında **ona özel bir
 hesap** açılıyor (servis rolüyle, `app_metadata.demo = true`), sıradan
 `signInWithPassword` ile oturum kuruluyor ve kurulum sihirbazına
 düşüyor. Kurulumu kendisi dolduruyor; biter bitmez `seedSampleDay` o kuruma

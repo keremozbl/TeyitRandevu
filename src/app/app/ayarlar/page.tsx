@@ -4,13 +4,12 @@ import Link from "next/link";
 import { Alert } from "@/components/ui/alert";
 import { CUSTOMER_ERASE, loadPermissions } from "@/lib/auth/permissions";
 import { requireTenant } from "@/lib/auth/session";
-import { logoUrl, parseBookingRules, parseBranding } from "@/lib/domain";
-import { siteUrl } from "@/lib/marketing/site-url";
+import { parseBookingRules } from "@/lib/domain";
+import { bookingDisplayUrl } from "@/lib/booking/share";
 import { countOpenErasureRequests } from "@/lib/legal/erasure";
 import { timeZoneOptions } from "@/lib/settings/timezone";
 import { createClient } from "@/lib/supabase/server";
 
-import { BrandingForm } from "./branding-form";
 import { SettingsForm } from "./settings-form";
 
 export const metadata: Metadata = { title: "Ayarlar" };
@@ -31,12 +30,11 @@ export default async function AyarlarPage({
   const supabase = await createClient();
   const { data: settings } = await supabase
     .from("tenant_settings")
-    .select("booking_rules, branding")
+    .select("booking_rules")
     .eq("tenant_id", active.tenant.id)
     .maybeSingle();
 
   const rules = parseBookingRules(settings?.booking_rules);
-  const branding = parseBranding(settings?.branding);
 
   return (
     <div className="flex flex-col gap-5 p-4">
@@ -63,11 +61,22 @@ export default async function AyarlarPage({
         timeZones={timeZoneOptions(active.tenant.timezone)}
       />
 
-      <BrandingForm
-        branding={branding}
-        logoUrl={logoUrl(branding.logo_path)}
-        publicHref={`${siteUrl()}/r/${active.tenant.slug}`}
-      />
+      <section className="flex max-w-2xl flex-col gap-2 border-t border-border pt-4">
+        <h2 className="text-[15px] font-semibold text-ink">Randevu sayfası</h2>
+        <p className="text-[13px] text-ink-2">
+          Paylaşacağınız bağlantı, basılabilir karekod ve sayfanın logosuyla rengi.
+          Adresiniz:{" "}
+          <code translate="no" className="font-mono text-[13px] text-ink">
+            {bookingDisplayUrl(active.tenant.slug)}
+          </code>
+        </p>
+        <Link
+          href="/app/ayarlar/randevu-sayfasi"
+          className="inline-flex h-8 w-fit items-center rounded border border-border bg-surface px-2.5 text-[13px] font-medium text-ink no-underline transition-colors duration-150 hover:bg-surface-2"
+        >
+          Sayfayı yönet
+        </Link>
+      </section>
 
       {canErase && (
         <section className="flex max-w-2xl flex-col gap-2 border-t border-border pt-4">
@@ -115,7 +124,7 @@ export default async function AyarlarPage({
         <h2 className="text-[13px] font-medium text-ink-2">Burada olmayanlar</h2>
         <p className="text-[13px] text-ink-3">
           Şube saatleri ve izinler ekip ekranında, hizmet süreleri hizmet ekranında. Bildirim
-          şablonları, marka rengi ve public randevu sayfası henüz yok.
+          şablonları henüz yok.
         </p>
       </section>
     </div>

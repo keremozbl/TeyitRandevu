@@ -113,5 +113,8 @@ export async function createTenantAction(
     });
   }
 
-  redirect("/app");
+  // Panele doğrudan atmıyoruz: kurum az önce seçtiği randevu adresini bir
+  // kez daha, paylaşılabilir hâlde görmeli. Ürünün tek dış çıktısı o
+  // bağlantı; paylaşılmazsa internetten randevu gelmiyor.
+  redirect("/kurulum/hazir");
 }

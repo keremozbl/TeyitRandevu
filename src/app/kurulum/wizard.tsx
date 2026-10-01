@@ -5,11 +5,13 @@ import { useActionState, useMemo, useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
+import { SectorIllustration } from "@/components/marketing/sector-illustration";
 import {
   createTenantAction,
   type OnboardingState,
 } from "@/lib/onboarding/actions";
 import { FAMILY_LABELS, type SectorTemplate } from "@/lib/templates";
+import { bookingUrlPrefix } from "@/lib/booking/share";
 import { slugify } from "@/lib/utils/slug";
 
 const EMPTY: OnboardingState = {};
@@ -25,7 +27,20 @@ const WEEKDAYS = [
   { value: 0, short: "Paz" },
 ];
 
-const STEPS = ["Kurum", "Sektör", "Çalışma saatleri"];
+/**
+ * Adımlar kimlikle taşınıyor, indeksle değil.
+ *
+ * Siteden sektör seçilerek gelindiğinde "Sektör" adımı listeden düşüyor —
+ * ziyaretçi aynı soruyu iki kez cevaplamasın. İndeks kaydığı için adım
+ * gövdeleri `step === 1` gibi sayılara değil, `current` kimliğine bakar.
+ */
+const ALL_STEPS = [
+  { id: "kurum", label: "Kurum" },
+  { id: "sektor", label: "Sektör" },
+  { id: "saatler", label: "Çalışma saatleri" },
+] as const;
+
+type StepId = (typeof ALL_STEPS)[number]["id"];
 
 export function OnboardingWizard({
   templates,
@@ -47,10 +62,20 @@ export function OnboardingWizard({
   const [branchName, setBranchName] = useState("");
   const [templateKey, setTemplateKey] = useState(initialTemplate ?? templates[0]?.key ?? "");
 
+  // Sektör siteden seçilip geldiyse adım gizli gelir; "Değiştir" onu geri açar.
+  const [sectorLocked, setSectorLocked] = useState(Boolean(initialTemplate));
+
   const template = useMemo(
     () => templates.find((t) => t.key === templateKey),
     [templates, templateKey],
   );
+
+  const steps = useMemo(
+    () => ALL_STEPS.filter((s) => s.id !== "sektor" || !sectorLocked),
+    [sectorLocked],
+  );
+  const current: StepId = steps[Math.min(step, steps.length - 1)].id;
+  const lastStep = step >= steps.length - 1;
 
   const [weekdays, setWeekdays] = useState<number[]>(
     template?.working_hours.weekdays ?? [1, 2, 3, 4, 5],
@@ -77,22 +102,28 @@ export function OnboardingWizard({
   }
 
   const canContinue =
-    (step === 0 && name.trim().length >= 2 && effectiveSlug.length >= 3) ||
-    (step === 1 && Boolean(template)) ||
-    step === 2;
+    (current === "kurum" && name.trim().length >= 2 && effectiveSlug.length >= 3) ||
+    (current === "sektor" && Boolean(template)) ||
+    current === "saatler";
 
   const families = [...new Set(templates.map((t) => t.family))];
 
   return (
     <main className="mx-auto flex w-full max-w-xl flex-col gap-8 px-6 py-14">
-      <header className="flex flex-col gap-4">
+      <header className="flex flex-col gap-5">
+        {/* Kurulum ürünün ilk beş dakikası: boş bir formla değil, ne yapıldığını
+            gösteren bir görselle açılıyor. Ekranın üstünde olduğu için geç
+            yüklenmiyor. */}
+        <SectorIllustration sector="kurulum" priority className="h-36 !p-4" />
+
         <div className="flex flex-col gap-1.5">
           <h1 className="text-2xl tracking-tight">
             {demo ? "Demo kurumunuzu kuralım" : "Kurumunuzu kuralım"}
           </h1>
           <p className="text-ink-2">
-            Sektörünüzü seçin; hizmetler, çalışma saatleri ve roller hazır gelsin.
-            Hepsini sonradan değiştirebilirsiniz.
+            {sectorLocked && template
+              ? `${template.label} şablonundan hizmetler, çalışma saatleri ve roller hazır gelecek. Hepsini sonradan değiştirebilirsiniz.`
+              : "Sektörünüzü seçin; hizmetler, çalışma saatleri ve roller hazır gelsin. Hepsini sonradan değiştirebilirsiniz."}
           </p>
         </div>
 
@@ -108,8 +139,8 @@ export function OnboardingWizard({
 
         {/* Adım göstergesi — sıra bilgi taşıyor, süsleme değil */}
         <ol className="flex gap-1.5">
-          {STEPS.map((label, i) => (
-            <li key={label} className="flex flex-1 flex-col gap-1.5">
+          {steps.map(({ id, label }, i) => (
+            <li key={id} className="flex flex-1 flex-col gap-1.5">
               <span
                 aria-hidden="true"
                 className={`h-0.5 rounded-full ${i <= step ? "bg-accent" : "bg-border"}`}
@@ -131,9 +162,9 @@ export function OnboardingWizard({
         onSubmit={(event) => {
           // Son adımdan önce Enter'a basmak formu göndermesin: alanların yarısı
           // henüz doldurulmadı. Enter, "Devam"ın kendisi olur.
-          if (step < STEPS.length - 1) {
+          if (!lastStep) {
             event.preventDefault();
-            if (canContinue) setStep((current) => current + 1);
+            if (canContinue) setStep((s) => s + 1);
           }
         }}
         className="flex flex-col gap-6"
@@ -157,8 +188,29 @@ export function OnboardingWizard({
           <input key={day} type="hidden" name="weekdays" value={day} />
         ))}
 
-        {step === 0 && (
+        {current === "kurum" && (
           <div className="flex flex-col gap-4">
+            {/* Sektör siteden geldi: sorulmaz, teyit edilir. Ziyaretçi aynı
+                soruyu iki kez cevaplamasın ama seçimi de kilitli kalmasın. */}
+            {sectorLocked && template && (
+              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded border border-border bg-surface-2 px-3.5 py-3">
+                <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-ink-3">
+                  Sektör
+                </span>
+                <span className="font-medium text-ink">{template.label}</span>
+                <span className="text-[13px] text-ink-2">
+                  {template.services.length} hizmet · {template.roles.length} rol hazır gelecek
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSectorLocked(false)}
+                  className="ml-auto text-[13px] text-accent underline underline-offset-2"
+                >
+                  Değiştir
+                </button>
+              </div>
+            )}
+
             <Field id="name" label="Kurum adı" required>
               <Input
                 id="name"
@@ -176,8 +228,11 @@ export function OnboardingWizard({
               hint="Müşterileriniz bu adresten randevu alacak."
             >
               <div className="flex items-center gap-0">
-                <span className="flex h-9 items-center rounded-l border border-r-0 border-border bg-surface-2 px-2.5 font-mono text-[13px] text-ink-3">
-                  teyitrandevu.com/r/
+                <span
+                  translate="no"
+                  className="flex h-9 shrink-0 items-center rounded-l border border-r-0 border-border bg-surface-2 px-2.5 font-mono text-[13px] text-ink-3"
+                >
+                  {bookingUrlPrefix()}
                 </span>
                 <Input
                   id="slug"
@@ -208,7 +263,7 @@ export function OnboardingWizard({
           </div>
         )}
 
-        {step === 1 && (
+        {current === "sektor" && (
           <div className="flex flex-col gap-5">
             {families.map((family) => (
               <fieldset key={family} className="flex flex-col gap-2.5">
@@ -255,7 +310,7 @@ export function OnboardingWizard({
           </div>
         )}
 
-        {step === 2 && template && (
+        {current === "saatler" && template && (
           <div className="flex flex-col gap-5">
             <fieldset className="flex flex-col gap-2">
               <legend className="mb-1.5 text-[13px] font-medium text-ink">
@@ -350,7 +405,7 @@ export function OnboardingWizard({
             Geri
           </Button>
 
-          {step < STEPS.length - 1 ? (
+          {!lastStep ? (
             <Button
               variant="primary"
               onClick={() => setStep((s) => s + 1)}

@@ -32,6 +32,9 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# Örnek dosya izlenir: README "cp .env.example .env" diyor, dosya depoda
+# yoksa o komut çalışmıyor. İçinde yalnızca yer tutucu var.
+!.env.example
 
 # vercel
 .vercel
@@ -47,3 +50,9 @@ supabase/.temp/
 # npx skills ile yonetilir; skills-lock.json yeterli
 .agents/skills/
 .claude/skills/
+
+# Figma'dan indirilen referans görseller (CC BY 4.0, Elsa Bardout).
+# Uygulamanın kullandığı illüstrasyonlar public/illo altında; bunlar
+# yalnızca çalışırken bakılan kaynak dosyalar, depoya girmeleri gereksiz
+# ve üçüncü taraf lisansını depoya taşıyor.
+/tasarim/

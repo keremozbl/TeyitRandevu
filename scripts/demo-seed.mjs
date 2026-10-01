@@ -34,18 +34,25 @@ if (!URL || !ANON || !SECRET) {
 
 const VITRIN = process.argv.includes("--vitrin");
 
+// Hesap bilgisi koda yazılmıyor, `.env`den geliyor.
+//
+// Önceden geliştirme hesabının e-postası ve parolası burada varsayılan
+// değer olarak duruyordu. Depo GitHub'a çıktığında o parola, canlı Supabase
+// projesinde çalışan bir hesabın parolası olarak yayımlanmış oluyordu.
+// Varsayılan yok: eksikse komut hiç çalışmıyor.
 const EMAIL = VITRIN
   ? (process.env.DEMO_PUBLIC_EPOSTA ?? DEMO_EMAIL_DEFAULT)
-  : (process.env.DEMO_EMAIL ?? "keremozbal@gmail.com");
-const PASSWORD = VITRIN
-  ? process.env.DEMO_PUBLIC_PAROLA
-  : (process.env.DEMO_PAROLA ?? "TeyitDemo2026!");
+  : process.env.DEMO_EMAIL;
+const PASSWORD = VITRIN ? process.env.DEMO_PUBLIC_PAROLA : process.env.DEMO_PAROLA;
 const SLUG = VITRIN ? DEMO_TENANT_SLUG : "demo-dis-klinigi";
 const NAME = VITRIN ? DEMO_TENANT_NAME : "Demo Diş Kliniği";
 const TZ = "Europe/Istanbul";
 
-if (VITRIN && !PASSWORD) {
-  console.error("\n.env eksik: DEMO_PUBLIC_PAROLA (vitrin hesabının parolası)\n");
+if (!EMAIL || !PASSWORD) {
+  const [eposta, parola] = VITRIN
+    ? ["DEMO_PUBLIC_EPOSTA", "DEMO_PUBLIC_PAROLA"]
+    : ["DEMO_EMAIL", "DEMO_PAROLA"];
+  console.error(`\n.env eksik: ${eposta} ve ${parola} (demo hesabının bilgileri)\n`);
   process.exit(1);
 }
 

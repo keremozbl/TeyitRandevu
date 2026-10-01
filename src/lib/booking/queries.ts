@@ -143,6 +143,8 @@ export type PublicResource = {
   name: string;
   title: string | null;
   color: string | null;
+  /** "staff" (hekim, usta) ya da "room" (ünit, koltuk, oda) */
+  kind: string;
   /** "Dt. Ayşe Yılmaz" — başlık varsa başında */
   label: string;
 };
@@ -216,6 +218,7 @@ export async function loadBookingPage(slug: string): Promise<BookingPage | null>
       name: resource.name,
       title: resource.title,
       color: resource.color,
+      kind: resource.kind,
       label: resourceLabel(resource.name, resource.title),
     })),
     services: page.services.map((service) => ({

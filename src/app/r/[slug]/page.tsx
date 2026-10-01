@@ -7,10 +7,17 @@ import {
   bookingErrorMessage,
   formatDayChip,
   formatDuration,
+  formatLongDateTime,
   formatPrice,
   formatTime,
 } from "@/lib/booking/messages";
-import { getBookingPage, loadPublicAvailability, type PublicDay } from "@/lib/booking/queries";
+import {
+  getBookingPage,
+  loadPublicAvailability,
+  lookupBooking,
+  type PublicDay,
+} from "@/lib/booking/queries";
+import { isHoldExpired } from "@/lib/booking/state";
 import {
   ANY_RESOURCE,
   bookingHref,
@@ -20,19 +27,38 @@ import {
   resolveSelectedDay,
 } from "@/lib/booking/steps";
 import { utcToPlainDate } from "@/lib/domain";
+import { buildConsentBoxes } from "@/lib/legal/consent-texts";
+
+import { Choice, Section } from "./booking-sections";
+import { DetailsForm } from "./details-form";
 
 /**
- * Public randevu sayfası: hizmet → hekim → gün → saat.
+ * Public randevu sayfası — hepsi tek ekranda.
  *
- * Tamamı sunucuda çizilir ve JavaScript olmadan çalışır. Sebebi ideoloji
- * değil: bu sayfa hastanın telefonundan, çoğu zaman zayıf bağlantıda
- * açılıyor. Adımlar `<a>`, saat seçimi `<form>`; tarayıcının kendi
- * mekanizmaları zaten hızlı ve erişilebilir.
+ * Önceden adımlar sayfa sayfa geliyordu: işlem seç → sayfa değişir → hekim
+ * seç → sayfa değişir → saat seç → sayfa değişir → bilgiler. Her adım
+ * doğruydu ama hasta nerede olduğunu ve kaç adım kaldığını bilmiyordu;
+ * seçimini değiştirmek için geri gitmesi gerekiyordu. Teknolojiyle arası iyi
+ * olmayan biri için bu akış, tek bir formdan belirgin biçimde zor.
  *
- * Seçimler query param'da (`?hizmet=…&kaynak=…&tarih=…`): geri tuşu çalışır,
- * bağlantı paylaşılabilir, yenileme seçimi kaybetmez.
+ * Şimdi dört bölüm de aynı sayfada, hep görünür:
  *
- * Uygunluk motoru panelinkiyle AYNI (`src/lib/domain/availability.ts`).
+ *   1. İşlem   2. Hekim   3. Gün ve saat   4. Bilgileriniz
+ *
+ * Sıra gelmemiş bölüm soluk duruyor ve niçin beklediğini yazıyor; yapılmış
+ * seçim başlığın yanında özetleniyor. İşlemi değiştirmek tek tık — geri
+ * tuşuna basmak, baştan başlamak yok.
+ *
+ * MİMARİ DEĞİŞMEDİ. Seçimler hâlâ query param'da, her seçenek hâlâ bir
+ * `<a>`, sayfa hâlâ JavaScript olmadan çalışıyor ve hâlâ sunucuda çiziliyor.
+ * Değişen tek şey, aynı anda kaç bölümün çizildiği. Bu sayfa hastanın
+ * telefonundan ve çoğu zaman zayıf bağlantıda açılıyor; tek sayfa olması
+ * tarayıcıdan JavaScript istememizi gerektirmiyor.
+ *
+ * Hekim seçimi ARTIK ZORUNLU DEĞİL: hizmet seçilince saatler "fark etmez"
+ * ile hemen geliyor. Hastaların çoğu hekim adı bilmiyor; bilen daraltır.
+ *
+ * Uygunluk motoru panelinkiyle aynı (`src/lib/domain/availability.ts`).
  * Buradaki liste bir kolaylıktır; asıl kapı `booking_hold` fonksiyonunda ve
  * `appointments_no_overlap` kısıtında.
  */
@@ -44,79 +70,18 @@ type SearchParams = {
   bas?: string;
   tarih?: string;
   hata?: string;
+  /** Tutulmuş slot'un token'ı — varsa 4. bölüm forma dönüyor. */
+  tutma?: string;
 };
 
 const CARD = "rounded border border-border bg-surface";
-const ROW =
-  "flex w-full min-w-0 items-center gap-3 px-4 py-3.5 text-left no-underline " +
-  "transition-[background-color,border-color,color] duration-150 hover:bg-surface-2";
 
-function StepHeading({ children, hint }: { children: React.ReactNode; hint?: string }) {
+function EmptyState({ title, body }: { title: string; body: string }) {
   return (
-    <div className="flex flex-col gap-1">
-      <h1 className="text-lg tracking-tight">{children}</h1>
-      {hint && <p className="text-[13px] text-ink-2">{hint}</p>}
+    <div className={`${CARD} flex flex-col gap-1.5 px-4 py-8 text-center`}>
+      <p className="font-medium text-ink">{title}</p>
+      <p className="text-[13px] text-ink-2">{body}</p>
     </div>
-  );
-}
-
-/** Yapılmış seçimler; her biri o adıma geri döner. */
-function Trail({
-  slug,
-  items,
-}: {
-  slug: string;
-  items: { label: string; href: string }[];
-}) {
-  if (items.length === 0) return null;
-  return (
-    <nav aria-label="Seçimleriniz" className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px]">
-      <Link href={bookingHref(slug, {})} className="text-ink-2 no-underline hover:text-ink">
-        Baştan
-      </Link>
-      {items.map((item) => (
-        <span key={item.href} className="flex min-w-0 items-center gap-2">
-          <span aria-hidden="true" className="text-ink-3">
-            ›
-          </span>
-          <Link href={item.href} className="min-w-0 truncate text-ink-2 underline underline-offset-2">
-            {item.label}
-          </Link>
-        </span>
-      ))}
-    </nav>
-  );
-}
-
-/**
- * Adım göstergesi.
- *
- * "Kaç adım kaldı" sorusunun cevabı görünmezse insan formu yarıda bırakıyor;
- * rakiplerin tamamında da bu şerit var. Yalnızca bilgi taşıyor, tıklanmıyor —
- * geri dönüş için üstteki `Trail` var, iki ayrı gezinme kafa karıştırırdı.
- */
-function Steps({ current, withResource }: { current: number; withResource: boolean }) {
-  const labels = withResource
-    ? ["İşlem", "Kim", "Saat", "Bilgiler"]
-    : ["İşlem", "Saat", "Bilgiler"];
-
-  return (
-    <ol className="flex gap-1.5" aria-label={`Adım ${current} / ${labels.length}`}>
-      {labels.map((label, index) => {
-        const done = index + 1 <= current;
-        return (
-          <li key={label} className="flex flex-1 flex-col gap-1.5">
-            <span
-              aria-hidden="true"
-              className={`h-0.5 rounded-full ${done ? "bg-accent" : "bg-border"}`}
-            />
-            <span className={`font-mono text-[11px] ${done ? "text-ink-2" : "text-ink-3"}`}>
-              {index + 1}. {label}
-            </span>
-          </li>
-        );
-      })}
-    </ol>
   );
 }
 
@@ -124,8 +89,7 @@ function Steps({ current, withResource }: { current: number; withResource: boole
  * Saatleri günün bölümlerine ayırır.
  *
  * Otuz saatlik düz bir ızgarada insan aradığı vakti bulamıyor; "öğleden
- * sonra" diye bakıyor. Sınırlar kurumun kendi saat diliminde okunuyor —
- * `formatTime` zaten o dilimde biçimlendiriyor, saat oradan alınıyor.
+ * sonra" diye bakıyor. Sınırlar kurumun kendi saat diliminde okunuyor.
  */
 function groupByDaypart<T>(items: T[], hourOf: (item: T) => number) {
   const groups: { label: string; items: T[] }[] = [
@@ -136,20 +100,10 @@ function groupByDaypart<T>(items: T[], hourOf: (item: T) => number) {
 
   for (const item of items) {
     const hour = hourOf(item);
-    const index = hour < 12 ? 0 : hour < 17 ? 1 : 2;
-    groups[index].items.push(item);
+    groups[hour < 12 ? 0 : hour < 17 ? 1 : 2].items.push(item);
   }
 
   return groups.filter((group) => group.items.length > 0);
-}
-
-function EmptyState({ title, body }: { title: string; body: string }) {
-  return (
-    <div className={`${CARD} flex flex-col gap-1.5 px-4 py-8 text-center`}>
-      <p className="font-medium text-ink">{title}</p>
-      <p className="text-[13px] text-ink-2">{body}</p>
-    </div>
-  );
 }
 
 export default async function RandevuAlPage({
@@ -165,6 +119,7 @@ export default async function RandevuAlPage({
   if (!page) notFound();
 
   const { rules, tenant } = page;
+
   const error = query.hata
     ? bookingErrorMessage(query.hata, {
         minLeadMinutes: rules.min_lead_minutes,
@@ -172,199 +127,77 @@ export default async function RandevuAlPage({
       })
     : null;
 
-  // ---------------------------------------------------------------- şube
-  const branch =
-    page.branches.find((item) => item.id === query.sube) ??
-    (page.branches.length === 1 ? page.branches[0] : null);
+  // ------------------------------------------------------------- tutma
+  // Slot tutulmuşsa 4. bölüm formu çiziyor. Tutma ölmüşse sessizce yok
+  // sayılıyor: hasta zaten sayfanın tamamını görüyor, yeniden saat seçmesi
+  // için ayrı bir ekrana göndermeye gerek yok.
+  const held = query.tutma ? await lookupBooking(query.tutma) : null;
+  const holdValid =
+    held !== null &&
+    held.tenantSlug === slug &&
+    held.holdExpiresAt !== null &&
+    !isHoldExpired(held.holdExpiresAt);
+  const holdExpired = Boolean(query.tutma) && !holdValid;
 
   if (page.branches.length === 0 || page.services.length === 0) {
     return (
       <div className="flex flex-col gap-4">
-        <StepHeading>Randevu</StepHeading>
+        <h1 className="text-lg tracking-tight">Randevu</h1>
         <EmptyState
           title="İnternetten randevu şu an kapalı"
-          body="Randevu için kliniği telefonla arayabilirsiniz."
+          body="Randevu için bizi telefonla arayabilirsiniz."
         />
       </div>
     );
   }
 
-  if (!branch) {
-    return (
-      <div className="flex flex-col gap-4">
-        {error && <Alert tone="error">{error}</Alert>}
-        <StepHeading hint="Randevu almak istediğiniz şubeyi seçin.">Şube</StepHeading>
-        <ul className={`${CARD} flex flex-col divide-y divide-border`}>
-          {page.branches.map((item) => (
-            <li key={item.id} className="min-w-0">
-              <Link href={bookingHref(slug, { sube: item.id })} className={ROW}>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate font-medium text-ink">{item.name}</span>
-                  {item.address && (
-                    <span className="block truncate text-[13px] text-ink-2">{item.address}</span>
-                  )}
-                </span>
-                <span aria-hidden="true" className="shrink-0 text-ink-3">
-                  ›
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </div>
-    );
-  }
+  // -------------------------------------------------------------- şube
+  const branch =
+    page.branches.find((item) => item.id === query.sube) ??
+    (page.branches.length === 1 ? page.branches[0] : null);
+  const branchParam = page.branches.length > 1 ? branch?.id : undefined;
 
-  const branchParam = page.branches.length > 1 ? branch.id : undefined;
-  const trail: { label: string; href: string }[] = [];
-  if (branchParam) trail.push({ label: branch.name, href: bookingHref(slug, {}) });
-
-  // -------------------------------------------------------------- hizmet
-  const service = page.services.find((item) => item.id === query.hizmet);
-
-  if (!service) {
-    const categories = [...new Set(page.services.map((item) => item.category ?? ""))];
-
-    return (
-      <div className="flex flex-col gap-4">
-        {error && <Alert tone="error">{error}</Alert>}
-        <Trail slug={slug} items={trail} />
-        <Steps current={1} withResource={page.resources.length > 1} />
-        <StepHeading hint={`${tenant.name} için internetten randevu alın.`}>
-          Hangi işlem için geliyorsunuz?
-        </StepHeading>
-
-        {categories.map((category) => {
-          const services = page.services.filter((item) => (item.category ?? "") === category);
-          return (
-            <section key={category || "genel"} className="flex flex-col gap-2">
-              {category && (
-                <h2 className="font-mono text-xs uppercase tracking-[0.1em] text-ink-3">
-                  {category}
-                </h2>
-              )}
-              <ul className={`${CARD} flex flex-col divide-y divide-border`}>
-                {services.map((item) => (
-                  <li key={item.id} className="min-w-0">
-                    <Link
-                      href={bookingHref(slug, { sube: branchParam, hizmet: item.id })}
-                      className={ROW}
-                    >
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate font-medium text-ink">{item.name}</span>
-                        <span className="block text-[13px] text-ink-2">
-                          {formatDuration(item.durationMin)}
-                          {page.branding.show_prices &&
-                            item.price !== null &&
-                            ` · ${formatPrice(item.price, tenant.currency)}`}
-                        </span>
-                      </span>
-                      <span aria-hidden="true" className="shrink-0 text-ink-3">
-                        ›
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          );
-        })}
-      </div>
-    );
-  }
-
-  trail.push({
-    label: service.name,
-    href: bookingHref(slug, { sube: branchParam }),
-  });
-
-  // -------------------------------------------------------------- kaynak
-  const eligible = eligibleResources(service, page.resources, branch.id);
-
-  if (eligible.length === 0) {
-    return (
-      <div className="flex flex-col gap-4">
-        <Trail slug={slug} items={trail} />
-        <StepHeading>{service.name}</StepHeading>
-        <EmptyState
-          title="Bu işlem için internetten randevu verilemiyor"
-          body="Kliniği arayarak randevu alabilirsiniz."
-        />
-      </div>
-    );
-  }
-
-  const onlyOne = eligible.length === 1;
-  const chosen = eligible.find((item) => item.id === query.kaynak);
-  const anyResource = query.kaynak === ANY_RESOURCE;
-  const resource = chosen ?? (onlyOne ? eligible[0] : null);
-
-  if (!resource && !anyResource) {
-    return (
-      <div className="flex flex-col gap-4">
-        {error && <Alert tone="error">{error}</Alert>}
-        <Trail slug={slug} items={trail} />
-        <Steps current={2} withResource />
-        <StepHeading hint="Fark etmiyorsa en erken boşalan saat size verilir.">
-          Kimden randevu almak istersiniz?
-        </StepHeading>
-        <ul className={`${CARD} flex flex-col divide-y divide-border`}>
-          {eligible.map((item) => (
-            <li key={item.id} className="min-w-0">
-              <Link
-                href={bookingHref(slug, {
-                  sube: branchParam,
-                  hizmet: service.id,
-                  kaynak: item.id,
-                })}
-                className={ROW}
-              >
-                <span className="min-w-0 flex-1 truncate font-medium text-ink">{item.label}</span>
-                <span aria-hidden="true" className="shrink-0 text-ink-3">
-                  ›
-                </span>
-              </Link>
-            </li>
-          ))}
-          <li className="min-w-0">
-            <Link
-              href={bookingHref(slug, {
-                sube: branchParam,
-                hizmet: service.id,
-                kaynak: ANY_RESOURCE,
-              })}
-              className={ROW}
-            >
-              <span className="min-w-0 flex-1 truncate font-medium text-ink">Fark etmez</span>
-              <span aria-hidden="true" className="shrink-0 text-ink-3">
-                ›
-              </span>
-            </Link>
-          </li>
-        </ul>
-      </div>
-    );
-  }
-
-  const resourceParam = anyResource ? ANY_RESOURCE : (resource?.id ?? ANY_RESOURCE);
-  if (!onlyOne) {
-    trail.push({
-      label: resource ? resource.label : "Fark etmez",
-      href: bookingHref(slug, { sube: branchParam, hizmet: service.id }),
+  const href = (extra: Partial<SearchParams>) =>
+    bookingHref(slug, {
+      sube: branchParam,
+      hizmet: query.hizmet,
+      kaynak: query.kaynak,
+      bas: query.bas,
+      tarih: query.tarih,
+      ...extra,
     });
-  }
 
-  // ----------------------------------------------------------- gün ve saat
-  const timeZone = branch.timeZone;
-  const today = utcToPlainDate(new Date(), timeZone);
-  const window = resolveDayWindow(today, rules, query.bas);
-  const resourceIds = resource ? [resource.id] : eligible.map((item) => item.id);
+  // ------------------------------------------------------------ hizmet
+  const service = branch ? page.services.find((item) => item.id === query.hizmet) : undefined;
+  const eligible = service && branch ? eligibleResources(service, page.resources, branch.id) : [];
 
+  // Hekim bölümü kurumda birden çok hekim VARSA her zaman duruyor, seçili
+  // işlemden bağımsız olarak. Sebebi numaraların sabit kalması: bölüm işlem
+  // seçilince araya girseydi "Gün ve saat" 2'den 3'e kayardı ve hasta az
+  // önce baktığı yeri kaybederdi. Tek hekimli kurumda bölüm hiç çizilmiyor —
+  // orada sorulacak bir soru yok.
+  const staffCount = page.resources.filter((item) => item.kind === "staff").length;
+  const showResourceSection = staffCount > 1;
+
+  const chosenResource = eligible.find((item) => item.id === query.kaynak) ?? null;
+  const resourceParam = chosenResource?.id ?? ANY_RESOURCE;
+
+  const step = {
+    service: 1,
+    resource: 2,
+    time: showResourceSection ? 3 : 2,
+    details: showResourceSection ? 4 : 3,
+  };
+
+  // --------------------------------------------------------- gün, saat
+  const timeZone = branch?.timeZone ?? tenant.timeZone;
   let days: PublicDay[] = [];
-  if (window.days.length > 0) {
+  const window = resolveDayWindow(utcToPlainDate(new Date(), timeZone), rules, query.bas);
+
+  if (service && branch && eligible.length > 0 && window.days.length > 0) {
     days = await loadPublicAvailability({
       slug,
-      resources: resourceIds,
+      resources: chosenResource ? [chosenResource.id] : eligible.map((item) => item.id),
       service,
       timeZone,
       from: window.days[0],
@@ -377,168 +210,326 @@ export default async function RandevuAlPage({
   const selectedDay = days.find((day) => day.date === selectedDate) ?? null;
   const totalSlots = days.reduce((sum, day) => sum + day.slots.length, 0);
 
-  const stepHref = (extra: { bas?: string; tarih?: string }) =>
-    bookingHref(slug, {
-      sube: branchParam,
-      hizmet: service.id,
-      kaynak: resourceParam,
-      ...extra,
-    });
-
   return (
-    <div className="flex flex-col gap-4">
-      {error && <Alert tone="error">{error}</Alert>}
-      <Trail slug={slug} items={trail} />
-      <Steps current={onlyOne ? 2 : 3} withResource={!onlyOne} />
-      <StepHeading
-        hint={`${service.name} · ${formatDuration(service.durationMin)}${
-          resource ? ` · ${resource.label}` : ""
-        }`}
-      >
-        Uygun saati seçin
-      </StepHeading>
-
-      {/* Gün şeridi: yatay kaydırılır, sayfayı yana kaydırmaz */}
-      <div className="flex items-stretch gap-2">
-        {window.previousStart ? (
-          <Link
-            href={stepHref({ bas: window.previousStart })}
-            aria-label="Önceki günler"
-            className="flex w-9 shrink-0 items-center justify-center rounded border border-border bg-surface text-ink-2 no-underline transition-[background-color,border-color,color] duration-150 hover:border-border-strong hover:text-ink"
-          >
-            <span aria-hidden="true">‹</span>
-          </Link>
-        ) : (
-          <span
-            aria-hidden="true"
-            className="flex w-9 shrink-0 items-center justify-center rounded border border-border/60 text-ink-3"
-          >
-            ‹
-          </span>
-        )}
-
-        <ul className="flex min-w-0 flex-1 gap-2 overflow-x-auto pb-1">
-          {window.days.map((date) => {
-            const day = days.find((item) => item.date === date);
-            const count = day?.slots.length ?? 0;
-            const chip = formatDayChip(date);
-            const active = date === selectedDate;
-
-            const body = (
-              <>
-                <span className="text-[11px] uppercase tracking-wide">{chip.weekday}</span>
-                <span data-numeric className="text-[13px] font-medium">
-                  {chip.day}
-                </span>
-              </>
-            );
-
-            return (
-              <li key={date} className="shrink-0">
-                {count > 0 ? (
-                  <Link
-                    href={stepHref({ bas: window.days[0], tarih: date })}
-                    aria-current={active ? "true" : undefined}
-                    className={[
-                      "flex w-14 flex-col items-center gap-0.5 rounded border px-1 py-2 no-underline",
-                      "transition-[background-color,border-color,color] duration-150",
-                      active
-                        ? "border-accent bg-accent text-accent-ink"
-                        : "border-border bg-surface text-ink-2 hover:border-accent hover:text-ink",
-                    ].join(" ")}
-                  >
-                    {body}
-                  </Link>
-                ) : (
-                  <span
-                    className="flex w-14 flex-col items-center gap-0.5 rounded border border-dashed border-border px-1 py-2 text-ink-3"
-                    title="Bu gün için uygun saat yok"
-                  >
-                    {body}
-                  </span>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-
-        {window.nextStart ? (
-          <Link
-            href={stepHref({ bas: window.nextStart })}
-            aria-label="Sonraki günler"
-            className="flex w-9 shrink-0 items-center justify-center rounded border border-border bg-surface text-ink-2 no-underline transition-[background-color,border-color,color] duration-150 hover:border-border-strong hover:text-ink"
-          >
-            <span aria-hidden="true">›</span>
-          </Link>
-        ) : (
-          <span
-            aria-hidden="true"
-            className="flex w-9 shrink-0 items-center justify-center rounded border border-border/60 text-ink-3"
-          >
-            ›
-          </span>
-        )}
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-1">
+        <h1 className="text-lg tracking-tight">Randevu alın</h1>
+        <p className="text-[13px] text-ink-2">
+          {tenant.name} · Aşağıdaki adımların hepsi bu sayfada. Bir seçimi değiştirmek
+          isterseniz üzerine dokunmanız yeterli.
+        </p>
       </div>
 
-      {totalSlots === 0 || !selectedDay ? (
-        <EmptyState
-          title="Bu iki haftada uygun saat yok"
-          body={
-            window.nextStart
-              ? "Sağdaki okla sonraki günlere bakabilir ya da kliniği arayabilirsiniz."
-              : "Kliniği arayarak randevu alabilirsiniz."
-          }
-        />
-      ) : selectedDay.slots.length === 0 ? (
-        <EmptyState
-          title="Bu günde uygun saat yok"
-          body="Şeritten saati olan bir gün seçin."
-        />
-      ) : (
-        <form action={holdSlotAction} className="flex flex-col gap-3">
-          <input type="hidden" name="slug" value={slug} />
-          <input type="hidden" name="hizmet" value={service.id} />
-          <input type="hidden" name="kaynak" value={resourceParam} />
-          {branchParam && <input type="hidden" name="sube" value={branchParam} />}
-          <input type="hidden" name="bas" value={window.days[0]} />
-          <input type="hidden" name="tarih" value={selectedDay.date} />
-
-          <fieldset className="flex flex-col gap-4">
-            <legend className="pb-1 text-[13px] font-medium text-ink">
-              {formatDayChip(selectedDay.date).day} · {selectedDay.slots.length} uygun saat
-            </legend>
-
-            {groupByDaypart(selectedDay.slots, (slot) =>
-              Number(formatTime(slot.startsAt, timeZone).slice(0, 2)),
-            ).map((group) => (
-              <div key={group.label} className="flex flex-col gap-2">
-                <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-3">
-                  {group.label}
-                </p>
-                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                  {group.items.map((slot) => (
-                    <button
-                      key={slot.startsAt.toISOString()}
-                      type="submit"
-                      name="secim"
-                      value={encodeSlotChoice(slot.startsAt, slot.resourceIds)}
-                      data-numeric
-                      className="h-11 rounded border border-border bg-surface text-[15px] font-medium text-ink transition-[background-color,border-color,color] duration-150 hover:border-accent hover:bg-accent-soft"
-                    >
-                      {formatTime(slot.startsAt, timeZone)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </fieldset>
-
-          <p className="text-[13px] text-ink-3">
-            Saati seçtiğinizde bilgilerinizi girmeniz için {formatDuration(rules.hold_minutes)}{" "}
-            boyunca sizin adınıza tutulur.
-          </p>
-        </form>
+      {error && <Alert tone="error">{error}</Alert>}
+      {holdExpired && (
+        <Alert tone="error">
+          Ayırdığımız süre doldu ve saat serbest bırakıldı. Aşağıdan yeniden bir saat seçin.
+        </Alert>
       )}
+
+      {/* ------------------------------------------------------- şube */}
+      {page.branches.length > 1 && (
+        <Section step={0} title="Şube" chosen={branch?.name} id="sube">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {page.branches.map((item) => (
+              <Choice
+                key={item.id}
+                href={bookingHref(slug, { sube: item.id })}
+                selected={branch?.id === item.id}
+                label={item.name}
+                hint={item.address}
+              />
+            ))}
+          </div>
+        </Section>
+      )}
+
+      {/* ----------------------------------------------------- hizmet */}
+      <Section
+        step={step.service}
+        title="İşlem"
+        chosen={service?.name}
+        waiting={branch ? null : "Önce şube seçin."}
+        id="islem"
+      >
+        <div className="flex flex-col gap-3">
+          {[...new Set(page.services.map((item) => item.category ?? ""))].map((category) => (
+            <div key={category || "genel"} className="flex flex-col gap-1.5">
+              {category && (
+                <h3 className="font-mono text-[11px] uppercase tracking-[0.1em] text-ink-3">
+                  {category}
+                </h3>
+              )}
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {page.services
+                  .filter((item) => (item.category ?? "") === category)
+                  .map((item) => (
+                    <Choice
+                      key={item.id}
+                      // İşlem değişince hekim ve gün sıfırlanır: eski hekim
+                      // yeni işlemi vermiyor olabilir, eski gün dolu olabilir.
+                      href={href({
+                        hizmet: item.id,
+                        kaynak: undefined,
+                        tarih: undefined,
+                        tutma: undefined,
+                      })}
+                      selected={service?.id === item.id}
+                      label={item.name}
+                      hint={[
+                        formatDuration(item.durationMin),
+                        page.branding.show_prices && item.price !== null
+                          ? formatPrice(item.price, tenant.currency)
+                          : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    />
+                  ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      {/* ------------------------------------------------------ hekim */}
+      {showResourceSection && (
+        <Section
+          step={step.resource}
+          title="Hekim"
+          chosen={service ? (chosenResource ? chosenResource.label : "Fark etmez") : null}
+          waiting={service ? null : "Önce yukarıdan bir işlem seçin."}
+          id="hekim"
+        >
+          {eligible.length === 1 ? (
+            // Bu işlemi tek hekim veriyor: seçenek değil, bilgi.
+            <p className="rounded border border-border bg-surface-2 px-3 py-2.5 text-[13px] text-ink-2">
+              Bu işlem için <span className="font-medium text-ink">{eligible[0].label}</span>{" "}
+              randevu veriyor.
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              <Choice
+                href={href({ kaynak: undefined, tarih: undefined, tutma: undefined })}
+                selected={!chosenResource}
+                label="Fark etmez"
+                hint="En erken boşalan saat"
+              />
+              {eligible.map((item) => (
+                <Choice
+                  key={item.id}
+                  href={href({ kaynak: item.id, tarih: undefined, tutma: undefined })}
+                  selected={chosenResource?.id === item.id}
+                  label={item.label}
+                />
+              ))}
+            </div>
+          )}
+        </Section>
+      )}
+
+      {/* ---------------------------------------------- gün ve saat */}
+      <Section
+        step={step.time}
+        title="Gün ve saat"
+        waiting={service ? null : "Önce yukarıdan bir işlem seçin."}
+        id="saat"
+      >
+        {eligible.length === 0 ? (
+          <EmptyState
+            title="Bu işlem için internetten randevu verilemiyor"
+            body="Bizi arayarak randevu alabilirsiniz."
+          />
+        ) : (
+          <div className="flex flex-col gap-3">
+            {/* Gün şeridi — yatay kaydırılır, sayfayı yana kaydırmaz */}
+            <div className="flex items-stretch gap-2">
+              {window.previousStart ? (
+                <Link
+                  href={href({ bas: window.previousStart, tutma: undefined })}
+                  aria-label="Önceki günler"
+                  className="flex w-9 shrink-0 items-center justify-center rounded border border-border bg-surface text-ink-2 no-underline transition-[background-color,border-color,color] duration-150 hover:border-border-strong hover:text-ink"
+                >
+                  <span aria-hidden="true">‹</span>
+                </Link>
+              ) : (
+                <span
+                  aria-hidden="true"
+                  className="flex w-9 shrink-0 items-center justify-center rounded border border-border/60 text-ink-3"
+                >
+                  ‹
+                </span>
+              )}
+
+              <ul className="flex min-w-0 flex-1 gap-2 overflow-x-auto pb-1">
+                {window.days.map((date) => {
+                  const day = days.find((item) => item.date === date);
+                  const count = day?.slots.length ?? 0;
+                  const chip = formatDayChip(date);
+                  const active = date === selectedDate;
+
+                  const body = (
+                    <>
+                      <span className="text-[11px] uppercase tracking-wide">{chip.weekday}</span>
+                      <span data-numeric className="text-[13px] font-medium">
+                        {chip.day}
+                      </span>
+                    </>
+                  );
+
+                  return (
+                    <li key={date} className="shrink-0">
+                      {count > 0 ? (
+                        <Link
+                          href={href({ bas: window.days[0], tarih: date, tutma: undefined })}
+                          aria-current={active ? "true" : undefined}
+                          className={[
+                            "flex min-h-11 w-14 flex-col items-center justify-center gap-0.5 rounded border px-1 no-underline",
+                            "transition-[background-color,border-color,color] duration-150",
+                            active
+                              ? "border-accent bg-accent text-accent-ink"
+                              : "border-border bg-surface text-ink-2 hover:border-accent hover:text-ink",
+                          ].join(" ")}
+                        >
+                          {body}
+                        </Link>
+                      ) : (
+                        <span
+                          className="flex min-h-11 w-14 flex-col items-center justify-center gap-0.5 rounded border border-dashed border-border px-1 text-ink-3"
+                          title="Bu gün için uygun saat yok"
+                        >
+                          {body}
+                        </span>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+
+              {window.nextStart ? (
+                <Link
+                  href={href({ bas: window.nextStart, tutma: undefined })}
+                  aria-label="Sonraki günler"
+                  className="flex w-9 shrink-0 items-center justify-center rounded border border-border bg-surface text-ink-2 no-underline transition-[background-color,border-color,color] duration-150 hover:border-border-strong hover:text-ink"
+                >
+                  <span aria-hidden="true">›</span>
+                </Link>
+              ) : (
+                <span
+                  aria-hidden="true"
+                  className="flex w-9 shrink-0 items-center justify-center rounded border border-border/60 text-ink-3"
+                >
+                  ›
+                </span>
+              )}
+            </div>
+
+            {totalSlots === 0 || !selectedDay ? (
+              <EmptyState
+                title="Bu iki haftada uygun saat yok"
+                body={
+                  window.nextStart
+                    ? "Sağdaki okla sonraki günlere bakabilir ya da bizi arayabilirsiniz."
+                    : "Bizi arayarak randevu alabilirsiniz."
+                }
+              />
+            ) : selectedDay.slots.length === 0 ? (
+              <EmptyState title="Bu günde uygun saat yok" body="Şeritten saati olan bir gün seçin." />
+            ) : (
+              <form action={holdSlotAction} className="flex flex-col gap-3">
+                <input type="hidden" name="slug" value={slug} />
+                <input type="hidden" name="hizmet" value={service!.id} />
+                <input type="hidden" name="kaynak" value={resourceParam} />
+                {branchParam && <input type="hidden" name="sube" value={branchParam} />}
+                <input type="hidden" name="bas" value={window.days[0]} />
+                <input type="hidden" name="tarih" value={selectedDay.date} />
+
+                <fieldset className="flex flex-col gap-3">
+                  <legend className="sr-only">
+                    {formatDayChip(selectedDay.date).day} için uygun saatler
+                  </legend>
+
+                  {groupByDaypart(selectedDay.slots, (slot) =>
+                    Number(formatTime(slot.startsAt, timeZone).slice(0, 2)),
+                  ).map((group) => (
+                    <div key={group.label} className="flex flex-col gap-1.5">
+                      <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-3">
+                        {group.label}
+                      </p>
+                      <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+                        {group.items.map((slot) => {
+                          const selected =
+                            holdValid && held!.startsAt.getTime() === slot.startsAt.getTime();
+                          return (
+                            <button
+                              key={slot.startsAt.toISOString()}
+                              type="submit"
+                              name="secim"
+                              value={encodeSlotChoice(slot.startsAt, slot.resourceIds)}
+                              data-numeric
+                              aria-current={selected ? "true" : undefined}
+                              className={[
+                                "h-11 rounded border text-[15px] font-medium",
+                                "transition-[background-color,border-color,color] duration-150",
+                                selected
+                                  ? "border-accent bg-accent text-accent-ink"
+                                  : "border-border bg-surface text-ink hover:border-accent hover:bg-accent-soft",
+                              ].join(" ")}
+                            >
+                              {formatTime(slot.startsAt, timeZone)}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </fieldset>
+              </form>
+            )}
+          </div>
+        )}
+      </Section>
+
+      {/* -------------------------------------------------- bilgiler */}
+      <Section
+        step={step.details}
+        title="Bilgileriniz"
+        waiting={holdValid ? null : "Önce yukarıdan bir saat seçin."}
+        id="bilgiler"
+      >
+        {holdValid && held && (
+          <div className="flex flex-col gap-4">
+            <div className={`${CARD} flex flex-col gap-2 px-4 py-3`}>
+              <p className="text-[13px] text-ink-2">Seçtiğiniz randevu</p>
+              <p className="text-[15px] font-medium text-ink" data-numeric>
+                {formatLongDateTime(held.startsAt, held.timeZone)}
+              </p>
+              <p className="min-w-0 truncate text-[13px] text-ink-2">
+                {held.serviceName} · {held.resourceLabel}
+              </p>
+              <p className="border-t border-border pt-2 text-[13px] text-ink-3">
+                Bu saat{" "}
+                <span data-numeric>
+                  {new Intl.DateTimeFormat("tr-TR", {
+                    timeZone: held.timeZone,
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hourCycle: "h23",
+                  }).format(held.holdExpiresAt!)}
+                </span>
+                ’e kadar sizin adınıza tutuluyor.
+              </p>
+            </div>
+
+            <DetailsForm
+              slug={slug}
+              token={query.tutma!}
+              consents={buildConsentBoxes(tenant.name)}
+              disclosureHref={`/r/${slug}/kvkk`}
+            />
+          </div>
+        )}
+      </Section>
     </div>
   );
 }

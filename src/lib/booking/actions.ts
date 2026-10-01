@@ -119,7 +119,19 @@ export async function holdSlotAction(formData: FormData): Promise<void> {
     }
 
     if (result.data.ok && result.data.token) {
-      redirect(`/r/${input.slug}/bilgiler/${result.data.token}`);
+      // Ayrı bir sayfaya değil, AYNI sayfanın bilgiler bölümüne dönülüyor:
+      // hasta seçimlerini görmeye devam ediyor, saatini değiştirmek için
+      // geri gitmesi gerekmiyor. Çapa, telefonda forma kadar indiriyor.
+      redirect(
+        `${bookingHref(input.slug, {
+          sube: input.sube,
+          hizmet: input.hizmet,
+          kaynak: input.kaynak,
+          bas: input.bas,
+          tarih: input.tarih,
+          tutma: result.data.token,
+        })}#bilgiler`,
+      );
     }
 
     lastReason = result.data.reason ?? "slot_taken";

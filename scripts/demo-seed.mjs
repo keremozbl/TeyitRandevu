@@ -165,14 +165,54 @@ const { data: branch } = await app
 // -----------------------------------------------------------------------------
 // Kaynaklar — şablon tek hekim kuruyor; demo için ikinci hekim eklenir
 // -----------------------------------------------------------------------------
-const { data: existing } = await app.from("resources").select("id, name, kind").eq("tenant_id", tenant.id);
+// SIRALAMA ÖNEMLİ. Eskiden sırasız okunuyordu ve `staff[0]` her çalıştırmada
+// başka birine denk gelebiliyordu: ikinci hekim "Ayla Demir" diye yeniden
+// adlandırılıyor, ardından "Mert Kılıç" bulunamadığı için yenisi ekleniyordu.
+// Üç çalıştırma sonunda üç tane "Dt. Ayla Demir" oluşmuştu.
+const { data: existing } = await app
+  .from("resources")
+  .select("id, name, kind, sort_order")
+  .eq("tenant_id", tenant.id)
+  .order("sort_order")
+  .order("id");
 
 const staff = existing.filter((r) => r.kind === "staff");
 const room = existing.find((r) => r.kind === "room");
 
-await app.from("resources").update({ name: "Ayla Demir", title: "Dt." }).eq("id", staff[0].id);
+// Birikmiş kopyaları temizle. Randevusu olmayan kopya silinir; randevusu
+// olan SİLİNMEZ, pasifleştirilir — silmek randevuları da götürürdü
+// (resources → appointments cascade). `is_active = false` olan kaynak
+// `booking_page` sorgusundan düşüyor, yani hasta onu görmüyor.
+const seen = new Set();
+const duplicates = [];
+for (const person of staff) {
+  if (!seen.has(person.name)) {
+    seen.add(person.name);
+    continue;
+  }
+  duplicates.push(person);
+}
 
-let second = staff.find((r) => r.name === "Mert Kılıç");
+for (const person of duplicates) {
+  const { count } = await app
+    .from("appointments")
+    .select("id", { count: "exact", head: true })
+    .eq("resource_id", person.id);
+
+  if (count === 0) {
+    await app.from("resources").delete().eq("id", person.id);
+    console.log(`  kopya hekim silindi: ${person.name}`);
+  } else {
+    await app.from("resources").update({ is_active: false }).eq("id", person.id);
+    console.log(`  kopya hekim pasifleştirildi (${count} randevusu var): ${person.name}`);
+  }
+  staff.splice(staff.indexOf(person), 1);
+}
+
+const first = staff.find((r) => r.name === "Ayla Demir") ?? staff[0];
+await app.from("resources").update({ name: "Ayla Demir", title: "Dt." }).eq("id", first.id);
+
+let second = staff.find((r) => r.id !== first.id && r.name === "Mert Kılıç");
 if (!second) {
   const { data, error } = await app
     .from("resources")
@@ -261,6 +301,38 @@ const at = (time) => zonedTimeToUtc(today, time, TZ);
 
 const { data: services } = await app.from("services").select("id, name, duration_min").eq("tenant_id", tenant.id);
 const serviceByName = new Map(services.map((s) => [s.name, s]));
+
+// -----------------------------------------------------------------------------
+// Hizmet-hekim bağları
+// -----------------------------------------------------------------------------
+// Şablon her hizmeti tek hekime bağlıyor; demoda iki hekim var ve public
+// randevu sayfası hekim seçimini ancak birden çok uygun hekim varsa gösteriyor.
+// Bağ kurulmazsa hasta hekim seçemiyor — demonun anlatmak istediği şey tam da
+// bu seçim olduğu için her hizmet iki hekime de bağlanıyor.
+const links = services.flatMap((service) =>
+  [first.id, second.id].map((resourceId) => ({
+    tenant_id: tenant.id,
+    service_id: service.id,
+    resource_id: resourceId,
+  })),
+);
+{
+  // Önce bu iki hekim dışındaki bağları at: eski çalıştırmalardan kalan
+  // kopya hekimlere giden bağlar hasta ekranında aynı isimden iki tane
+  // çıkarıyordu.
+  const keep = [first.id, second.id];
+  const { error: cleanError } = await app
+    .from("service_resources")
+    .delete()
+    .eq("tenant_id", tenant.id)
+    .not("resource_id", "in", `(${keep.join(",")})`);
+  if (cleanError) throw new Error(`eski bağlar silinemedi: ${cleanError.message}`);
+
+  const { error } = await app
+    .from("service_resources")
+    .upsert(links, { onConflict: "service_id,resource_id", ignoreDuplicates: true });
+  if (error) throw new Error(`hizmet-hekim bağı kurulamadı: ${error.message}`);
+}
 
 // Aynı gün tekrar çalıştırılırsa üst üste binmesin
 const { data: old } = await app

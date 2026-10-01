@@ -24,6 +24,7 @@ const resource = (id: string, branchId = "b1"): PublicResource => ({
   name: `Kaynak ${id}`,
   title: "Dt.",
   color: null,
+  kind: "staff",
   label: `Dt. Kaynak ${id}`,
 });
 

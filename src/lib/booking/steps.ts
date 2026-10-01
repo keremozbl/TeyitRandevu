@@ -1,8 +1,10 @@
 /**
  * Public randevu sayfasının adım mantığı — saf, veritabanısız, testli.
  *
- * Akış: (şube) → hizmet → hekim → gün → saat → bilgiler. Her adım query
- * param'da tutulur (`?hizmet=…&kaynak=…`), state'te değil. Sebebi tek değil:
+ * Akış: (şube) → hizmet → hekim → gün → saat → bilgiler. Bölümlerin HEPSİ
+ * aynı sayfada duruyor; aşağıdaki yardımcılar hangisinin seçili olduğunu
+ * hesaplıyor. Her seçim query param'da tutulur (`?hizmet=…&kaynak=…`),
+ * state'te değil. Sebebi tek değil:
  *
  *   - Geri tuşu ve sayfa yenileme çalışır; hasta seçimini kaybetmez.
  *   - Bağlantı paylaşılabilir: klinik "şu hizmete şu hekimden randevu al"
@@ -30,6 +32,8 @@ export type BookingParams = {
   /** Seçili gün */
   tarih?: string;
   hata?: string;
+  /** Tutulmuş slot'un token'ı; bilgiler bölümü bununla açılıyor */
+  tutma?: string;
 };
 
 /** Adım bağlantısı. Boş değerler URL'e yazılmaz — adres okunur kalsın. */

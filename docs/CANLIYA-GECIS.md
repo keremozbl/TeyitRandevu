@@ -297,11 +297,21 @@ masasına konmuş bir kartı, kapıya yapıştırılmış bir etiketi ya da
 bastırılmış kartvizitleri geri çağıramayız; kurum da bizi değil "karekod
 çalışmıyor" diye kendi müşterisini kaybeder.
 
-**Yapılacak:** `NEXT_PUBLIC_SITE_URL` üretim alan adına sabitlenmeden hiçbir
-pilot kuruma "karekodu bastırın" denmeyecek. Alan adı sonradan değişirse
-karekod bastırmış kurumlar tek tek aranacak; bu yüzden alan adı B11'deki
-ticari kararın değil, **ilk pilot başlamadan önce** kapanması gereken bir
-maddenin parçası.
+**1 Ekim 2026 güncellemesi — risk arttı.** Adres artık elle verilmek zorunda
+değil: `NEXT_PUBLIC_SITE_URL` boşsa kod Vercel'in
+`NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL` değerine düşüyor. Kolaylık ama
+aynı zamanda tuzak: Vercel o değeri **"en kısa üretim alan adı"** olarak
+seçiyor, yani projeye özel bir alan adı bağlandığı anda adres
+`proje.vercel.app`tan `klinikadi.com`a **kendiliğinden** değişiyor. Kimse bir
+ayar değiştirmemiş olur, ekranda hata çıkmaz; yalnızca o güne kadar basılmış
+karekodlar ölü bağlantıya gider.
+
+**Yapılacak:** Alan adı kesinleşmeden hiçbir pilot kuruma "karekodu
+bastırın" denmeyecek. Test dağıtımında `*.vercel.app` adresiyle üretilen
+karekodlar **kâğıda basılmayacak**, yalnızca ekranda denenecek. Alan adı
+sonradan değişirse karekod bastırmış kurumlar tek tek aranacak; bu yüzden
+alan adı B11'deki ticari kararın değil, **ilk pilot başlamadan önce**
+kapanması gereken bir maddenin parçası.
 
 İlgili kod: `src/lib/booking/share.ts`, `src/lib/booking/qr.ts`,
 `src/app/app/ayarlar/randevu-sayfasi/karekod/route.ts`.

@@ -65,13 +65,14 @@ Depo GitHub'a bağlı; `main`'e gelen her commit dağıtımı tetikler.
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | aynı yer |
 | `SUPABASE_SERVICE_ROLE_KEY` | aynı yer; `NEXT_PUBLIC_` ön eki ASLA eklenmez |
 | `CRON_SECRET` | kuyruk uç noktasının sırrı; yoksa uç nokta 503 döner |
-| `NEXT_PUBLIC_SITE_URL` | dağıtımın kendi adresi |
+| `NEXT_PUBLIC_SITE_URL` | **Vercel'de gerekmez** — aşağıya bakın |
 
-`NEXT_PUBLIC_SITE_URL` iki aşamalı: ilk dağıtım adresi üretir, adres
-değişkene yazılır ve **yeniden dağıtılır**. `NEXT_PUBLIC_` değişkenleri
-derleme anında koda gömülüyor, ayarı kaydetmek tek başına yetmiyor.
-Eksik kalırsa kurumun paylaştığı randevu bağlantısı, karekodun içi ve
-hatırlatma mesajındaki link `localhost` gösterir.
+`NEXT_PUBLIC_SITE_URL` Vercel'de boş bırakılır: kod, Vercel'in kendi verdiği
+`NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL` değerine düşer ve özel alan adı
+bağlandığında kendiliğinden ona döner. Yerel `.env`i Vercel'e olduğu gibi
+kopyalayıp `localhost` yazarsan o değer **yok sayılır** — aksi hâlde kurumun
+paylaştığı bağlantı, karekodun içi ve hatırlatma mesajındaki link hep
+`localhost` gösterirdi.
 
 Supabase tarafında Authentication → URL Configuration → Site URL ve
 Redirect URLs aynı adrese ayarlanır; yoksa giriş yönlendirmeleri

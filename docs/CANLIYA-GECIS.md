@@ -198,22 +198,31 @@ mesajı gönderilemez (hatırlatma gönderilebilir, o hizmet bilgilendirmesi).
 
 ### B10. Kuyruk zamanlayıcısı Vercel'de yapılandırılacak
 
-`vercel.json` içinde `/api/bildirim/gonder` beş dakikada bir çağrılıyor.
-İki şart var:
+`vercel.json` içinde `/api/bildirim/gonder` **günde bir kez** (06:00 UTC)
+çağrılıyor. Beş dakikada birdi; 1 Ekim 2026'da Hobby planına geçerken
+değiştirildi, sebebi aşağıda 3. maddede. İki şart var:
 
 1. **CRON_SECRET** Vercel'in Environment Variables ekranına yazılacak. Yoksa
    uç nokta 503 döner ve kuyruk hiç boşalmaz — bilinçli: korumasız çalışmaz.
 2. **NEXT_PUBLIC_SITE_URL** üretim alan adına ayarlanacak. Hatırlatma
    mesajındaki randevu bağlantısı bu kökle kuruluyor; boş kalırsa hastaya
    `/r/klinik/randevu/…` diye tıklanamaz bir yol gider.
-3. **Dakikalık cron Pro planı istiyor.** Hobby planında cron günde bir kez
-   çalışır; "iki saat kala hatırlatma" o planda anlamsız olur. Pilot öncesi
-   plan yükseltmesi zaten A2 ve B5 için de gerekiyor.
+3. **Sık cron Pro planı istiyor — ve Hobby'de dağıtımı KIRIYOR.** Vercel
+   belgesinin sözü: "Hobby accounts are limited to daily cron jobs. This cron
+   expression would run more than once per day." Yani `*/5 * * * *` yavaşlamıyor,
+   dağıtım hiç tamamlanmıyor. Hobby'de ayrıca zamanlama ±59 dakika sapıyor.
+   `vercel.json` bu yüzden günlüğe çekildi. Pro'ya geçildiğinde `*/5 * * * *`
+   geri yazılır; plan yükseltmesi zaten A2 ve B5 için de gerekiyor.
 
-**Alternatif — artık hazır:** `pg_cron` kuruldu (A1/A4), yani kuyruk Vercel Pro
-olmadan da beş dakikada bir boşaltılabilir. Eksik olan tek şey uç noktanın
-dışarıdan erişilebilir bir adreste olması; bu yüzden iş **kurulmadı**, ilk
-dağıtımdan sonra eklenecek:
+   Günde bir çalışan kuyrukla "randevudan iki saat önce hatırlat" çalışmaz.
+   Test dağıtımında gerçek davranışı görmek için aşağıdaki `pg_cron` yolu
+   kurulmalı — Vercel cron'u o zaman yalnızca yedek olur.
+
+**Alternatif — artık hazır ve Hobby'de TEK gerçek seçenek:** `pg_cron` kuruldu
+(A1/A4), yani kuyruk Vercel Pro olmadan da beş dakikada bir boşaltılabilir.
+Zamanlamayı Vercel değil Supabase yapar, dolayısıyla Hobby'nin günlük sınırı
+geçerli değildir. Eksik olan tek şey uç noktanın dışarıdan erişilebilir bir
+adreste olmasıydı; ilk Vercel dağıtımından sonra kurulur:
 
 ```sql
 create extension if not exists pg_net;

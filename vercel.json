@@ -4,7 +4,7 @@
   "crons": [
     {
       "path": "/api/bildirim/gonder",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 6 * * *"
     }
   ]
 }

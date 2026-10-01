@@ -29,6 +29,26 @@ const nextConfig: NextConfig = {
       ? [{ protocol: "https", hostname: supabaseHost, pathname: "/storage/v1/object/public/**" }]
       : [],
   },
+
+  /**
+   * Pazarlama sitesi tek sayfaya indi: fiyat, canlı demo ve iletişim artık ana
+   * sayfanın bölümleri. Eski adresler dışarıda kaldı (paylaşılmış bağlantılar,
+   * arama motoru, sitemap geçmişi) — bu yüzden siliniyor değil, kancaya
+   * yönlendiriliyorlar.
+   *
+   * KVKK aydınlatma metni BİLEREK kapsam dışı: kalıcı ve ayrı adreste durmak
+   * zorunda (hasta randevu sayfası da oraya bağ veriyor).
+   *
+   * `permanent: false` — 307. Kalıcı yönlendirme tarayıcıda süresiz
+   * önbelleğe alınır; sayfalar geri gelirse geri alması imkânsız olur.
+   */
+  async redirects() {
+    return [
+      { source: "/fiyat", destination: "/#fiyat", permanent: false },
+      { source: "/iletisim", destination: "/#iletisim", permanent: false },
+      { source: "/demo", destination: "/#demo", permanent: false },
+    ];
+  },
 };
 
 export default nextConfig;

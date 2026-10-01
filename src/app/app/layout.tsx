@@ -96,7 +96,7 @@ export default async function AppLayout({
               Gördüğünüz her şey örnek veridir; gerçek kişi bilgisi girmeyin. Bu kurum bir gün
               sonra silinir.
             </span>
-            <Link href="/iletisim" className="underline underline-offset-2">
+            <Link href="/#iletisim" className="underline underline-offset-2">
               Kendi kurumunuz için demo isteyin
             </Link>
           </p>

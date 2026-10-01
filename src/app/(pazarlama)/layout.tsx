@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { ThemeToggle } from "@/components/theme-toggle";
+import { SiteNav } from "@/components/marketing/site-nav";
 import { BTN_SMALL, Container, Wordmark } from "@/components/marketing/ui";
 import { PRODUCT } from "@/lib/marketing/content";
 
@@ -13,15 +14,6 @@ import { PRODUCT } from "@/lib/marketing/content";
  * Bu grupta Supabase'e hiç gidilmiyor — sayfalar statik üretiliyor ve
  * veritabanına tur atmıyor. Tek istisna demo formu; o da bir server action.
  */
-
-const NAV = [
-  { href: "/#urun", label: "Ürün" },
-  { href: "/#sektorler", label: "Sektörler" },
-  { href: "/fiyat", label: "Fiyat" },
-  { href: "/demo", label: "Canlı demo" },
-  { href: "/#kvkk", label: "KVKK" },
-  { href: "/iletisim", label: "İletişim" },
-];
 
 export default function PazarlamaLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -42,17 +34,7 @@ export default function PazarlamaLayout({ children }: { children: React.ReactNod
             <Wordmark />
           </Link>
 
-          <nav aria-label="Site menüsü" className="hidden gap-5 md:flex">
-            {NAV.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="text-[14px] text-ink-2 no-underline transition-colors duration-150 hover:text-ink"
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
+          <SiteNav variant="masaustu" />
 
           <div className="ml-auto flex items-center gap-2">
             <ThemeToggle />
@@ -63,7 +45,7 @@ export default function PazarlamaLayout({ children }: { children: React.ReactNod
               Giriş
             </Link>
             <Link
-              href="/demo"
+              href="/#demo"
               className={`${BTN_SMALL} border border-brand bg-brand text-brand-ink hover:border-brand-strong hover:bg-brand-strong`}
             >
               Demoyu deneyin
@@ -72,21 +54,8 @@ export default function PazarlamaLayout({ children }: { children: React.ReactNod
         </Container>
 
         {/* Mobilde menü kaybolmasın: açılır panel yerine kayan tek sıra —
-            JavaScript istemez, klavye ve ekran okuyucu için sorunsuz. */}
-        <nav
-          aria-label="Site menüsü (mobil)"
-          className="flex gap-4 overflow-x-auto border-t border-border px-5 py-2 md:hidden"
-        >
-          {NAV.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="shrink-0 text-[14px] text-ink-2 no-underline hover:text-ink"
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
+            klavye ve ekran okuyucu için sorunsuz. */}
+        <SiteNav variant="mobil" />
       </header>
 
       <main id="icerik" className="flex-1">
@@ -107,10 +76,10 @@ export default function PazarlamaLayout({ children }: { children: React.ReactNod
               <Link href="/#urun" className="text-[14px] text-ink-2 no-underline hover:text-ink">
                 Neler yapıyor
               </Link>
-              <Link href="/fiyat" className="text-[14px] text-ink-2 no-underline hover:text-ink">
+              <Link href="/#fiyat" className="text-[14px] text-ink-2 no-underline hover:text-ink">
                 Fiyat
               </Link>
-              <Link href="/demo" className="text-[14px] text-ink-2 no-underline hover:text-ink">
+              <Link href="/#demo" className="text-[14px] text-ink-2 no-underline hover:text-ink">
                 Canlı demo
               </Link>
               <Link href="/giris" className="text-[14px] text-ink-2 no-underline hover:text-ink">
@@ -125,7 +94,7 @@ export default function PazarlamaLayout({ children }: { children: React.ReactNod
               <Link href="/kvkk" className="text-[14px] text-ink-2 no-underline hover:text-ink">
                 Aydınlatma metni
               </Link>
-              <Link href="/iletisim" className="text-[14px] text-ink-2 no-underline hover:text-ink">
+              <Link href="/#iletisim" className="text-[14px] text-ink-2 no-underline hover:text-ink">
                 İletişim
               </Link>
             </nav>

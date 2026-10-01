@@ -15,9 +15,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
 
   return [
+    // Site tek sayfa: fiyat, canlı demo ve iletişim ana sayfanın bölümleri.
+    // Ayrı girdi vermek yok olan adresleri bildirmek olurdu (ikisi de artık
+    // yalnızca yönlendirme — bkz. next.config.ts).
     { url: `${base}/`, lastModified: now, changeFrequency: "monthly", priority: 1 },
-    { url: `${base}/fiyat`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
-    { url: `${base}/iletisim`, lastModified: now, changeFrequency: "yearly", priority: 0.6 },
     { url: `${base}/kvkk`, lastModified: now, changeFrequency: "yearly", priority: 0.2 },
   ];
 }

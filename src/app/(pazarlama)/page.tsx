@@ -1,14 +1,17 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 
+import { DemoForm } from "@/components/marketing/demo-form";
+import { DemoStart } from "@/components/marketing/demo-start";
 import { MOCKS } from "@/components/marketing/product-mocks";
 import { Reveal } from "@/components/marketing/reveal";
 import { SectorCarousel } from "@/components/marketing/sector-carousel";
+import { SectorIllustration } from "@/components/marketing/sector-illustration";
 import {
   BODY,
   BTN_PRIMARY,
   BTN_SECONDARY,
+  BTN_SMALL,
   Container,
   Eyebrow,
   GridTexture,
@@ -17,7 +20,11 @@ import {
   H3,
   LEAD,
 } from "@/components/marketing/ui";
+import { Alert } from "@/components/ui/alert";
+import { isDemoEnabled } from "@/lib/demo/config";
+import { SITE_CONTACT } from "@/lib/legal/site-texts";
 import { listSectorSlides } from "@/lib/marketing/sectors";
+import { FAMILY_LABELS, listTemplates } from "@/lib/templates";
 import {
   CAPABILITIES,
   CHANNELS,
@@ -42,6 +49,8 @@ export const metadata: Metadata = {
 };
 
 export default function AnaSayfa() {
+  const templates = listTemplates();
+
   return (
     <div className="flex flex-col">
       {/* ---------------------------------------------------------------- hero */}
@@ -73,10 +82,10 @@ export default function AnaSayfa() {
               className="flex flex-wrap items-center gap-3 animate-[giris-yukari_620ms_cubic-bezier(0.22,0.61,0.36,1)_both]"
               style={{ animationDelay: "240ms" }}
             >
-              <Link href="/demo" className={BTN_PRIMARY}>
+              <Link href="#demo" className={BTN_PRIMARY}>
                 Demoyu deneyin
               </Link>
-              <Link href="/iletisim" className={BTN_SECONDARY}>
+              <Link href="#iletisim" className={BTN_SECONDARY}>
                 Pilot için görüşelim
               </Link>
             </div>
@@ -234,7 +243,7 @@ export default function AnaSayfa() {
       </section>
 
       {/* ----------------------------------------------------------- sektörler */}
-      <section id="sektorler" className="scroll-mt-24 border-b border-border">
+      <section id="sektorler" className="scroll-mt-24 overflow-hidden border-b border-border">
         <Container className="py-16">
           <Reveal className="flex max-w-2xl flex-col gap-4 pb-10">
             <Eyebrow index="03">Sektörler</Eyebrow>
@@ -308,64 +317,124 @@ export default function AnaSayfa() {
         </Container>
       </section>
 
-      {/* -------------------------------------------------------------- fiyat */}
-      <section className="border-b border-border bg-surface-2">
+      {/* -------------------------------------------------------------- fiyat
+          Eskiden `/fiyat` ayrı bir sayfaydı; site tek sayfaya indi ve paket
+          kartlarının TAMAMI (içerik listesi + sınırlar) buraya taşındı.
+          Özet bir kart bırakıp "detaya bakın" demek, gidecek sayfa kalmayınca
+          bilgiyi kaybetmek olurdu. */}
+      <section id="fiyat" className="scroll-mt-24 border-b border-border bg-surface-2">
         <Container className="py-16">
-          <div className="flex flex-wrap items-end justify-between gap-6 pb-10">
-            <div className="flex max-w-xl flex-col gap-4">
-              <Eyebrow index="05">Paketler</Eyebrow>
-              <h2 className={H2}>İşletme büyüdükçe artan tek şey yetki derinliği</h2>
-            </div>
-            <Link href="/fiyat" className={`${BTN_SECONDARY} shrink-0`}>
-              Paketleri karşılaştırın
-            </Link>
-          </div>
+          <Reveal className="flex max-w-2xl flex-col gap-4 pb-10">
+            <Eyebrow index="05">Paketler</Eyebrow>
+            <h2 className={H2}>İşletme büyüdükçe artan tek şey yetki derinliği</h2>
+            <p className={LEAD}>
+              Tek kişinin çalıştığı muayenehane ya da salon, birden çok uzmanın çalıştığı işletme
+              ve şubeli kurumlar. Hepsinde takvim, müşteri kartı ve günün programı var; fark
+              yetki derinliği, kullanıcı sayısı ve hatırlatma hacminde.
+            </p>
+          </Reveal>
 
-          <ul className="grid gap-4 lg:grid-cols-3">
+          {PRICING_IS_DRAFT && (
+            <div className="max-w-2xl pb-8">
+              <Alert tone="info">
+                <strong className="font-medium">Fiyatlar temsilidir.</strong> Pilot dönemdeyiz;
+                paket içerikleri ve rakamlar ilk kurumlarla birlikte netleşiyor. Görüşmede
+                işletmenizin büyüklüğüne göre konuşuyoruz.
+              </Alert>
+            </div>
+          )}
+
+          <ul className="grid gap-5 lg:grid-cols-3">
             {PLANS.map((plan, index) => (
               <Reveal
                 key={plan.key}
                 as="li"
                 delay={index * 70}
-                className={`flex flex-col gap-3 rounded-lg border bg-surface p-5 transition-[transform,box-shadow] duration-200 [@media(hover:hover)]:hover:-translate-y-0.5 [@media(hover:hover)]:hover:shadow-[0_14px_30px_-22px_rgba(0,0,0,0.45)] ${
-                  plan.highlight ? "border-brand" : "border-border"
+                className={`flex flex-col rounded-lg border bg-surface ${
+                  plan.highlight
+                    ? "border-brand shadow-[0_18px_40px_-28px_rgba(0,0,0,0.3)]"
+                    : "border-border"
                 }`}
               >
-                <div className="flex items-baseline gap-2">
-                  <h3 className="text-[17px] font-semibold tracking-tight text-ink">{plan.name}</h3>
-                  {plan.highlight && (
-                    <span className="rounded-sm bg-brand-tint px-1.5 py-0.5 font-mono text-[11px] uppercase tracking-wide text-brand">
-                      yaygın
-                    </span>
-                  )}
-                </div>
-                <p className="flex items-baseline gap-1.5">
-                  {plan.monthly === null ? (
-                    <span className="text-[24px] font-semibold tracking-tight text-ink">
-                      Görüşelim
-                    </span>
-                  ) : (
-                    <>
-                      {/* data-numeric YOK: tabular-nums basamakları eşitlerken
-                          binlik noktasını da geniş bir hücreye oturtuyor ve
-                          "1 . 890" gibi görünüyor. Hizalanacak sütun değil. */}
-                      <span className="text-[28px] font-semibold tracking-tight text-ink">
-                        {formatMonthly(plan.monthly)}
+                <div className="flex flex-col gap-2.5 border-b border-border p-5">
+                  <div className="flex items-baseline gap-2">
+                    <h3 className={H3}>{plan.name}</h3>
+                    {plan.highlight && (
+                      <span className="rounded-sm bg-brand-tint px-1.5 py-0.5 font-mono text-[11px] uppercase tracking-wide text-brand">
+                        yaygın
                       </span>
-                      <span className="text-[13px] text-ink-3">/ ay</span>
-                    </>
-                  )}
-                </p>
-                <p className="text-[14px] leading-relaxed text-ink-2">{plan.fit}</p>
+                    )}
+                  </div>
+                  <p className="min-h-[2.75rem] text-[14px] leading-relaxed text-ink-2">
+                    {plan.fit}
+                  </p>
+                  <p className="flex items-baseline gap-1.5 pt-1">
+                    {plan.monthly === null ? (
+                      <span className="text-[26px] font-semibold tracking-tight text-ink">
+                        Görüşelim
+                      </span>
+                    ) : (
+                      <>
+                        {/* data-numeric YOK: tabular-nums basamakları eşitlerken
+                            binlik noktasını da geniş bir hücreye oturtuyor ve
+                            "1 . 890" gibi görünüyor. Hizalanacak sütun değil. */}
+                        <span className="text-[32px] font-semibold tracking-tight text-ink">
+                          {formatMonthly(plan.monthly)}
+                        </span>
+                        <span className="text-[13px] text-ink-3">/ ay</span>
+                      </>
+                    )}
+                  </p>
+                  <Link
+                    href="#iletisim"
+                    className={`${BTN_SMALL} mt-2 ${
+                      plan.highlight
+                        ? "border border-brand bg-brand text-brand-ink hover:border-brand-strong hover:bg-brand-strong"
+                        : "border border-border-strong bg-surface text-ink hover:bg-surface-2"
+                    }`}
+                  >
+                    {plan.monthly === null ? "Teklif isteyin" : "Demo isteyin"}
+                  </Link>
+                </div>
+
+                <div className="flex flex-1 flex-col gap-5 p-5">
+                  <ul className="flex flex-col gap-2.5">
+                    {plan.includes.map((item) => (
+                      <li
+                        key={item}
+                        className="flex items-start gap-3 text-[14px] leading-relaxed text-ink"
+                      >
+                        <span aria-hidden="true" className="mt-[10px] h-px w-3 shrink-0 bg-brand" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+
+                  <dl className="mt-auto flex flex-col gap-2 border-t border-border pt-4">
+                    {plan.limits.map((limit) => (
+                      <div key={limit.label} className="flex items-baseline justify-between gap-3">
+                        <dt className="text-[13px] text-ink-3">{limit.label}</dt>
+                        <dd data-numeric className="text-[13px] font-medium text-ink-2">
+                          {limit.value}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
               </Reveal>
             ))}
           </ul>
 
-          {PRICING_IS_DRAFT && (
-            <p className="pt-5 text-[13px] text-ink-3">
-              Rakamlar temsilidir: paket içerikleri ilk kurumlarla birlikte netleşiyor.
+          <div className="flex max-w-2xl flex-col gap-3 pt-10">
+            <h3 className={H3}>Fiyata dahil olmayan tek şey</h3>
+            <p className={BODY}>
+              Gönderilen SMS ve WhatsApp mesajlarının operatör ücreti. Türkçe karakter içeren bir
+              mesaj 70 karakterde bir parçaya bölünür, yani metnin uzunluğu doğrudan faturaya
+              yansır; şablon ekranı yazarken parça sayısını gösteriyor. Dilerseniz kendi operatör
+              sözleşmenizi bağlayabilirsiniz.
             </p>
-          )}
+            <p className={BODY}>Kurulum, veri aktarımı ve eğitim pilot döneminde ücretsiz.</p>
+          </div>
         </Container>
       </section>
 
@@ -424,13 +493,14 @@ export default function AnaSayfa() {
 
       {/* ------------------------------------------------------ nasıl başlanır */}
       <section className="border-b border-border bg-surface-2">
-        <Container className="py-16">
-          <div className="flex max-w-2xl flex-col gap-4 pb-10">
+        <Container className="grid gap-10 py-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)] lg:items-start lg:gap-16">
+          <div className="flex flex-col gap-10">
+          <div className="flex max-w-2xl flex-col gap-4">
             <Eyebrow index="08">Başlangıç</Eyebrow>
             <h2 className={H2}>Üç adım, biri şu anda</h2>
           </div>
 
-          <ol className="grid gap-8 lg:grid-cols-3">
+          <ol className="flex flex-col gap-8">
             {START_STEPS.map((step, index) => (
               <Reveal
                 key={step.title}
@@ -446,56 +516,147 @@ export default function AnaSayfa() {
               </Reveal>
             ))}
           </ol>
-        </Container>
-      </section>
-
-      {/* ----------------------------------------------------------------- cta */}
-      <section className="relative isolate overflow-hidden border-b border-border">
-        {/* Fotoğraf dekor değil bağlam: sayfanın anlattığı yer burası. Metnin
-            okunması için üstünde tam kapaklı bir perde var; koyu temada da
-            aynı perde çalışıyor. */}
-        <Image
-          src="/sektor/resepsiyon.jpg"
-          alt=""
-          fill
-          sizes="100vw"
-          className="-z-10 object-cover"
-        />
-        {/* Perde soldan sağa açılıyor: metin tarafı tam zemin, sağ taraf
-            fotoğrafı gösteriyor. Renk `--bg` olduğu için koyu temada da
-            kontrast korunuyor. */}
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 -z-10"
-          style={{
-            background:
-              "linear-gradient(90deg, var(--bg) 0%, var(--bg) 40%, color-mix(in oklab, var(--bg) 62%, transparent) 100%)",
-          }}
-        />
-
-        <Container className="flex flex-col gap-5 py-20">
-          <h2 className={`${H2} max-w-2xl`}>Pilot işletmelerle birlikte kuruyoruz</h2>
-          <p className={`${LEAD} max-w-2xl`}>
-            İlk kurumlarla çalışıp eksikleri onların günlük işine göre kapatıyoruz. İşinizi
-            anlatın, size sistemi gösterelim ve neyin işinize yaramadığını söyleyin.
-          </p>
-          <div className="flex flex-wrap gap-3 pt-1">
-            <Link href="/demo" className={BTN_PRIMARY}>
-              Demoyu deneyin
-            </Link>
-            <Link href="/iletisim" className={BTN_SECONDARY}>
-              Pilot için görüşelim
-            </Link>
           </div>
-          <p className="text-[13px] text-ink-3">
-            Kayıt istemez · Kart istemez · Kurulum ve eğitim pilotta ücretsiz
-          </p>
+
+          <Reveal delay={120}>
+            <SectorIllustration sector="randevu" />
+          </Reveal>
         </Container>
       </section>
 
+      {/* --------------------------------------------------------- canlı demo
+          Eskiden `/demo` ayrı bir sayfaydı. Form aynı server action'a gidiyor;
+          hata durumunda adrese `?durum=` yazılıyor ve <DemoDurumu /> onu
+          İSTEMCİDE okuyor — `searchParams`'ı burada okumak ana sayfayı
+          statiklikten çıkarırdı. */}
+      <section id="demo" className="scroll-mt-24 border-b border-border">
+        <Container className="py-16">
+          <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,21rem)] lg:gap-16">
+            <div className="flex max-w-2xl flex-col gap-6">
+              <Eyebrow index="09">Canlı demo</Eyebrow>
+              <h2 className={H2}>Kendi kurumunuzu kurun</h2>
+              <p className={LEAD}>
+                Hazır bir hesaba girmiyorsunuz: sektörünüzü seçiyor, kurulumu kendiniz dolduruyor
+                ve kendi kurumunuzun takvimine düşüyorsunuz. Kayıt yok, e-posta doğrulaması yok,
+                kart yok.
+              </p>
+
+              <DemoStart
+                acik={isDemoEnabled()}
+                sectors={templates.map((template) => ({
+                  key: template.key,
+                  label: template.label,
+                  familyLabel: FAMILY_LABELS[template.family],
+                  customerPlural: template.terminology.customer_plural,
+                  resourcePlural: template.terminology.resource_plural,
+                  serviceCount: template.services.length,
+                }))}
+              />
+            </div>
+
+            <aside className="flex flex-col gap-4 rounded-lg border border-border bg-surface-2 p-5 lg:self-start">
+              <h3 className="font-mono text-[12px] uppercase tracking-[0.14em] text-ink-2">
+                Demoda bilmeniz gerekenler
+              </h3>
+              <ul className="flex flex-col gap-3 text-[14px] leading-relaxed text-ink-2">
+                {DEMO_NOTES.map((line) => (
+                  <li key={line} className="flex gap-3">
+                    <span aria-hidden="true" className="mt-[10px] h-px w-3 shrink-0 bg-brand" />
+                    <span className="min-w-0">{line}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="border-t border-border pt-4 text-[13px] leading-relaxed text-ink-3">
+                Kurumunuzu gerçekten kurmaya karar verirseniz veriyi sıfırdan girmenize gerek yok:
+                kurulumda mevcut listenizi birlikte aktarıyoruz.
+              </p>
+            </aside>
+          </div>
+        </Container>
+      </section>
+
+      {/* --------------------------------------------------------- iletişim */}
+      <section id="iletisim" className="scroll-mt-24 border-b border-border bg-surface-2">
+        <Container className="py-16">
+          <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,21rem)] lg:gap-16">
+            <div className="flex max-w-xl flex-col gap-8">
+              <div className="flex flex-col gap-4">
+                <Eyebrow index="10">Pilot</Eyebrow>
+                <h2 className={H2}>İşletmenizi anlatın</h2>
+                <p className={LEAD}>
+                  İlk kurumlarla çalışıp eksikleri onların günlük işine göre kapatıyoruz. Görüşme
+                  yaklaşık yarım saat sürüyor ve satış sunumu değil: kendi gününüzü sistemde kurup
+                  neyin işinize yaramadığını söylüyorsunuz.
+                </p>
+              </div>
+
+              <DemoForm
+                source="ana-sayfa"
+                sectors={templates.map((template) => ({
+                  key: template.key,
+                  label: template.label,
+                }))}
+              />
+            </div>
+
+            <aside className="flex flex-col gap-7 lg:pt-2">
+              <section className="flex flex-col gap-2 rounded-lg border border-brand-line bg-brand-tint p-4">
+                <h3 className="font-mono text-[12px] uppercase tracking-[0.14em] text-ink-2">
+                  Doğrudan yazın
+                </h3>
+                <a
+                  href={`mailto:${SITE_CONTACT.email}`}
+                  className="break-words text-[15px] font-medium text-ink underline underline-offset-2"
+                >
+                  {SITE_CONTACT.email}
+                </a>
+                {SITE_CONTACT.phone && (
+                  <a href={`tel:${SITE_CONTACT.phone}`} className="text-[15px] text-ink">
+                    {SITE_CONTACT.phone}
+                  </a>
+                )}
+              </section>
+
+              <section className="flex flex-col gap-3">
+                <h3 className="font-mono text-[12px] uppercase tracking-[0.14em] text-ink-3">
+                  Görüşmede ne oluyor
+                </h3>
+                <ol className="flex flex-col gap-3 text-[14px] leading-relaxed text-ink-2">
+                  {MEETING_STEPS.map((step, index) => (
+                    <li key={step} className="flex gap-3">
+                      <span data-numeric className="font-mono text-[13px] text-brand">
+                        {String(index + 1).padStart(2, "0")}
+                      </span>
+                      <span className="min-w-0">{step}</span>
+                    </li>
+                  ))}
+                </ol>
+              </section>
+
+              <p className="border-t border-border pt-5 text-[13px] leading-relaxed text-ink-3">
+                {PRODUCT.stage}
+              </p>
+            </aside>
+          </div>
+        </Container>
+      </section>
     </div>
   );
 }
+
+/* Demo bölümünün yan sütunu — sayfaya özel, içerik dosyasına taşımaya değmez. */
+const DEMO_NOTES = [
+  "Kurum yalnızca size ait: başka bir ziyaretçi onu göremez, değiştiremez. Sınırı veritabanı çiziyor.",
+  "Gerçek kişi bilgisi girmeyin. Demo kurumu ve hesabı bir gün sonra siliniyor.",
+  "Hiçbir mesaj gerçekten gönderilmez: SMS sağlayıcısı bağlı değil, kuyruk yalnızca kaydı yazar.",
+  "İstediğiniz her şeyi değiştirin — hizmet ekleyin, randevu taşıyın, rol yetkisi kısın.",
+];
+
+const MEETING_STEPS = [
+  "İşletmenizin gününü dinliyoruz: kaç kişi çalışıyor, randevuyu kim yazıyor, program nasıl hazırlanıyor.",
+  "Sistemi sizin verinizle kuruyoruz — hizmetler, uzmanlar, çalışma saatleri.",
+  "Bir haftalık gerçek kullanım sonrası eksikleri konuşuyoruz.",
+];
 
 /* Günün programı çıktısı — sayfaya özel, bu yüzden mock dosyasında değil. */
 function ProgramMock() {

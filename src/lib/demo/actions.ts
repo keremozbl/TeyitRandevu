@@ -56,8 +56,8 @@ async function clientIp(): Promise<string> {
 
 export async function startDemoAction(formData: FormData) {
   const sector = String(formData.get("sektor") ?? "");
-  if (!getTemplate(sector)) redirect("/demo?durum=sektor");
-  if (!isDemoEnabled()) redirect("/demo?durum=kapali");
+  if (!getTemplate(sector)) redirect("/?durum=sektor#demo");
+  if (!isDemoEnabled()) redirect("/?durum=kapali#demo");
 
   const supabase = await createClient();
 
@@ -68,7 +68,7 @@ export async function startDemoAction(formData: FormData) {
   } = await supabase.auth.getUser();
   if (isDemoUser(current)) redirect(`/kurulum?sektor=${sector}`);
 
-  if (!allow(await clientIp())) redirect("/demo?durum=yogun");
+  if (!allow(await clientIp())) redirect("/?durum=yogun#demo");
 
   const { email, password } = demoCredentials();
   const admin = createAdminClient();
@@ -84,13 +84,13 @@ export async function startDemoAction(formData: FormData) {
 
   if (createError) {
     console.error("[vitrin] demo hesabı açılamadı:", createError.message);
-    redirect("/demo?durum=hata");
+    redirect("/?durum=hata#demo");
   }
 
   const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
   if (signInError) {
     console.error("[vitrin] demo girişi başarısız:", signInError.message);
-    redirect("/demo?durum=hata");
+    redirect("/?durum=hata#demo");
   }
 
   redirect(`/kurulum?sektor=${sector}`);

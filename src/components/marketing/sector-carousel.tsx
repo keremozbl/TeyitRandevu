@@ -1,42 +1,44 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import type { SectorSlide } from "@/lib/marketing/sectors";
 
+import { SectorIllustration } from "./sector-illustration";
+
 /**
- * Sektör seçici.
+ * Sektör seçici — sürüklenen çark.
  *
- * Sekme (tab) deseni. Geniş ekranda sekmeler bir HALKA üzerinde duruyor:
- * seçilen sektör tepedeki çapaya gelene kadar çember dönüyor, etiketler dik
- * kalsın diye kendi eksenlerinde ters dönüyor. Dar ekranda aynı sekmeler yatay
- * şerit olarak çiziliyor — çember orada dikey alanı yiyor ve etiketler
- * çakışıyor.
+ * Geniş ekranda sektörler ekranın sağ kenarından TAŞAN büyük bir çemberin
+ * üstünde duruyor; seçili olan çemberin sol ucundaki çapada, yani metnin hemen
+ * yanında. Fareyle tutup çevirirsin, bıraktığında atalet devam eder, yavaşlar
+ * ve en yakın sektöre oturur. Dar ekranda çember dikey alanı yiyip etiketleri
+ * çakıştırdığı için aynı sekmeler yatay şerit olarak çiziliyor.
  *
- * Halka `display` ile değiştiği için ekran okuyucuda her zaman TEK bir tablist
- * var; iki ayrı `role="tab"` kümesi görünmüyor.
+ * Üç şey bilerek böyle:
  *
- * Karusel otomatik DÖNMÜYOR — okuyan kişi metnin ortasında kendiliğinden dönen
- * bir çemberle yarışmak zorunda kalmasın (ve otomatik oynatma, Web Interface
- * Guidelines'ın durdurma denetimi istediği yerdir). Hareket kullanıcının
- * tıklamasından doğuyor; dönüş yalnızca `transform`, `prefers-reduced-motion`
- * globals.css'te süreyi zaten sıfırlıyor.
+ * 1. **Açı SÜREKLİ bir sayı, 0-360'a sıkıştırılmıyor.** Sondan başa geçerken
+ *    açıyı sarmak çemberi ters yöne neredeyse tam tur döndürüyordu.
  *
- * Geçiş `key` ile tetiklenen bir animasyon: yalnızca `opacity` ve `transform`,
- * `prefers-reduced-motion` globals.css'te zaten kapatıyor.
+ * 2. **Sürükleme sırasında React render edilmiyor.** Her karede altı chip'in
+ *    `transform`'u doğrudan DOM'a yazılıyor; state yalnızca seçili sektör
+ *    DEĞİŞTİĞİNDE güncelleniyor. Kare başına render, sürüklemeyi takılmalı
+ *    yapıyordu.
+ *
+ * 3. **Sayfa kaydırması çalınmıyor.** Tekerlek yalnızca YATAY (trackpad)
+ *    hareketini çeviriyor; dikey tekerlek sayfayı kaydırmaya devam eder.
+ *    Çemberin üstünde imleçle sayfayı kaydıramamak, kazanılan her şeyden
+ *    daha can sıkıcı olurdu.
+ *
+ * Sürükleme bir ZENGİNLEŞTİRME: sekmeye tıklamak, ok tuşları, Home/End ve
+ * ileri/geri düğmeleri aynı işi yapıyor (Web Interface Guidelines: jest
+ * gerektiren her eylemin tıklama ve klavye karşılığı olmalı).
  *
  * Seçim adres çubuğuna `?sektor=` olarak yazılıyor ama `router.replace` ile
  * DEĞİL: bu sayfa statik üretiliyor ve her seçimde sunucuya tur attırmanın
  * anlamı yok. `history.replaceState` bağlantıyı paylaşılabilir yapar, sayfayı
- * dinamiğe çevirmez.
- *
- * Adres çubuğu bir dış kaynak olduğu için `useSyncExternalStore` ile okunuyor:
- * `useEffect` içinde `setState` çağırmak zincirleme render üretir ve lint
- * kuralı (react-hooks/set-state-in-effect) haklı olarak buna izin vermiyor.
- * Sunucu anlık görüntüsü `null` döndüğü için ilk HTML her zaman ilk sektörle
- * çiziliyor; hidrasyon uyuşmazlığı olmuyor.
+ * dinamiğe çevirmez. Aynı parametreyi aşağıdaki demo bölümü de okuyor.
  */
 
 function subscribeToUrl(onChange: () => void) {
@@ -56,180 +58,435 @@ const TONES = {
 
 const ROW_H = 2.5; // rem — önizleme ızgarasında yarım saat
 
-/** Halkanın yarıçapı (px) ve dönüş süresi. Çember 360° / sektör sayısı. */
-const RING_R = 122;
-const RING_MS = 600;
+/** Çapa çemberin SOL ucunda: seçili sektör metnin yanında dursun. */
+const ANCHOR = 180;
+/** Atalet eşiği (derece/ms) — altına inince oturma tween'i başlar. */
+const STOP = 0.02;
+const SNAP_MS = 420;
+
+/** Bir açıyı (-180, 180] aralığına indirger — sürüklerken sarmayı çözer. */
+function wrap180(deg: number): number {
+  return ((((deg + 180) % 360) + 360) % 360) - 180;
+}
+
+function easeOutCubic(t: number): number {
+  return 1 - Math.pow(1 - t, 3);
+}
 
 /**
- * Halkadaki kısa ad: "Güzellik & Bakım Salonu" çemberde komşusuna değiyor.
- * Tam ad halkanın ortasında ve panelde zaten yazıyor.
+ * Kısa ad: "Güzellik & Bakım Salonu" çemberde komşusuna değiyor.
+ * Tam ad çapanın yanındaki panelde zaten yazıyor.
  */
 function shortLabel(label: string): string {
   return label.split(/[&/]/)[0].trim();
 }
 
-/**
- * İki sektör arasındaki EN KISA yön (işaretli adım sayısı).
- *
- * Halkanın açısı sürekli bir sayı olarak tutuluyor, 0-360 arasına
- * sıkıştırılmıyor: sonuncudan ilkine geçerken açı sıfıra "sarsaydı" çember
- * ters yöne neredeyse tam tur atardı.
- */
-function shortestStep(from: number, to: number, count: number): number {
-  const forward = (((to - from) % count) + count) % count;
-  return forward > count / 2 ? forward - count : forward;
-}
-
 export function SectorCarousel({ slides }: { slides: SectorSlide[] }) {
-  const step = 360 / slides.length;
-  const [picked, setPicked] = useState<{ index: number; angle: number } | null>(null);
-  const tabsRef = useRef<HTMLDivElement>(null);
+  const count = slides.length;
+  const step = 360 / count;
 
-  const urlKey = useSyncExternalStore(
-    subscribeToUrl,
-    readSectorFromUrl,
-    () => null, // sunucu: adres çubuğu yok
+  const urlKey = useSyncExternalStore(subscribeToUrl, readSectorFromUrl, () => null);
+  const fromUrl = slides.findIndex((slide) => slide.key === urlKey);
+
+  /**
+   * Seçili sektör TÜRETİLİR: kullanıcı henüz çarka dokunmadıysa adres
+   * çubuğundaki `?sektor=`, dokunduysa `picked`.
+   *
+   * Doğrudan `setIndex` tutup effect içinde adresle eşitlemek zincirleme
+   * render üretiyor ve `react-hooks/set-state-in-effect` haklı olarak buna
+   * izin vermiyor. Geri tuşu `picked`'i temizliyor — ama effect GÖVDESİNDE
+   * değil, popstate GERİ ÇAĞRISINDA; kuralın izin verdiği yer orası.
+   */
+  const [picked, setPicked] = useState<number | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const index = picked ?? (fromUrl >= 0 ? fromUrl : 0);
+
+  const ringRef = useRef<HTMLDivElement>(null);
+  const chipsRef = useRef<(HTMLButtonElement | null)[]>([]);
+  const stripRef = useRef<HTMLDivElement>(null);
+
+  /** Çemberin o anki açısı (sürekli derece). Render'a girmiyor. */
+  const angleRef = useRef(ANCHOR);
+  const rafRef = useRef(0);
+  /** Sürükleme durumu — hepsi ref, çünkü karede state yazılmıyor. */
+  const drag = useRef({ active: false, cx: 0, cy: 0, last: 0, v: 0, t: 0 });
+
+  const targetFor = useCallback((i: number) => ANCHOR - i * step, [step]);
+
+  const nearestIndex = useCallback(
+    (angle: number) => (((Math.round((ANCHOR - angle) / step) % count) + count) % count),
+    [count, step],
   );
 
-  const fromUrl = slides.findIndex((slide) => slide.key === urlKey);
-  const index = picked?.index ?? (fromUrl >= 0 ? fromUrl : 0);
-  // Adres çubuğundan gelen seçim (geri tuşu) dönmeden yerine oturur.
-  const angle = picked?.angle ?? -index * step;
-  const chosen = slides[index];
+  /** Altı chip'i açıya göre yerleştirir. Etiketler dik kalsın diye her chip
+      kendi ekseninde `-(açı)` kadar ters dönüyor. */
+  const place = useCallback(
+    (angle: number) => {
+      for (let i = 0; i < count; i++) {
+        const chip = chipsRef.current[i];
+        if (!chip) continue;
+        const own = angle + i * step;
+        chip.style.transform =
+          `translate(-50%, -50%) rotate(${own}deg) translateX(var(--halka-r)) rotate(${-own}deg)`;
+      }
+      const hub = ringRef.current;
+      if (hub) hub.style.setProperty("--halka-aci", `${angle}deg`);
+    },
+    [count, step],
+  );
 
-  function select(next: number, focusTab = false) {
-    const clamped = (next + slides.length) % slides.length;
-    setPicked({
-      index: clamped,
-      angle: angle - shortestStep(index, clamped, slides.length) * step,
-    });
+  /** Açıyı yaz, gerekiyorsa seçili sektörü de güncelle (panel takip etsin). */
+  const apply = useCallback(
+    (angle: number) => {
+      angleRef.current = angle;
+      place(angle);
+      const next = nearestIndex(angle);
+      setPicked((current) => (current === next ? current : next));
+    },
+    [nearestIndex, place],
+  );
 
+  const writeUrl = useCallback((key: string) => {
     const url = new URL(window.location.href);
-    url.searchParams.set("sektor", slides[clamped].key);
-    url.hash = "sektorler";
+    url.searchParams.set("sektor", key);
     window.history.replaceState(null, "", url);
+  }, []);
 
-    // Şerit dar ekranda; halkada kaydırılacak bir şey yok. `getElementById`
-    // çünkü iki yerleşimden hangisinin çizildiğini CSS belirliyor.
-    tabsRef.current
-      ?.querySelector<HTMLButtonElement>(`#sektor-tab-${clamped}`)
-      ?.scrollIntoView({ block: "nearest", inline: "center" });
+  const reduced = useCallback(
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+    [],
+  );
 
-    if (!focusTab) return;
-    // İki yerleşimden hangisinin çizildiğini CSS belirliyor; görünür olana
-    // odaklan. `offsetParent` null ise öğe `display: none` demektir.
-    for (const id of [`sektor-halka-${clamped}`, `sektor-tab-${clamped}`]) {
-      const tab = document.getElementById(id) as HTMLButtonElement | null;
-      if (tab && tab.offsetParent !== null) {
-        tab.focus();
+  /** En yakın sektöre yumuşak oturma. */
+  const snap = useCallback(
+    (from: number) => {
+      const i = nearestIndex(from);
+      // Hedef, açının BULUNDUĞU tura en yakın olan: tam tur atmasın.
+      const to = targetFor(i) + Math.round((from - targetFor(i)) / 360) * 360;
+
+      if (reduced() || Math.abs(to - from) < 0.01) {
+        apply(to);
+        writeUrl(slides[i].key);
         return;
       }
-    }
+
+      const start = performance.now();
+      const tick = (now: number) => {
+        const t = Math.min(1, (now - start) / SNAP_MS);
+        apply(from + (to - from) * easeOutCubic(t));
+        if (t < 1) rafRef.current = requestAnimationFrame(tick);
+        else writeUrl(slides[i].key);
+      };
+      rafRef.current = requestAnimationFrame(tick);
+    },
+    [apply, nearestIndex, reduced, slides, targetFor, writeUrl],
+  );
+
+  /** Bırakıldıktan sonraki serbest dönüş. */
+  const coast = useCallback(() => {
+    let last = performance.now();
+    const tick = (now: number) => {
+      const dt = Math.min(48, now - last);
+      last = now;
+      const v = drag.current.v;
+      apply(angleRef.current + v * dt);
+      // Üssel sönüm. Kareden BAĞIMSIZ olsun diye dt'ye göre üs alınıyor;
+      // sabit bir çarpan, 60 Hz ile 120 Hz ekranda farklı mesafe verirdi.
+      // Taban 0.05: sert bir savurma ~1 saniyede iki sektör kadar yol alıp
+      // duruyor. Daha hızlı sönümde çark "tutuk", daha yavaşta savruk.
+      drag.current.v = v * Math.pow(0.05, dt / 1000);
+      if (Math.abs(drag.current.v) > STOP) rafRef.current = requestAnimationFrame(tick);
+      else snap(angleRef.current);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+  }, [apply, snap]);
+
+  /** Bir sektörü doğrudan seç (tıklama, klavye, ileri/geri). */
+  const select = useCallback(
+    (next: number, focusTab = false) => {
+      cancelAnimationFrame(rafRef.current);
+      const i = ((next % count) + count) % count;
+      const from = angleRef.current;
+      const to = targetFor(i) + Math.round((from - targetFor(i)) / 360) * 360;
+
+      if (reduced()) {
+        apply(to);
+        writeUrl(slides[i].key);
+      } else {
+        const start = performance.now();
+        const tick = (now: number) => {
+          const t = Math.min(1, (now - start) / SNAP_MS);
+          apply(from + (to - from) * easeOutCubic(t));
+          if (t < 1) rafRef.current = requestAnimationFrame(tick);
+          else writeUrl(slides[i].key);
+        };
+        rafRef.current = requestAnimationFrame(tick);
+      }
+
+      stripRef.current
+        ?.querySelector<HTMLButtonElement>(`#sektor-tab-${i}`)
+        ?.scrollIntoView({ block: "nearest", inline: "center" });
+
+      if (!focusTab) return;
+      for (const id of [`sektor-halka-${i}`, `sektor-tab-${i}`]) {
+        const tab = document.getElementById(id) as HTMLButtonElement | null;
+        if (tab && tab.offsetParent !== null) {
+          tab.focus();
+          return;
+        }
+      }
+    },
+    [apply, count, reduced, slides, targetFor, writeUrl],
+  );
+
+  /* İlk yerleşim + adres çubuğundan gelen seçim (paylaşılan bağlantı, geri
+     tuşu). Dönmeden yerine oturur: kullanıcı sayfaya yeni geldi.
+     Kendi yazdığımız `replaceState` popstate üretmediği için bu effect
+     sürükleme sırasında yeniden çalışmıyor. */
+  useEffect(() => {
+    angleRef.current = targetFor(fromUrl >= 0 ? fromUrl : 0);
+    place(angleRef.current);
+  }, [fromUrl, place, targetFor]);
+
+  /* Geri tuşu: elle yapılan seçim düşsün, adres çubuğu yeniden söz sahibi olsun. */
+  useEffect(() => {
+    const onPop = () => setPicked(null);
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  useEffect(() => () => cancelAnimationFrame(rafRef.current), []);
+
+  /* --- sürükleme --- */
+
+  function pointerAngle(event: { clientX: number; clientY: number }): number {
+    const { cx, cy } = drag.current;
+    return (Math.atan2(event.clientY - cy, event.clientX - cx) * 180) / Math.PI;
   }
 
+  function onPointerDown(event: React.PointerEvent<HTMLDivElement>) {
+    // Chip'e tıklamak seçim yapar; sürükleme ancak parmak gerçekten
+    // hareket ederse devreye girer (aşağıda eşik var).
+    cancelAnimationFrame(rafRef.current);
+    const box = event.currentTarget.getBoundingClientRect();
+    drag.current = {
+      active: true,
+      cx: box.left + box.width / 2,
+      cy: box.top + box.height / 2,
+      last: 0,
+      v: 0,
+      t: performance.now(),
+    };
+    drag.current.last = pointerAngle(event);
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function onPointerMove(event: React.PointerEvent<HTMLDivElement>) {
+    if (!drag.current.active) return;
+    const now = performance.now();
+    const current = pointerAngle(event);
+    const delta = wrap180(current - drag.current.last);
+    drag.current.last = current;
+
+    const dt = Math.max(1, now - drag.current.t);
+    drag.current.t = now;
+    // Anlık hızı yumuşat: tek bir sıçrayan örnek ataleti fırlatıyordu.
+    drag.current.v = drag.current.v * 0.6 + (delta / dt) * 0.4;
+
+    if (!dragging && Math.abs(delta) > 0.4) setDragging(true);
+    apply(angleRef.current + delta);
+  }
+
+  function onPointerUp(event: React.PointerEvent<HTMLDivElement>) {
+    if (!drag.current.active) return;
+    drag.current.active = false;
+    event.currentTarget.releasePointerCapture(event.pointerId);
+    setDragging(false);
+    if (reduced() || Math.abs(drag.current.v) <= STOP) snap(angleRef.current);
+    else coast();
+  }
+
+  /** Trackpad'de yatay kaydırma çevirir; DİKEY tekerlek sayfayı kaydırmaya
+      devam eder — sayfa kaydırmasını çalmak için hiçbir sebep yok. */
+  useEffect(() => {
+    const ring = ringRef.current;
+    if (!ring) return;
+
+    let idle = 0;
+    const onWheel = (event: WheelEvent) => {
+      if (Math.abs(event.deltaX) <= Math.abs(event.deltaY)) return;
+      event.preventDefault();
+      cancelAnimationFrame(rafRef.current);
+      apply(angleRef.current - event.deltaX * 0.35);
+      window.clearTimeout(idle);
+      idle = window.setTimeout(() => snap(angleRef.current), 140);
+    };
+
+    ring.addEventListener("wheel", onWheel, { passive: false });
+    return () => {
+      ring.removeEventListener("wheel", onWheel);
+      window.clearTimeout(idle);
+    };
+  }, [apply, snap]);
+
   function onKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
-    if (event.key === "ArrowRight") select(index + 1, true);
-    else if (event.key === "ArrowLeft") select(index - 1, true);
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") select(index + 1, true);
+    else if (event.key === "ArrowLeft" || event.key === "ArrowUp") select(index - 1, true);
     else if (event.key === "Home") select(0, true);
-    else if (event.key === "End") select(slides.length - 1, true);
+    else if (event.key === "End") select(count - 1, true);
     else return;
     event.preventDefault();
   }
 
+  const chosen = slides[index];
+
   return (
-    <div className="flex flex-col gap-6">
-      {/* --- dar ekran: yatay şerit --- */}
-      <div className="flex items-center gap-3 sm:hidden">
-        <div
-          ref={tabsRef}
-          role="tablist"
-          aria-label="Sektörler"
-          aria-orientation="horizontal"
-          onKeyDown={onKeyDown}
-          className="flex min-w-0 flex-1 gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        >
-          {slides.map((slide, position) => (
-            <button
-              key={slide.key}
-              id={`sektor-tab-${position}`}
-              type="button"
-              role="tab"
-              aria-selected={position === index}
-              aria-controls="sektor-panel"
-              tabIndex={position === index ? 0 : -1}
-              onClick={() => select(position)}
-              className={`shrink-0 rounded border px-3.5 py-2 text-[14px] font-medium transition-colors duration-150 ${
-                position === index
-                  ? "border-brand bg-brand text-brand-ink"
-                  : "border-border bg-surface text-ink-2"
-              }`}
-            >
-              {slide.label}
-            </button>
-          ))}
-        </div>
+    <div className="flex flex-col gap-8">
+      {/* --- dar ekran: yatay şerit (çember burada etiketleri çakıştırıyor) --- */}
+      <div
+        ref={stripRef}
+        role="tablist"
+        aria-label="Sektörler"
+        aria-orientation="horizontal"
+        onKeyDown={onKeyDown}
+        className="flex gap-2 overflow-x-auto pb-1 lg:hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {slides.map((slide, position) => (
+          <button
+            key={slide.key}
+            id={`sektor-tab-${position}`}
+            type="button"
+            role="tab"
+            aria-selected={position === index}
+            aria-controls="sektor-panel"
+            tabIndex={position === index ? 0 : -1}
+            onClick={() => select(position)}
+            className={`shrink-0 rounded border px-3.5 py-2 text-[14px] font-medium transition-colors duration-150 ${
+              position === index
+                ? "border-brand bg-brand text-brand-ink"
+                : "border-border bg-surface text-ink-2"
+            }`}
+          >
+            {slide.label}
+          </button>
+        ))}
       </div>
 
-      {/* --- geniş ekran: dönen halka --- */}
-      <div className="hidden flex-col items-center gap-5 sm:flex">
-        <div
-          role="tablist"
-          aria-label="Sektörler"
-          onKeyDown={onKeyDown}
-          className="relative size-[19rem] shrink-0 lg:size-[21rem]"
-        >
-          {/* Yörünge çizgisi: çemberin nerede olduğu görünsün, dekor değil */}
-          <span
-            aria-hidden="true"
-            className="absolute inset-6 rounded-full border border-dashed border-border"
-          />
+      {/* --- geniş ekran: sağ kenardan taşan çark --- */}
+      <div className="hidden gap-16 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,20rem)]">
+        <div className="flex min-w-0 flex-col justify-center gap-5">
+          <div key={chosen.key} className="flex animate-[sektor-giris_220ms_ease-out] flex-col gap-2">
+            <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-3">
+              {chosen.familyLabel}
+            </p>
+            <h3 className="text-pretty text-[clamp(1.5rem,1.1rem+1.2vw,2rem)] font-semibold leading-tight tracking-tight text-ink">
+              {chosen.label}
+            </h3>
+            <p className="max-w-md text-[15px] leading-relaxed text-ink-2">{chosen.description}</p>
+          </div>
 
-          {/* Tepedeki çapa — seçilenin geleceği yer */}
-          <span
-            aria-hidden="true"
-            className="absolute left-1/2 top-3 size-1.5 -translate-x-1/2 rounded-full bg-brand"
-          />
+          <dl className="grid max-w-md grid-cols-3 gap-4 border-y border-border py-4">
+            <Term label="Kayıtlar" value={chosen.terms.customer} />
+            <Term label="Kaynaklar" value={chosen.terms.resource} />
+            <Term label={chosen.terms.service} value={`${chosen.serviceCount} hazır`} />
+          </dl>
 
-          {/* Ortada tam ad; sektör değişince çapraz sönümlenir */}
-          <div className="absolute inset-0 flex items-center justify-center px-16">
-            <div key={chosen.key} className="animate-[sektor-giris_220ms_ease-out] text-center">
-              <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-ink-3">
-                {chosen.familyLabel}
-              </p>
-              <p className="text-pretty pt-1 text-[15px] font-semibold leading-tight text-ink">
-                {chosen.label}
-              </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href="#demo"
+              className="inline-flex h-10 items-center justify-center rounded border border-brand bg-brand px-4 text-[14px] font-medium text-brand-ink no-underline transition-colors duration-150 hover:border-brand-strong hover:bg-brand-strong"
+            >
+              Bu Sektörle Demoyu Başlatın
+            </Link>
+
+            <div className="flex gap-1">
+              <button
+                type="button"
+                onClick={() => select(index - 1)}
+                aria-label="Önceki sektör"
+                className="inline-flex size-10 items-center justify-center rounded border border-border bg-surface text-ink-2 transition-colors duration-150 hover:bg-surface-2 hover:text-ink"
+              >
+                <Chevron direction="left" />
+              </button>
+              <button
+                type="button"
+                onClick={() => select(index + 1)}
+                aria-label="Sonraki sektör"
+                className="inline-flex size-10 items-center justify-center rounded border border-border bg-surface text-ink-2 transition-colors duration-150 hover:bg-surface-2 hover:text-ink"
+              >
+                <Chevron direction="right" />
+              </button>
             </div>
           </div>
 
-          {/* Dönen kap. Sekmeler bunun içinde SABİT duruyor; dönen şey halka.
-              Her sekme kendi ekseninde `-(angle + kendi açısı)` kadar ters
-              dönerek dik kalıyor — yoksa etiketler yan yatardı. */}
+          <p className="text-[13px] text-ink-3">
+            Çarkı fareyle tutup çevirin — ya da ok tuşlarını kullanın.
+          </p>
+        </div>
+
+        {/* Çemberin kendisi: kutunun sağından taşıyor, bölüm onu kırpıyor.
+            `--halka-r` yarıçapı tek yerde tutuyor; chip'lerin transform'u
+            JavaScript'ten yazılıyor ve bu değişkeni okuyor. */}
+        <div className="relative min-h-[26rem] lg:min-h-[30rem]">
           <div
-            className="absolute inset-0 ease-[cubic-bezier(0.22,0.61,0.36,1)] motion-safe:transition-transform"
-            style={{ transform: `rotate(${angle}deg)`, transitionDuration: `${RING_MS}ms` }}
+            ref={ringRef}
+            role="tablist"
+            aria-label="Sektörler"
+            onKeyDown={onKeyDown}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onPointerCancel={onPointerUp}
+            style={{ ["--halka-r" as string]: "13.5rem" }}
+            className={`absolute left-0 top-1/2 size-[30rem] -translate-y-1/2 touch-pan-y select-none xl:size-[34rem] xl:[--halka-r:15.5rem] ${
+              dragging ? "cursor-grabbing" : "cursor-grab"
+            }`}
           >
+            {/* Yörünge: çemberin nerede olduğu görünsün, dekor değil */}
+            <span
+              aria-hidden="true"
+              className="absolute inset-6 rounded-full border border-dashed border-brand-line"
+            />
+            <span
+              aria-hidden="true"
+              className="absolute inset-[5.5rem] rounded-full border border-border"
+            />
+            {/* Çapa: seçilinin oturduğu yer, çemberin sol ucu */}
+            <span
+              aria-hidden="true"
+              className="absolute left-6 top-1/2 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand"
+            />
+
+            {/* Göbek: kaç sektör olduğunu söyler, sayfayla birlikte döner */}
+            <div className="pointer-events-none absolute left-1/2 top-1/2 flex size-[8.5rem] -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center rounded-full border border-border bg-surface text-center">
+              <span data-numeric className="text-[26px] font-semibold tracking-tight text-ink">
+                {count}
+              </span>
+              <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-ink-3">
+                hazır sektör
+              </span>
+            </div>
+
             {slides.map((slide, position) => {
               const active = position === index;
               return (
                 <button
                   key={slide.key}
                   id={`sektor-halka-${position}`}
+                  ref={(node) => {
+                    chipsRef.current[position] = node;
+                  }}
                   type="button"
                   role="tab"
                   aria-selected={active}
                   aria-controls="sektor-panel"
                   tabIndex={active ? 0 : -1}
                   onClick={() => select(position)}
-                  style={{
-                    transform:
-                      `translate(-50%, -50%) rotate(${position * step}deg) ` +
-                      `translateY(-${RING_R}px) rotate(${-(angle + position * step)}deg)`,
-                    transitionDuration: `${RING_MS}ms`,
-                  }}
-                  className={`absolute left-1/2 top-1/2 w-[7.5rem] rounded border px-2 py-1.5 text-[13px] font-medium ease-[cubic-bezier(0.22,0.61,0.36,1)] motion-safe:transition-[transform,background-color,border-color,color] ${
+                  className={`absolute left-1/2 top-1/2 w-[9.5rem] rounded-full border px-3 py-2 text-[13px] font-medium transition-[background-color,border-color,color,box-shadow] duration-200 ${
                     active
-                      ? "border-brand bg-brand text-brand-ink"
+                      ? "border-brand bg-brand text-brand-ink shadow-[0_10px_24px_-14px_rgba(0,0,0,0.6)]"
                       : "border-border bg-surface text-ink-2 [@media(hover:hover)]:hover:border-border-strong [@media(hover:hover)]:hover:text-ink"
                   }`}
                 >
@@ -239,53 +496,28 @@ export function SectorCarousel({ slides }: { slides: SectorSlide[] }) {
             })}
           </div>
         </div>
-
-        <div className="flex shrink-0 gap-1">
-          <button
-            type="button"
-            onClick={() => select(index - 1)}
-            aria-label="Önceki sektör"
-            className="inline-flex size-9 items-center justify-center rounded border border-border bg-surface text-ink-2 transition-colors duration-150 hover:bg-surface-2 hover:text-ink"
-          >
-            <Chevron direction="left" />
-          </button>
-          <button
-            type="button"
-            onClick={() => select(index + 1)}
-            aria-label="Sonraki sektör"
-            className="inline-flex size-9 items-center justify-center rounded border border-border bg-surface text-ink-2 transition-colors duration-150 hover:bg-surface-2 hover:text-ink"
-          >
-            <Chevron direction="right" />
-          </button>
-        </div>
       </div>
 
+      {/* --- seçilen sektörün ayrıntısı --- */}
       <div
         id="sektor-panel"
         role="tabpanel"
-        aria-labelledby={`sektor-tab-${index}`}
+        aria-labelledby={`sektor-halka-${index}`}
         tabIndex={0}
         className="rounded-lg border border-border bg-surface p-5 sm:p-7"
       >
-        {/* key: sektör değiştiğinde giriş animasyonu yeniden çalışsın */}
         <div
           key={chosen.key}
           className="grid animate-[sektor-giris_220ms_ease-out] gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:gap-12"
         >
           <div className="flex min-w-0 flex-col gap-5">
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2 lg:hidden">
               <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
                 {chosen.familyLabel}
               </p>
               <h3 className="text-[22px] font-semibold tracking-tight text-ink">{chosen.label}</h3>
               <p className="text-[15px] leading-relaxed text-ink-2">{chosen.description}</p>
             </div>
-
-            <dl className="grid grid-cols-3 gap-4 border-y border-border py-4">
-              <Term label="Kayıtlar" value={chosen.terms.customer} />
-              <Term label="Kaynaklar" value={chosen.terms.resource} />
-              <Term label={chosen.terms.service} value={`${chosen.serviceCount} hazır`} />
-            </dl>
 
             <div className="flex flex-col gap-2">
               <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
@@ -306,38 +538,23 @@ export function SectorCarousel({ slides }: { slides: SectorSlide[] }) {
               </ul>
             </div>
 
+            <DayPreview slide={chosen} />
+
             {chosen.note && (
               <p className="border-l-2 border-brand-line pl-3 text-[13px] leading-relaxed text-ink-3">
                 {chosen.note}
               </p>
             )}
 
-            <div className="mt-auto flex flex-wrap items-center gap-3 pt-1">
-              <Link
-                href={`/demo?sektor=${chosen.key}`}
-                className="inline-flex h-10 items-center justify-center rounded border border-brand bg-brand px-4 text-[14px] font-medium text-brand-ink no-underline transition-colors duration-150 hover:border-brand-strong hover:bg-brand-strong"
-              >
-                Bu sektörle demoyu başlat
-              </Link>
-              <span data-numeric className="text-[13px] text-ink-3">
-                {chosen.fieldCount} sektöre özel alan
-              </span>
-            </div>
+            <p data-numeric className="mt-auto text-[13px] text-ink-3">
+              {chosen.fieldCount} sektöre özel alan
+            </p>
           </div>
 
           <div className="flex min-w-0 flex-col gap-3">
-            {/* Fotoğraf sektörü bir bakışta anlatıyor; ürünün kendisi hemen
-                altında duruyor ki fotoğraf iddiayı değil ortamı taşısın. */}
-            <div className="relative aspect-[16/9] overflow-hidden rounded border border-border">
-              <Image
-                src={chosen.photo.src}
-                alt={chosen.photo.alt}
-                fill
-                sizes="(min-width: 1024px) 26rem, 100vw"
-                className="object-cover"
-              />
-            </div>
-            <DayPreview slide={chosen} />
+            {/* Çizim sektörü bir bakışta anlatıyor; ürünün kendisi solda
+                duruyor ki görsel iddiayı değil ortamı taşısın. */}
+            <SectorIllustration sector={chosen.key} />
             {chosen.reminder && (
               <div className="rounded border border-border bg-surface-2 p-3">
                 <p className="pb-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">

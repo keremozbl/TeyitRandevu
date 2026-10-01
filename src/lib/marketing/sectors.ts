@@ -38,8 +38,6 @@ export type SectorSlide = {
   blocks: PreviewBlock[];
   /** Şablondaki hatırlatma metni, örnek değerlerle doldurulmuş hali */
   reminder: string;
-  /** `public/sektor/` altındaki telifsiz fotoğraf (Pexels lisansı) */
-  photo: { src: string; alt: string };
   /** Şablonun kendi notu — sektöre özel dikkat (varsa) */
   note?: string;
 };
@@ -139,10 +137,6 @@ export function listSectorSlides(): SectorSlide[] {
       rows,
       blocks,
       reminder: sampleReminder(template),
-      photo: {
-        src: `/sektor/${template.key.replace(/_/g, "-")}.jpg`,
-        alt: `${template.label} çalışma alanı`,
-      },
       note: template.notes?.[0],
     };
   });

@@ -55,6 +55,16 @@
   --brand-tint:   #E8F3EC;
   --brand-line:   #BCD9C8;
 
+  /* --- illüstrasyon zemini ----------------------------------------------------
+     İllüstrasyonların (public/illo/*.svg) arkasındaki panel.
+
+     Çizimlerin figürleri neredeyse siyah; koyu temada koyu zemine oturtulursa
+     kaybolurlar. Bu yüzden panel HER İKİ TEMADA DA açık kalır — koyu temada
+     yalnızca tonu kısılır ki ekranda parlamayan, kasıtlı bir kart gibi dursun.
+     Düz illüstrasyonu tema ile ters çevirmek temiz sonuç vermiyor: gri
+     kademeleri birbirine giriyor. */
+  --illo-panel: #E8F3EC;
+
   --focus: #0E5F6E;
 
   /* --- ölçüler --------------------------------------------------------------
@@ -98,6 +108,9 @@
     --brand-tint:   #0E2B22;
     --brand-line:   #1E4A3A;
 
+    /* Panel koyu temada da AÇIK kalır, yalnızca tonu kısılır. */
+    --illo-panel: #CFE0D6;
+
     --focus: #3FA9BC;
   }
 }
@@ -129,6 +142,8 @@
   --brand-ink:    #04241A;
   --brand-tint:   #0E2B22;
   --brand-line:   #1E4A3A;
+
+  --illo-panel: #CFE0D6;
 
   --focus: #3FA9BC;
 }
@@ -184,6 +199,11 @@ html {
   /* Tercih yapıldığında tarayıcı kontrolleri de o temaya sabitlenir */
   /* Yapışkan başlık, odaklanan ya da kancayla gelinen öğeyi örtmesin */
   scroll-padding-top: 5.5rem;
+  /* Pazarlama sitesi tek sayfa: menüdeki her bağlantı bir bölüme kancadır ve
+     ekran oraya kayarak iner, zıplamaz. Aşağıdaki prefers-reduced-motion
+     bloğu bunu `auto`ya çeviriyor — hareket isteği olmayan kullanıcıda
+     sayfa anında konumlanır. */
+  scroll-behavior: smooth;
 }
 
 :root[data-theme="light"] { color-scheme: light; }

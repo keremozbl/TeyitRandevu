@@ -79,7 +79,7 @@ export default async function TaleplerSayfasi({
           <h2 className="text-ink">Bu filtrede talep yok</h2>
           <p className="text-[13px] text-ink-2">
             Siteden gelen demo talepleri buraya düşer. Formu{" "}
-            <Link href="/iletisim" className="underline underline-offset-2">
+            <Link href="/#iletisim" className="underline underline-offset-2">
               iletişim sayfasında
             </Link>{" "}
             deneyebilirsiniz.

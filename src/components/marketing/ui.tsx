@@ -6,23 +6,14 @@
  * (bkz. globals.css `--brand`).
  */
 
+import { LogoMark } from "@/components/logo-mark";
 import { PRODUCT } from "@/lib/marketing/content";
 
-/** Teyit = onay. İşaret bir tik; degrade leke ya da soyut şekil değil. */
+/** Teyit = onay → tik, Randevu → R. İşaret `LogoMark`'ta; burada ad eşlik eder. */
 export function Wordmark({ className = "" }: { className?: string }) {
   return (
     <span className={`inline-flex items-center gap-2 ${className}`}>
-      <svg viewBox="0 0 20 20" className="size-5 shrink-0 text-brand" aria-hidden="true">
-        <rect width="20" height="20" rx="4.5" fill="currentColor" />
-        <path
-          d="M5.6 10.3 8.5 13.2 14.4 7"
-          fill="none"
-          stroke="var(--brand-ink)"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
+      <LogoMark className="size-6" />
       <span className="text-[16px] font-semibold tracking-[-0.01em] text-ink" translate="no">
         {PRODUCT.name}
       </span>

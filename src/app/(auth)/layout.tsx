@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { LogoMark } from "@/components/logo-mark";
+
 export default function AuthLayout({
   children,
 }: {
@@ -11,8 +13,10 @@ export default function AuthLayout({
         <div className="mx-auto flex h-14 w-full max-w-5xl items-center px-6">
           <Link
             href="/"
-            className="text-[15px] font-semibold tracking-tight text-ink no-underline"
+            className="flex items-center gap-2 text-[15px] font-semibold tracking-tight text-ink no-underline"
+            aria-label="TeyitRandevu ana sayfa"
           >
+            <LogoMark className="size-5" />
             TeyitRandevu
           </Link>
         </div>

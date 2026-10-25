@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { LogoMark } from "@/components/logo-mark";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { requireTenant } from "@/lib/auth/session";
 import { DEMO_TENANT_SLUG, isDemoUser } from "@/lib/demo/config";
@@ -43,10 +44,12 @@ export default async function AppLayout({
         <div className="flex h-12 items-center gap-4 px-4">
           <Link
             href="/app"
-            className="shrink-0 text-[15px] font-semibold tracking-tight text-ink no-underline"
+            className="flex shrink-0 items-center gap-2 text-[15px] font-semibold tracking-tight text-ink no-underline"
             translate="no"
+            aria-label="TeyitRandevu ana sayfa"
           >
-            TeyitRandevu
+            <LogoMark className="size-5" />
+            <span className="hidden sm:inline">TeyitRandevu</span>
           </Link>
 
           <span className="text-ink-3" aria-hidden="true">

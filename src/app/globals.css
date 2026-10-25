@@ -55,6 +55,14 @@
   --brand-tint:   #E8F3EC;
   --brand-line:   #BCD9C8;
 
+  /* --- logo rozeti ------------------------------------------------------------
+     Marka işareti bir kare rozetin içinde (bkz. components/logo-mark.tsx).
+     Açık temada yeşil zemin + beyaz işaret (tik emojisi gibi); koyu temada
+     dönüyor: açık zemin + yeşil işaret. Marka token'larıyla birebir uymadığı
+     için ayrı tutuluyor. */
+  --logo-badge-bg: #0A6B4F;
+  --logo-badge-fg: #FFFFFF;
+
   /* --- illüstrasyon zemini ----------------------------------------------------
      İllüstrasyonların (public/illo/*.svg) arkasındaki panel.
 
@@ -108,6 +116,10 @@
     --brand-tint:   #0E2B22;
     --brand-line:   #1E4A3A;
 
+    /* Rozet koyu temada döner: açık zemin + yeşil işaret. */
+    --logo-badge-bg: #EAF0EA;
+    --logo-badge-fg: #0A6B4F;
+
     /* Panel koyu temada da AÇIK kalır, yalnızca tonu kısılır. */
     --illo-panel: #CFE0D6;
 
@@ -142,6 +154,9 @@
   --brand-ink:    #04241A;
   --brand-tint:   #0E2B22;
   --brand-line:   #1E4A3A;
+
+  --logo-badge-bg: #EAF0EA;
+  --logo-badge-fg: #0A6B4F;
 
   --illo-panel: #CFE0D6;
 

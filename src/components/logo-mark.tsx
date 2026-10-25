@@ -4,9 +4,8 @@
  * "Teyit" = onay → tik; "Randevu" → R; üstte ince bir çubuk. İşaret, işletmenin
  * tasarladığı vektörden (auto-trace SVG) çıkarıldı; yazı ve sunum zemini ayıklandı.
  *
- * Renk temaya göre döner (bkz. globals.css `--logo-badge-*`): açık temada yeşil
- * zemin + beyaz işaret, koyu temada açık zemin + yeşil işaret. Favicon de aynı
- * rozet ama sabit renkli (`src/app/icon.svg`) — 16 pikselde CSS değişkeni yok.
+ * Renk her iki temada da yeşil zemin + beyaz işaret (bkz. globals.css
+ * `--logo-badge-*`). Favicon de aynı rozet, sabit renkli (`src/app/icon.svg`).
  *
  * Boyut dışarıdan `className` ile verilir (kare: ör. `size-6`).
  */
